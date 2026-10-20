@@ -9,7 +9,8 @@ is renamed in the IDA database through the ida-mcp HTTP endpoint.
 
 Addresses that are not a function start (helpers split out of a larger
 original function) and code-segment locals are skipped. When two C names
-claim one address the CHOOSE table decides.
+claim one address the CHOOSE table decides. A static s_foo in file.c
+becomes file_foo; struct fields (indented) are not names of their own.
 """
 import collections, glob, json, os, re, sys, urllib.request
 
@@ -30,9 +31,18 @@ def call(name, args):
     return r['result'].get('structuredContent') or json.loads(r['result']['content'][0]['text'])
 
 
+def local_name(path, name):
+    """A file's static s_foo is named <file>_foo in IDA, so statics of the
+    same name in two files stay apart."""
+    if name.startswith('s_'):
+        return os.path.splitext(os.path.basename(path))[0] + '_' + name[2:]
+    return name
+
+
 def collect():
     pairs = collections.defaultdict(set)
-    decl = re.compile(r'^\s*(?:extern\s+)?(?:static\s+)?(?:const\s+)?(?:unsigned\s+)?'
+    # Column 0 only: indented lines are struct fields and locals.
+    decl = re.compile(r'^(?:extern\s+)?(?:static\s+)?(?:const\s+)?(?:unsigned\s+)?'
                       r'[A-Za-z_]\w*(?:\s+[A-Za-z_]\w*)?[\s\*]+\**([A-Za-z_]\w*)\s*'
                       r'(\(|\[|=|;)[^/]*?/\*\s*(0x[4-6][0-9a-fA-F]{5})\b')
     for f in glob.glob(os.path.join(SRC, '**', '*.[ch]'), recursive=True):
@@ -41,7 +51,7 @@ def collect():
             m = decl.match(l)
             if m and not l.strip().startswith(('return', 'if', 'case')):
                 kind = 'func' if m.group(2) == '(' else 'data'
-                pairs[(int(m.group(3), 16), kind)].add(m.group(1))
+                pairs[(int(m.group(3), 16), kind)].add(local_name(f, m.group(1)))
             m = re.match(r'^/\*\s*(0x4[0-9a-fA-F]{5})\b', l)
             if m:
                 for j in range(i + 1, min(i + 12, len(lines))):

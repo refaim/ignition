@@ -50,19 +50,12 @@ int joystick_read(void);            /* 0x459a20 */
 int menu_network_page(void);        /* 0x40af54, inside menu_page_handler_a */
 /* 3D, for the OpenGL renderer */
 int menu_background_render(void);   /* 0x40c740 */
-int car3d_draw(s32 car, int spin, double scale, int x, int y);   /* 0x40c5a0 */
-int menucar_load(void);             /* 0x40ca60 */
-int menucar_free(void);             /* 0x410920 */
-int scene_free(void);               /* 0x446c30 */
 int net_send_settings(void *state, void *settings);    /* 0x40d200 */
 int net_connect(void);              /* 0x459d40, the DirectPlay dialogs */
 int net_start(void);                /* 0x459e80 */
 extern s32 g_net_players;           /* 0x50f7a8 */
 
 /* 3D scene; the renderer's buffers are replaced by OpenGL */
-void *scene_create(void);           /* 0x4468d0: returns the camera */
-int raster_set_grid(int w, int h, int count);      /* 0x446ca0 */
-int raster_set_screen(int w, int h, int flags);    /* 0x402be0 */
 
 /* game */
 void race_load_1(void);             /* 0x418b70 */
@@ -72,5 +65,7 @@ void race_frame(void);              /* 0x4173fb, inside game_frame */
 void race_end(void);                /* 0x420870 */
 
 #include "net.h"
+#include "menucar.h"
+#include "scene.h"
 
 #endif /* IGN_STUBS_H */

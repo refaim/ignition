@@ -72,17 +72,6 @@ int menu_background_render(void)
     return 0;
 }
 
-int car3d_draw(s32 car, int spin, double scale, int x, int y)
-{
-    (void)car;
-    (void)spin;
-    (void)scale;
-    (void)x;
-    (void)y;
-    STUB(0x40c5a0, "car3d_draw");
-    return 0;
-}
-
 int net_connect(void)
 {
     STUB(0x459d40, "net_connect");
@@ -95,25 +84,7 @@ int net_start(void)
     return 0;
 }
 
-int menucar_free(void)
-{
-    STUB(0x410920, "menucar_free");
-    return 1;
-}
 
-int scene_free(void)
-{
-    STUB(0x446c30, "scene_free");
-    return 1;
-}
-
-
-
-int menucar_load(void)
-{
-    STUB(0x40ca60, "menucar_load");
-    return 1;
-}
 
 s32 g_net_players;          /* 0x50f7a8 */
 
@@ -128,32 +99,6 @@ int net_send_settings(void *state, void *settings)
 /* No audio yet: the menu runs with sound off. */
 
 
-
-/* The camera record the menu writes to; the scene's object lists and
- * the rasteriser's tables are not made. */
-void *scene_create(void)
-{
-    STUB(0x4468d0, "scene_create");
-    return calloc(1, 0xa8);
-}
-
-int raster_set_grid(int w, int h, int count)
-{
-    (void)w;
-    (void)h;
-    (void)count;
-    STUB(0x446ca0, "raster_set_grid");
-    return 0;
-}
-
-int raster_set_screen(int w, int h, int flags)
-{
-    (void)w;
-    (void)h;
-    (void)flags;
-    STUB(0x402be0, "raster_set_screen");
-    return 1;
-}
 
 
 

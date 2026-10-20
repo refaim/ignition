@@ -45,7 +45,7 @@ u8 *g_menu_screen;              /* 0x4be840, the 320 x 200 menu buffer */
 u8 *g_menu_palette;             /* 0x4be614, menu.col */
 u8 *g_menu_table;               /* 0x4be86c, menu.tab */
 u8 *g_render_target;            /* 0x498734 */
-s32 *g_menu_camera;             /* 0x4be818, the 3D scene's camera */
+struct scene *g_menu_camera;             /* 0x4be818, the 3D scene's camera */
 
 /* Pictures without their header (0x34e bytes), as 0x403e80 reads them. */
 u8 *g_pic_cars;                 /* 0x4be84c, bilar.pic, 186 wide */
@@ -188,8 +188,8 @@ static void menu_set_mode(void)
     g_video_mode.width = mode[0];
     g_video_mode.height = mode[1];
     video_set_mode();
-    g_menu_camera[0x9c / 4] = mode[0] / 2;
-    memcpy(&g_menu_camera[0x30 / 4], &one, sizeof(one));
+    g_menu_camera->center_x = mode[0] / 2;
+    g_menu_camera->zoom = one;
     s_mode_pending = 0;
 }
 
@@ -488,7 +488,7 @@ int menu_init(void)
     text_draw(loading, small, 160 - text_width(loading, small) / 2, 0x5e);
     menu_present();
     raster_set_grid(2000, 2000, 11);
-    g_menu_camera[0x3c / 4] = 0;
+    g_menu_camera->stage_gather = 0;
     g_render_target = g_menu_screen;
     raster_set_screen(mode[0], mode[1], 0);
     menu_sound_init();

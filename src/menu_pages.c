@@ -49,7 +49,7 @@ s32 g_car_count;                        /* 0x4be858 */
 struct sprite *g_sprite_track;          /* 0x4bf55c */
 struct sprite *g_sprite_flags[5];       /* 0x4be618 */
 
-static double s_background_t;           /* 0x4bf570 */
+double g_menu_background_t;           /* 0x4bf570 */
 
 static struct menu_page *page(int k)
 {
@@ -542,10 +542,10 @@ int menu_page_handler_a(void)
         if (cur == page(PAGE_LANGUAGE)) {
             memset(g_menu_screen, 0, 64000);
         } else {
-            s_background_t += menu_dt();
-            if (s_background_t >= 2.1176470588235294) {
-                while (s_background_t >= 2.1176470588235294) {
-                    s_background_t -= 2.1176470588235294;
+            g_menu_background_t += menu_dt();
+            if (g_menu_background_t >= 2.1176470588235294) {
+                while (g_menu_background_t >= 2.1176470588235294) {
+                    g_menu_background_t -= 2.1176470588235294;
                 }
                 menu_background_render();
             }

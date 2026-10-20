@@ -19,6 +19,7 @@ s32 fe_4be710, fe_4be718;
 s32 fe_47dc48 = 1;
 struct sound_voice *fe_4be584;
 void *fe_4be880[6];
+s32 fe_4be5dc, fe_4be75c;
 void *fe_4be5f8, *fe_4be630, *fe_4be898, *fe_4be804, *fe_4be604, *fe_4be5f4, *fe_4be658;
 
 /* 0x403e80, before the buffers */

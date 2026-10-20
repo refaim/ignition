@@ -19,7 +19,7 @@ extern const s32 g_menu_modes[3][2];
 extern u8 *g_menu_screen;
 extern u8 *g_menu_palette;
 extern u8 *g_menu_table;
-extern s32 *g_menu_camera;
+extern struct scene *g_menu_camera;
 extern s32 g_menu_language;
 extern struct sprite *g_sprite_car;
 extern struct sprite *g_sprite_logo;

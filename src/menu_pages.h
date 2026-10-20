@@ -9,6 +9,7 @@
 #include "types.h"
 
 extern s32 g_car_order[11];
+extern double g_menu_background_t;
 extern s32 g_car_count;
 extern struct sprite *g_sprite_track;
 extern struct sprite *g_sprite_flags[5];

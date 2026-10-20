@@ -9,6 +9,8 @@ BUILD  := build
 
 CORE_SRC := $(SRCDIR)/app.c $(SRCDIR)/game.c $(SRCDIR)/stubs.c \
             $(SRCDIR)/lisa/lisa.c $(SRCDIR)/lisa/log.c $(SRCDIR)/lisa/mem.c $(SRCDIR)/lisa/file.c \
+            $(SRCDIR)/lisa/exit.c $(SRCDIR)/lisa/gfx.c $(SRCDIR)/lisa/texture.c $(SRCDIR)/lisa/sprite.c \
+            $(SRCDIR)/lisa/font.c $(SRCDIR)/startup.c \
             $(SRCDIR)/video.c $(SRCDIR)/gfx_gl.c $(SRCDIR)/vfs.c $(SRCDIR)/main.c \
             $(SRCDIR)/cdimage.c
 MAC_SRC  := $(SRCDIR)/platform_macos.m
@@ -39,8 +41,11 @@ $(BUILD)/%.o: $(SRCDIR)/%.m $(wildcard $(SRCDIR)/*.h)
 cd_extract: tools/cd_extract.c $(SRCDIR)/cdimage.c $(SRCDIR)/cdimage.h
 	$(CC) $(CFLAGS) tools/cd_extract.c $(SRCDIR)/cdimage.c -o $@
 
-test_lisa: tests/test_lisa.c $(BUILD)/lisa/mem.o $(BUILD)/lisa/file.o $(BUILD)/lisa/log.o $(BUILD)/vfs.o
-	$(CC) $(CFLAGS) $^ -o $@
+# The engine without main.c, for tests.
+TEST_OBJ := $(filter-out $(BUILD)/main.o,$(CORE_OBJ)) $(HOST_OBJ)
+
+test_lisa: tests/test_lisa.c $(TEST_OBJ)
+	$(CC) $(CFLAGS) $^ $(LDFLAGS) -o $@
 
 test: test_lisa
 	./test_lisa $(BUILD)

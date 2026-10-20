@@ -10,6 +10,8 @@
 #include "gfx.h"
 #include "platform.h"
 #include "video.h"
+#include "lisa/sprite.h"
+#include "stubs.h"
 
 struct video_mode g_video_mode;     /* 0x4ba6e0 */
 u8 *g_video_screen;
@@ -18,13 +20,30 @@ u8 g_video_palette[768];
 static int s_gfx_ready;
 static int s_screen_w, s_screen_h;
 
+static int gfx_register_generic(void);
+
 /* 0x456af0
  * Driver 0 fills the generic table at 0x50eba0 (0x456e60) and the
  * DirectDraw table at 0x50eb68 (0x45b690). This file stands in for both;
  * there is nothing to fill. */
 int video_select_driver(int driver)
 {
-    return driver == 0 ? 1 : 2;
+    if (driver != 0) {
+        return 2;
+    }
+    gfx_register_generic();
+    return 1;
+}
+
+/* 0x456e60
+ * Fills the generic table; what is left to do is set up the
+ * rasteriser's buffers and the sprite records. */
+static int gfx_register_generic(void)
+{
+    gfx_init_45d840();
+    gfx_init_spans();
+    sprite_init();
+    return 1;
 }
 
 /* 0x456bc0, through the table entries 0x50eb6c and 0x50eba0.

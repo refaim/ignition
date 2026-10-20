@@ -464,6 +464,20 @@ struct sound_sample *sound_sample_of(int bank, int group, int index)
     return s_banks[bank][group][index];
 }
 
+/* 0x458d80: frees one sample; only the first 16 of a group. */
+int sound_unload(int bank, int group, int index)
+{
+    if (bank < 0 || bank > 7 || group < 0 || group > 0x7f || index < 0 || index > 0xf) {
+        return 0;
+    }
+    if (s_banks[bank][group] == NULL || s_banks[bank][group][index] == NULL) {
+        return 0;
+    }
+    sample_free(s_banks[bank][group][index]);
+    s_banks[bank][group][index] = NULL;
+    return 1;
+}
+
 /* 0x4579b0
  * Starts a voice and returns its handle, slot << 16 | sequence, or 0. */
 s32 sound_start(const struct sound_request *req)

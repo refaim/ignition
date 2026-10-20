@@ -53,15 +53,6 @@ int net_stop(void)
 
 
 
-int sound_music(int a, int b, int c)
-{
-    (void)a;
-    (void)b;
-    (void)c;
-    STUB(0x458d80, "sound_music");
-    return 0;
-}
-
 
 
 
@@ -134,12 +125,6 @@ int scene_free(void)
 int menucar_load(void)
 {
     STUB(0x40ca60, "menucar_load");
-    return 1;
-}
-
-int menu_apply_settings(void)
-{
-    STUB(0x404800, "menu_apply_settings");
     return 1;
 }
 

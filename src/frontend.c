@@ -614,7 +614,7 @@ static void intro_step(void)
             fe_4be584->rate = 0;
         }
         sound_stop_all();
-        sound_music(0, 0, 3);
+        sound_unload(0, 0, 3);
         fe_4be598 = 1079.9;
     }
 }
@@ -1025,4 +1025,73 @@ int menu_cb_404790(int arg0, int action)
         g_menu.key_pressed[0x01] = 1;
     }
     return 0;
+}
+
+/* 0x404800
+ * Turns the menu choices into the race's setup, in the settings: the
+ * 25 pages' selections are kept from 0x507, then the race mode, the
+ * cars on the grid and their drivers' names are filled in. */
+void menu_apply_settings(void)
+{
+    int i;
+
+    for (i = 0; i < MENU_PAGE_TABLE; i++) {
+        settings_set(0x507 + 4 * i, g_frontend_pages[i]->selected);
+    }
+    /* Two players when page 0 has the second choice and page 2 the first. */
+    if (settings_get(0x507) == 1) {
+        settings_set(0x004, settings_get(0x50f) ^ 1);
+    } else {
+        settings_set(0x004, 0);
+    }
+    /* The race mode, from page 3. */
+    if (settings_get(0x513) >= 0 && settings_get(0x513) <= 3) {
+        settings_set(0x008, settings_get(0x513));
+    }
+
+    /* The grid: the players' cars, then cars 2 to 7. */
+    settings_set(0x01c, g_car_order[settings_get(0x040)]);
+    if (settings_get(0x004) == 1) {
+        settings_set(0x020, g_car_order[settings_get(0x044)]);
+    } else {
+        settings_set(0x020, 1);
+    }
+    for (i = 2; i < 8; i++) {
+        settings_set(0x01c + 4 * i, i);
+    }
+    /* Drivers 1 to 7 are named after their cars; player 2 keeps theirs. */
+    for (i = 0; i < 7; i++) {
+        const char *name = ui_name(0x47e560 + 4 * (u32)settings_get(0x020 + 4 * i));
+
+        memcpy(g_settings + 0x07b + 15 * i, name, strlen(name) + 1);
+    }
+    if (settings_get(0x004) == 1) {
+        const char *name = (const char *)g_settings + SET_PLAYER2_NAME;
+
+        memmove(g_settings + 0x07b, name, strlen(name) + 1);
+        settings_set(0x04c, settings_get(0x068));
+    } else {
+        settings_set(0x04c, 1);
+    }
+    for (i = 0; i < 6; i++) {
+        settings_set(0x050 + 4 * i, 1);
+    }
+
+    settings_set(0x15f, fe_4be710 != 2 ? 2 : 0);
+    settings_set(0x163, settings_get(0x004) != 1 ? 1 : 0);
+    for (i = 0; i < 6; i++) {
+        settings_set(0x167 + 4 * i, 1);
+    }
+    settings_set(0x0f3, settings_get(0x008) == 0 ? 0 : settings_get(0x51f));
+    settings_set(0x107, 3 - settings_get(SET_SCREEN_SIZE));
+    if (settings_get(0x008) != 2) {
+        settings_set(0x153, 6);
+    } else {
+        settings_set(0x153, settings_get(0x004) == 0 ? 1 : 2);
+    }
+    for (i = 0; i < 8; i++) {
+        settings_set(0x133 + 4 * i, i);
+    }
+    settings_set(0x197, fe_4be710);
+    settings_set(0x58f, 0);
 }

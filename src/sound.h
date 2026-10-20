@@ -63,6 +63,7 @@ int sound_close(void);
 int sound_load_bank(const char *dir, int bank);
 int sound_load_group(const char *dir, int bank, int group);
 struct sound_sample *sound_sample_of(int bank, int group, int index);
+int sound_unload(int bank, int group, int index);
 s32 sound_start(const struct sound_request *req);
 struct sound_voice *sound_voice_of(s32 handle);
 int sound_set_volume(int volume);

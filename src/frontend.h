@@ -49,6 +49,7 @@ double menu_dt(void);
 int menu_init(void);
 int frontend_load_language(void);
 void frontend_intro_start(void *file, u8 *screen);
+void menu_apply_settings(void);
 extern u32 g_intro_sizes[6];
 int menu_frame(void);
 int menu_exit(void);

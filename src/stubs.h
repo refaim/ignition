@@ -44,7 +44,6 @@ int joystick_init(void);            /* 0x4596a0 */
 
 /* sound */
 
-int sound_music(int a, int b, int c);   /* 0x458d80 */
 int joystick_read(void);            /* 0x459a20 */
 
 /* front end pieces still to port */
@@ -55,7 +54,6 @@ int car3d_draw(s32 car, int spin, double scale, int x, int y);   /* 0x40c5a0 */
 int menucar_load(void);             /* 0x40ca60 */
 int menucar_free(void);             /* 0x410920 */
 int scene_free(void);               /* 0x446c30 */
-int menu_apply_settings(void);      /* 0x404800 */
 int net_send_settings(void *state, void *settings);    /* 0x40d200 */
 int net_connect(void);              /* 0x459d40, the DirectPlay dialogs */
 int net_start(void);                /* 0x459e80 */

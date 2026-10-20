@@ -770,7 +770,7 @@ static void choose_language(void)
         frontend_intro_start(fe_4be880[0], g_menu_screen);
     } else {
         fe_4be5a8 = 0.01;
-        sound_music(0, 0, 3);
+        sound_unload(0, 0, 3);
         menucar_load();
     }
 }

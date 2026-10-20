@@ -22,7 +22,7 @@ ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 IMAGE = os.path.join(ROOT, ".ida-mcp", "image.bin")
 WRITES = os.path.join(ROOT, ".ida-mcp", "menu_writes.json")
 OUT = os.path.join(ROOT, "src", "menu_data.c")
-BASE = 0x47a000
+BASE = 0x479000
 
 LANG_LISTS = [0x481880, 0x4847e8, 0x487750, 0x48a6b8, 0x48d620, 0x490588]
 LIST_SLOTS = 30
@@ -58,16 +58,22 @@ for k, v in json.load(open(WRITES))["writes"].items():
         img[a - BASE] = v
 
 
+def check(a, n):
+    if not BASE <= a and a + n <= BASE + len(img):
+        sys.exit("0x%x is outside the image" % a)
+    return a - BASE
+
+
 def u32(a):
-    return struct.unpack_from("<I", img, a - BASE)[0]
+    return struct.unpack_from("<I", img, check(a, 4))[0]
 
 
 def s32(a):
-    return struct.unpack_from("<i", img, a - BASE)[0]
+    return struct.unpack_from("<i", img, check(a, 4))[0]
 
 
 def s16(a):
-    return struct.unpack_from("<h", img, a - BASE)[0]
+    return struct.unpack_from("<h", img, check(a, 2))[0]
 
 
 def cstring(a):

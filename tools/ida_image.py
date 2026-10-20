@@ -1,6 +1,6 @@
 """Save the initial bytes of IGN_WIN.EXE's data sections from IDA.
 
-Writes .ida-mcp/image.bin covering 0x47a000..0x4c6000 (.rdata and the
+Writes .ida-mcp/image.bin covering 0x479000..0x4c6000 (.rdata and the
 initialised .data), unreadable bytes as zero, and .ida-mcp/image.json
 with the base address.
 
@@ -11,7 +11,7 @@ import os
 import urllib.request
 
 URL = "http://127.0.0.1:13337/mcp"
-BASE, END, STEP = 0x47a000, 0x4c6000, 0x1000
+BASE, END, STEP = 0x479000, 0x4c6000, 0x1000
 
 
 def call(name, args):

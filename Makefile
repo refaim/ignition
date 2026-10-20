@@ -11,6 +11,7 @@ CORE_SRC := $(SRCDIR)/app.c $(SRCDIR)/game.c $(SRCDIR)/stubs.c \
             $(SRCDIR)/lisa/lisa.c $(SRCDIR)/lisa/log.c $(SRCDIR)/lisa/mem.c $(SRCDIR)/lisa/file.c \
             $(SRCDIR)/lisa/exit.c $(SRCDIR)/lisa/gfx.c $(SRCDIR)/lisa/texture.c $(SRCDIR)/lisa/sprite.c \
             $(SRCDIR)/lisa/font.c $(SRCDIR)/startup.c $(SRCDIR)/input.c \
+            $(SRCDIR)/menu_engine.c $(SRCDIR)/menu_data.c \
             $(SRCDIR)/video.c $(SRCDIR)/gfx_gl.c $(SRCDIR)/vfs.c $(SRCDIR)/main.c \
             $(SRCDIR)/cdimage.c
 MAC_SRC  := $(SRCDIR)/platform_macos.m
@@ -47,8 +48,12 @@ TEST_OBJ := $(filter-out $(BUILD)/main.o,$(CORE_OBJ)) $(HOST_OBJ)
 test_lisa: tests/test_lisa.c $(TEST_OBJ)
 	$(CC) $(CFLAGS) $^ $(LDFLAGS) -o $@
 
-test: test_lisa
+test_menu: tests/test_menu.c $(TEST_OBJ)
+	$(CC) $(CFLAGS) $^ $(LDFLAGS) -o $@
+
+test: test_lisa test_menu
 	./test_lisa $(BUILD)
+	./test_menu
 
 # Extracts each disc image in data/ into data/<image name>/disc/.
 extract: cd_extract
@@ -60,4 +65,4 @@ run: $(TARGET)
 	./$(TARGET)
 
 clean:
-	rm -rf $(BUILD) $(TARGET) cd_extract test_lisa *.dSYM
+	rm -rf $(BUILD) $(TARGET) cd_extract test_lisa test_menu *.dSYM

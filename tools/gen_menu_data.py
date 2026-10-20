@@ -37,7 +37,10 @@ PAGE_TABLE = [0x481850, 0x481838, 0x481808, 0x4817d8, 0x4817c0, 0x4817a8,
 TREE, TREE_ENTRIES = 0x4909e0, 25
 CALLBACKS, CALLBACK_COUNT = 0x47df70, 5
 SETTINGS, SETTINGS_END = 0x4bf580, 0x4bfb18
-PAGE_STYLE = 0x47dd70
+PAGE_STYLE = 0x47dd70        # the key map every page uses
+DEFAULT_KEYMAP = 0x4931c8    # for a page without one
+TEXT_CHARS = 0x4932c8        # scan code to character, codes 0..0x53
+BINDABLE = 0x47de70          # 1 for keys a binding may take
 FUNCS = {0x409fb0: "menu_page_handler_a", 0x409610: "menu_page_handler_b",
          0x4045b0: "menu_cb_4045b0", 0x4045e0: "menu_cb_4045e0",
          0x404610: "menu_cb_404610", 0x404740: "menu_cb_404740",
@@ -166,18 +169,30 @@ def main():
         for k in range(item_arrays[a]):
             it = a + 0x1c * k
             vis, ch = u32(it + 0xc), u32(it + 0x16)
-            w("    { %s, %d, %d, %s, %d, %d, %s, %d },\n" % (
+            w("    { %s, %d, %d, %s, %d, %d, %d, %s, %d },\n" % (
                 settings_ref(u32(it), "s32"), s32(it + 4), s32(it + 8),
-                "s_visual_%x" % vis if vis else "NULL", s32(it + 0x10),
+                "s_visual_%x" % vis if vis else "NULL", s16(it + 0x10), s16(it + 0x12),
                 s16(it + 0x14), "&s_choice_%x" % ch if ch else "NULL", s16(it + 0x1a)))
         w("};\n\n")
-    w("const s32 g_menu_page_style[16] = {\n    %s\n};\n\n" % ", ".join(
-        "0x%x" % u32(PAGE_STYLE + 4 * k) for k in range(16)))
+    for name, a in (("g_menu_keymap", PAGE_STYLE), ("g_menu_keymap_default", DEFAULT_KEYMAP)):
+        vals = [struct.unpack_from("<b", img, a + k - BASE)[0] for k in range(256)]
+        w("const s8 %s[256] = {\n" % name)
+        for k in range(0, 256, 16):
+            w("    %s,\n" % ", ".join("%d" % v for v in vals[k:k + 16]))
+        w("};\n\n")
+    w("const u8 g_menu_text_chars[0x54] = {\n")
+    for k in range(0, 0x54, 12):
+        w("    %s,\n" % ", ".join("0x%02x" % img[TEXT_CHARS + j - BASE] for j in range(k, min(k + 12, 0x54))))
+    w("};\n\n")
+    w("const u8 g_menu_bindable[256] = {\n")
+    for k in range(0, 256, 16):
+        w("    %s,\n" % ", ".join("%d" % img[BINDABLE + j - BASE] for j in range(k, k + 16)))
+    w("};\n\n")
     for p in sorted(pages):
         fa, fb, style = u32(p), u32(p + 4), u32(p + 8)
         w("static struct menu_page s_page_%x = {\n" % p)
         w("    %s, %s, %s, %d, s_items_%x, %d\n};\n\n" % (
-            FUNCS[fa], FUNCS[fb], "g_menu_page_style" if style == PAGE_STYLE else "NULL",
+            FUNCS[fa], FUNCS[fb], "g_menu_keymap" if style == PAGE_STYLE else "NULL",
             u32(p + 0xc), u32(p + 0x10), s32(p + 0x14)))
     w("struct menu_page *const g_menu_pages[MENU_LANGUAGES][MENU_PAGE_SLOTS] = {\n")
     for lst in LANG_LISTS:

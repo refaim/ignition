@@ -87,6 +87,30 @@ int menu_exit(void)
     return 1;
 }
 
+STUB_VOID(0x457890, sound_tick)
+
+int menu_page_handler_a(void)
+{
+    STUB(0x409fb0, "menu_page_handler_a");
+    return 0;
+}
+
+int menu_page_handler_b(int key, int action)
+{
+    (void)key;
+    (void)action;
+    STUB(0x409610, "menu_page_handler_b");
+    return 0;
+}
+
+#define STUB_CB(addr, name) \
+    int name(int arg0, int arg1) { (void)arg0; (void)arg1; STUB(addr, #name); return 0; }
+
+STUB_CB(0x4045b0, menu_cb_4045b0)
+STUB_CB(0x4045e0, menu_cb_4045e0)
+STUB_CB(0x404610, menu_cb_404610)
+STUB_CB(0x404740, menu_cb_404740)
+STUB_CB(0x404790, menu_cb_404790)
 STUB_VOID(0x418b70, race_load_1)
 STUB_VOID(0x418be0, race_load_2)
 STUB_VOID(0x418c40, race_load_world)

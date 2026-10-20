@@ -46,6 +46,22 @@ extern s32 g_cd_tracks[4];          /* 0x50f2cc */
 int cd_read_status(void);           /* 0x457b50 */
 int cd_read_tracks(void);           /* 0x457da0 */
 
+/* front end page handlers and tree callbacks; declared in menu.h:
+ * menu_page_handler_a 0x409fb0, menu_page_handler_b 0x409610,
+ * menu_cb_4045b0 0x4045b0, menu_cb_4045e0 0x4045e0,
+ * menu_cb_404610 0x404610, menu_cb_404740 0x404740,
+ * menu_cb_404790 0x404790 */
+int menu_page_handler_a(void);                  /* 0x409fb0 */
+int menu_page_handler_b(int key, int action);   /* 0x409610 */
+int menu_cb_4045b0(int arg0, int arg1);         /* 0x4045b0 */
+int menu_cb_4045e0(int arg0, int arg1);         /* 0x4045e0 */
+int menu_cb_404610(int arg0, int arg1);         /* 0x404610 */
+int menu_cb_404740(int arg0, int arg1);         /* 0x404740 */
+int menu_cb_404790(int arg0, int arg1);         /* 0x404790 */
+
+/* sound */
+void sound_tick(void);              /* 0x457890 */
+
 /* game */
 int cd_stop(void);                  /* 0x459e10 */
 int menu_init(void);                /* 0x4029a0 */

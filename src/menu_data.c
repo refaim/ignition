@@ -4560,1527 +4560,1590 @@ static struct menu_choice s_choice_48f5d0 = {
 };
 
 static struct menu_item s_items_47eb40[2] = {
-    { NULL, 0, 0, s_visual_47eae0, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_47eb10, 65535, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_47eae0, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_47eb10, -1, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_47eb78[2] = {
-    { NULL, 0, 0, s_visual_47eae0, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_47eb10, 65535, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_47eae0, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_47eb10, -1, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_47ebb0[2] = {
-    { NULL, 0, 0, s_visual_47eae0, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_47eb10, 65535, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_47eae0, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_47eb10, -1, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_47ebe8[1] = {
-    { NULL, 0, 0, NULL, 0, 0, NULL, 1 },
+    { NULL, 0, 0, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_47ec08[1] = {
-    { NULL, 0, 0, NULL, 0, 0, NULL, 1 },
+    { NULL, 0, 0, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_47ec28[1] = {
-    { NULL, 0, 0, NULL, 0, 0, NULL, 1 },
+    { NULL, 0, 0, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_47ec48[1] = {
-    { NULL, 0, 0, NULL, 0, 0, NULL, 1 },
+    { NULL, 0, 0, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_47eea8[8] = {
-    { NULL, 0, 0, s_visual_47ec68, 0, 0, &s_choice_47ede8, 1 },
-    { NULL, 0, 0, s_visual_47ec98, 0, 0, &s_choice_47ee00, 1 },
-    { NULL, 0, 0, s_visual_47ecc8, 0, 0, &s_choice_47ee18, 1 },
-    { NULL, 0, 0, s_visual_47ecf8, 0, 0, &s_choice_47ee30, 1 },
-    { NULL, 0, 0, s_visual_47ed28, 0, 0, &s_choice_47ee48, 1 },
-    { NULL, 0, 0, s_visual_47ed58, 0, 0, &s_choice_47ee60, 1 },
-    { NULL, 0, 0, s_visual_47ed88, 0, 0, &s_choice_47ee78, 1 },
-    { NULL, 0, 0, s_visual_47edb8, 0, 0, &s_choice_47ee90, 1 },
+    { NULL, 0, 0, s_visual_47ec68, 0, 0, 0, &s_choice_47ede8, 1 },
+    { NULL, 0, 0, s_visual_47ec98, 0, 0, 0, &s_choice_47ee00, 1 },
+    { NULL, 0, 0, s_visual_47ecc8, 0, 0, 0, &s_choice_47ee18, 1 },
+    { NULL, 0, 0, s_visual_47ecf8, 0, 0, 0, &s_choice_47ee30, 1 },
+    { NULL, 0, 0, s_visual_47ed28, 0, 0, 0, &s_choice_47ee48, 1 },
+    { NULL, 0, 0, s_visual_47ed58, 0, 0, 0, &s_choice_47ee60, 1 },
+    { NULL, 0, 0, s_visual_47ed88, 0, 0, 0, &s_choice_47ee78, 1 },
+    { NULL, 0, 0, s_visual_47edb8, 0, 0, 0, &s_choice_47ee90, 1 },
 };
 
 static struct menu_item s_items_47f1c8[8] = {
-    { NULL, 0, 0, s_visual_47ef88, 0, 0, &s_choice_47f108, 1 },
-    { NULL, 0, 0, s_visual_47efb8, 0, 0, &s_choice_47f120, 1 },
-    { NULL, 0, 0, s_visual_47efe8, 0, 0, &s_choice_47f138, 1 },
-    { NULL, 0, 0, s_visual_47f018, 0, 0, &s_choice_47f150, 1 },
-    { NULL, 0, 0, s_visual_47f048, 0, 0, &s_choice_47f168, 1 },
-    { NULL, 0, 0, s_visual_47f078, 0, 0, &s_choice_47f180, 1 },
-    { NULL, 0, 0, s_visual_47f0a8, 0, 0, &s_choice_47f198, 1 },
-    { NULL, 0, 0, s_visual_47f0d8, 0, 0, &s_choice_47f1b0, 1 },
+    { NULL, 0, 0, s_visual_47ef88, 0, 0, 0, &s_choice_47f108, 1 },
+    { NULL, 0, 0, s_visual_47efb8, 0, 0, 0, &s_choice_47f120, 1 },
+    { NULL, 0, 0, s_visual_47efe8, 0, 0, 0, &s_choice_47f138, 1 },
+    { NULL, 0, 0, s_visual_47f018, 0, 0, 0, &s_choice_47f150, 1 },
+    { NULL, 0, 0, s_visual_47f048, 0, 0, 0, &s_choice_47f168, 1 },
+    { NULL, 0, 0, s_visual_47f078, 0, 0, 0, &s_choice_47f180, 1 },
+    { NULL, 0, 0, s_visual_47f0a8, 0, 0, 0, &s_choice_47f198, 1 },
+    { NULL, 0, 0, s_visual_47f0d8, 0, 0, 0, &s_choice_47f1b0, 1 },
 };
 
 static struct menu_item s_items_47f4b8[3] = {
-    { (s32 *)(g_settings + 0xc), 0, 0, s_visual_47f2a8, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x10), 0, 1, s_visual_47f398, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x14), 0, 1, s_visual_47f428, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0xc), 0, 0, s_visual_47f2a8, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x10), 0, 1, s_visual_47f398, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x14), 0, 1, s_visual_47f428, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_47f900[6] = {
-    { (s32 *)(g_settings + 0x10b), 0, 2, s_visual_47f510, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x103), 0, 3, s_visual_47f5d0, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x15b), 0, 1, s_visual_47f6c0, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x10f), 0, 1, s_visual_47f750, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x113), 0, 1, s_visual_47f7e0, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x117), 0, 1, s_visual_47f870, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x10b), 0, 2, s_visual_47f510, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x103), 0, 3, s_visual_47f5d0, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x15b), 0, 1, s_visual_47f6c0, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x10f), 0, 1, s_visual_47f750, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x113), 0, 1, s_visual_47f7e0, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x117), 0, 1, s_visual_47f870, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_4801b8[3] = {
-    { (s32 *)(g_settings + 0xfb), 0, 1, s_visual_47f9a8, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0xff), 0, 10, s_visual_47fa38, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0xf7), -1, 7, s_visual_47fc78, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0xfb), 0, 1, s_visual_47f9a8, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0xff), 0, 10, s_visual_47fa38, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0xf7), -1, 7, s_visual_47fc78, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_4804f8[7] = {
-    { NULL, 0, 0, s_visual_480210, 0, 0, &s_choice_4804e0, 1 },
-    { (s32 *)(g_settings + 0x48), 0, 1, s_visual_480240, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x123), 0, 3, s_visual_4802d0, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x12b), 0, 1, s_visual_4803c0, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_480450, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_480480, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_4804b0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_480210, 0, 0, 0, &s_choice_4804e0, 1 },
+    { (s32 *)(g_settings + 0x48), 0, 1, s_visual_480240, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x123), 0, 3, s_visual_4802d0, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x12b), 0, 1, s_visual_4803c0, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_480450, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_480480, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_4804b0, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_4808a8[7] = {
-    { NULL, 0, 0, s_visual_4805c0, 0, 0, &s_choice_480890, 1 },
-    { (s32 *)(g_settings + 0x68), 0, 1, s_visual_4805f0, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x127), 0, 3, s_visual_480680, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x12f), 0, 1, s_visual_480770, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_480800, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_480830, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_480860, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_4805c0, 0, 0, 0, &s_choice_480890, 1 },
+    { (s32 *)(g_settings + 0x68), 0, 1, s_visual_4805f0, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x127), 0, 3, s_visual_480680, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x12f), 0, 1, s_visual_480770, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_480800, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_480830, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_480860, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_480970[1] = {
-    { NULL, 0, 0, NULL, 0, 0, NULL, 1 },
+    { NULL, 0, 0, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_480c30[7] = {
-    { NULL, 0, 0, s_visual_480990, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_4809f0, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_480a50, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_480ab0, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_480b10, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_480b70, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_480bd0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_480990, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_4809f0, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_480a50, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_480ab0, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_480b10, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_480b70, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_480bd0, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_480cf8[1] = {
-    { (s32 *)(g_settings + 0x40), 0, 10, NULL, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x40), 0, 10, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_480d18[1] = {
-    { (s32 *)(g_settings + 0x44), 0, 10, NULL, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x44), 0, 10, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_480e88[4] = {
-    { NULL, 0, 0, s_visual_480d38, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_480d98, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_480dc8, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_480e28, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_480d38, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_480d98, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_480dc8, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_480e28, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_480ef8[2] = {
-    { NULL, 0, 0, NULL, 0, 0, NULL, 1 },
-    { NULL, 0, 0, NULL, 0, 0, NULL, 1 },
+    { NULL, 0, 0, NULL, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_480fc0[2] = {
-    { NULL, 0, 0, s_visual_480f30, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_480f60, 3, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_480f30, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_480f60, 3, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_481208[2] = {
-    { (s32 *)(g_settings + 0x57f), 0, 6, s_visual_480ff8, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x583), 0, 1, s_visual_481178, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x57f), 0, 6, s_visual_480ff8, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x583), 0, 1, s_visual_481178, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_481390[7] = {
-    { NULL, 0, 0, s_visual_481240, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_481270, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_4812a0, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_4812d0, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_481300, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_481330, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_481360, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_481240, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_481270, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_4812a0, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_4812d0, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_481300, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_481330, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_481360, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_481578[5] = {
-    { NULL, 0, 0, s_visual_481458, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_481488, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_4814e8, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_481518, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_481548, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_481458, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_481488, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_4814e8, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_481518, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_481548, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_481608[1] = {
-    { (s32 *)(g_settings + 0x593), 0, 4, NULL, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x593), 0, 4, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_481ae0[2] = {
-    { NULL, 0, 0, s_visual_481a80, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_481ab0, 65535, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_481a80, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_481ab0, -1, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_481b18[2] = {
-    { NULL, 0, 0, s_visual_481a80, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_481ab0, 65535, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_481a80, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_481ab0, -1, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_481b50[2] = {
-    { NULL, 0, 0, s_visual_481a80, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_481ab0, 65535, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_481a80, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_481ab0, -1, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_481b88[1] = {
-    { NULL, 0, 0, NULL, 0, 0, NULL, 1 },
+    { NULL, 0, 0, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_481ba8[1] = {
-    { NULL, 0, 0, NULL, 0, 0, NULL, 1 },
+    { NULL, 0, 0, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_481bc8[1] = {
-    { NULL, 0, 0, NULL, 0, 0, NULL, 1 },
+    { NULL, 0, 0, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_481be8[1] = {
-    { NULL, 0, 0, NULL, 0, 0, NULL, 1 },
+    { NULL, 0, 0, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_481e48[8] = {
-    { NULL, 0, 0, s_visual_481c08, 0, 0, &s_choice_481d88, 1 },
-    { NULL, 0, 0, s_visual_481c38, 0, 0, &s_choice_481da0, 1 },
-    { NULL, 0, 0, s_visual_481c68, 0, 0, &s_choice_481db8, 1 },
-    { NULL, 0, 0, s_visual_481c98, 0, 0, &s_choice_481dd0, 1 },
-    { NULL, 0, 0, s_visual_481cc8, 0, 0, &s_choice_481de8, 1 },
-    { NULL, 0, 0, s_visual_481cf8, 0, 0, &s_choice_481e00, 1 },
-    { NULL, 0, 0, s_visual_481d28, 0, 0, &s_choice_481e18, 1 },
-    { NULL, 0, 0, s_visual_481d58, 0, 0, &s_choice_481e30, 1 },
+    { NULL, 0, 0, s_visual_481c08, 0, 0, 0, &s_choice_481d88, 1 },
+    { NULL, 0, 0, s_visual_481c38, 0, 0, 0, &s_choice_481da0, 1 },
+    { NULL, 0, 0, s_visual_481c68, 0, 0, 0, &s_choice_481db8, 1 },
+    { NULL, 0, 0, s_visual_481c98, 0, 0, 0, &s_choice_481dd0, 1 },
+    { NULL, 0, 0, s_visual_481cc8, 0, 0, 0, &s_choice_481de8, 1 },
+    { NULL, 0, 0, s_visual_481cf8, 0, 0, 0, &s_choice_481e00, 1 },
+    { NULL, 0, 0, s_visual_481d28, 0, 0, 0, &s_choice_481e18, 1 },
+    { NULL, 0, 0, s_visual_481d58, 0, 0, 0, &s_choice_481e30, 1 },
 };
 
 static struct menu_item s_items_482168[8] = {
-    { NULL, 0, 0, s_visual_481f28, 0, 0, &s_choice_4820a8, 1 },
-    { NULL, 0, 0, s_visual_481f58, 0, 0, &s_choice_4820c0, 1 },
-    { NULL, 0, 0, s_visual_481f88, 0, 0, &s_choice_4820d8, 1 },
-    { NULL, 0, 0, s_visual_481fb8, 0, 0, &s_choice_4820f0, 1 },
-    { NULL, 0, 0, s_visual_481fe8, 0, 0, &s_choice_482108, 1 },
-    { NULL, 0, 0, s_visual_482018, 0, 0, &s_choice_482120, 1 },
-    { NULL, 0, 0, s_visual_482048, 0, 0, &s_choice_482138, 1 },
-    { NULL, 0, 0, s_visual_482078, 0, 0, &s_choice_482150, 1 },
+    { NULL, 0, 0, s_visual_481f28, 0, 0, 0, &s_choice_4820a8, 1 },
+    { NULL, 0, 0, s_visual_481f58, 0, 0, 0, &s_choice_4820c0, 1 },
+    { NULL, 0, 0, s_visual_481f88, 0, 0, 0, &s_choice_4820d8, 1 },
+    { NULL, 0, 0, s_visual_481fb8, 0, 0, 0, &s_choice_4820f0, 1 },
+    { NULL, 0, 0, s_visual_481fe8, 0, 0, 0, &s_choice_482108, 1 },
+    { NULL, 0, 0, s_visual_482018, 0, 0, 0, &s_choice_482120, 1 },
+    { NULL, 0, 0, s_visual_482048, 0, 0, 0, &s_choice_482138, 1 },
+    { NULL, 0, 0, s_visual_482078, 0, 0, 0, &s_choice_482150, 1 },
 };
 
 static struct menu_item s_items_482458[3] = {
-    { (s32 *)(g_settings + 0xc), 0, 0, s_visual_482248, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x10), 0, 1, s_visual_482338, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x14), 0, 1, s_visual_4823c8, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0xc), 0, 0, s_visual_482248, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x10), 0, 1, s_visual_482338, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x14), 0, 1, s_visual_4823c8, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_4828a0[6] = {
-    { (s32 *)(g_settings + 0x10b), 0, 2, s_visual_4824b0, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x103), 0, 3, s_visual_482570, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x15b), 0, 1, s_visual_482660, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x10f), 0, 1, s_visual_4826f0, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x113), 0, 1, s_visual_482780, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x117), 0, 1, s_visual_482810, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x10b), 0, 2, s_visual_4824b0, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x103), 0, 3, s_visual_482570, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x15b), 0, 1, s_visual_482660, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x10f), 0, 1, s_visual_4826f0, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x113), 0, 1, s_visual_482780, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x117), 0, 1, s_visual_482810, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_483158[3] = {
-    { (s32 *)(g_settings + 0xfb), 0, 1, s_visual_482948, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0xff), 0, 10, s_visual_4829d8, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0xf7), -1, 7, s_visual_482c18, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0xfb), 0, 1, s_visual_482948, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0xff), 0, 10, s_visual_4829d8, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0xf7), -1, 7, s_visual_482c18, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_483498[7] = {
-    { NULL, 0, 0, s_visual_4831b0, 0, 0, &s_choice_483480, 1 },
-    { (s32 *)(g_settings + 0x48), 0, 1, s_visual_4831e0, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x123), 0, 3, s_visual_483270, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x12b), 0, 1, s_visual_483360, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_4833f0, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_483420, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_483450, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_4831b0, 0, 0, 0, &s_choice_483480, 1 },
+    { (s32 *)(g_settings + 0x48), 0, 1, s_visual_4831e0, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x123), 0, 3, s_visual_483270, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x12b), 0, 1, s_visual_483360, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_4833f0, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_483420, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_483450, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_483848[7] = {
-    { NULL, 0, 0, s_visual_483560, 0, 0, &s_choice_483830, 1 },
-    { (s32 *)(g_settings + 0x68), 0, 1, s_visual_483590, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x127), 0, 3, s_visual_483620, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x12f), 0, 1, s_visual_483710, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_4837a0, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_4837d0, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_483800, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_483560, 0, 0, 0, &s_choice_483830, 1 },
+    { (s32 *)(g_settings + 0x68), 0, 1, s_visual_483590, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x127), 0, 3, s_visual_483620, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x12f), 0, 1, s_visual_483710, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_4837a0, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_4837d0, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_483800, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_483910[1] = {
-    { NULL, 0, 0, NULL, 0, 0, NULL, 1 },
+    { NULL, 0, 0, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_483bd0[7] = {
-    { NULL, 0, 0, s_visual_483930, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_483990, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_4839f0, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_483a50, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_483ab0, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_483b10, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_483b70, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_483930, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_483990, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_4839f0, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_483a50, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_483ab0, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_483b10, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_483b70, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_483c98[1] = {
-    { (s32 *)(g_settings + 0x40), 0, 10, NULL, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x40), 0, 10, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_483cb8[1] = {
-    { (s32 *)(g_settings + 0x44), 0, 10, NULL, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x44), 0, 10, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_483e28[4] = {
-    { NULL, 0, 0, s_visual_483cd8, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_483d38, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_483d68, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_483dc8, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_483cd8, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_483d38, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_483d68, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_483dc8, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_483e98[2] = {
-    { NULL, 0, 0, NULL, 0, 0, NULL, 1 },
-    { NULL, 0, 0, NULL, 0, 0, NULL, 1 },
+    { NULL, 0, 0, NULL, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_483f60[2] = {
-    { NULL, 0, 0, s_visual_483ed0, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_483f00, 3, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_483ed0, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_483f00, 3, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_4841a8[2] = {
-    { (s32 *)(g_settings + 0x57f), 0, 6, s_visual_483f98, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x583), 0, 1, s_visual_484118, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x57f), 0, 6, s_visual_483f98, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x583), 0, 1, s_visual_484118, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_484330[7] = {
-    { NULL, 0, 0, s_visual_4841e0, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_484210, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_484240, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_484270, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_4842a0, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_4842d0, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_484300, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_4841e0, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_484210, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_484240, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_484270, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_4842a0, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_4842d0, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_484300, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_484518[5] = {
-    { NULL, 0, 0, s_visual_4843f8, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_484428, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_484488, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_4844b8, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_4844e8, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_4843f8, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_484428, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_484488, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_4844b8, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_4844e8, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_484a48[2] = {
-    { NULL, 0, 0, s_visual_4849e8, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_484a18, 65535, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_4849e8, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_484a18, -1, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_484a80[2] = {
-    { NULL, 0, 0, s_visual_4849e8, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_484a18, 65535, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_4849e8, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_484a18, -1, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_484ab8[2] = {
-    { NULL, 0, 0, s_visual_4849e8, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_484a18, 65535, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_4849e8, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_484a18, -1, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_484af0[1] = {
-    { NULL, 0, 0, NULL, 0, 0, NULL, 1 },
+    { NULL, 0, 0, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_484b10[1] = {
-    { NULL, 0, 0, NULL, 0, 0, NULL, 1 },
+    { NULL, 0, 0, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_484b30[1] = {
-    { NULL, 0, 0, NULL, 0, 0, NULL, 1 },
+    { NULL, 0, 0, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_484b50[1] = {
-    { NULL, 0, 0, NULL, 0, 0, NULL, 1 },
+    { NULL, 0, 0, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_484db0[8] = {
-    { NULL, 0, 0, s_visual_484b70, 0, 0, &s_choice_484cf0, 1 },
-    { NULL, 0, 0, s_visual_484ba0, 0, 0, &s_choice_484d08, 1 },
-    { NULL, 0, 0, s_visual_484bd0, 0, 0, &s_choice_484d20, 1 },
-    { NULL, 0, 0, s_visual_484c00, 0, 0, &s_choice_484d38, 1 },
-    { NULL, 0, 0, s_visual_484c30, 0, 0, &s_choice_484d50, 1 },
-    { NULL, 0, 0, s_visual_484c60, 0, 0, &s_choice_484d68, 1 },
-    { NULL, 0, 0, s_visual_484c90, 0, 0, &s_choice_484d80, 1 },
-    { NULL, 0, 0, s_visual_484cc0, 0, 0, &s_choice_484d98, 1 },
+    { NULL, 0, 0, s_visual_484b70, 0, 0, 0, &s_choice_484cf0, 1 },
+    { NULL, 0, 0, s_visual_484ba0, 0, 0, 0, &s_choice_484d08, 1 },
+    { NULL, 0, 0, s_visual_484bd0, 0, 0, 0, &s_choice_484d20, 1 },
+    { NULL, 0, 0, s_visual_484c00, 0, 0, 0, &s_choice_484d38, 1 },
+    { NULL, 0, 0, s_visual_484c30, 0, 0, 0, &s_choice_484d50, 1 },
+    { NULL, 0, 0, s_visual_484c60, 0, 0, 0, &s_choice_484d68, 1 },
+    { NULL, 0, 0, s_visual_484c90, 0, 0, 0, &s_choice_484d80, 1 },
+    { NULL, 0, 0, s_visual_484cc0, 0, 0, 0, &s_choice_484d98, 1 },
 };
 
 static struct menu_item s_items_4850d0[8] = {
-    { NULL, 0, 0, s_visual_484e90, 0, 0, &s_choice_485010, 1 },
-    { NULL, 0, 0, s_visual_484ec0, 0, 0, &s_choice_485028, 1 },
-    { NULL, 0, 0, s_visual_484ef0, 0, 0, &s_choice_485040, 1 },
-    { NULL, 0, 0, s_visual_484f20, 0, 0, &s_choice_485058, 1 },
-    { NULL, 0, 0, s_visual_484f50, 0, 0, &s_choice_485070, 1 },
-    { NULL, 0, 0, s_visual_484f80, 0, 0, &s_choice_485088, 1 },
-    { NULL, 0, 0, s_visual_484fb0, 0, 0, &s_choice_4850a0, 1 },
-    { NULL, 0, 0, s_visual_484fe0, 0, 0, &s_choice_4850b8, 1 },
+    { NULL, 0, 0, s_visual_484e90, 0, 0, 0, &s_choice_485010, 1 },
+    { NULL, 0, 0, s_visual_484ec0, 0, 0, 0, &s_choice_485028, 1 },
+    { NULL, 0, 0, s_visual_484ef0, 0, 0, 0, &s_choice_485040, 1 },
+    { NULL, 0, 0, s_visual_484f20, 0, 0, 0, &s_choice_485058, 1 },
+    { NULL, 0, 0, s_visual_484f50, 0, 0, 0, &s_choice_485070, 1 },
+    { NULL, 0, 0, s_visual_484f80, 0, 0, 0, &s_choice_485088, 1 },
+    { NULL, 0, 0, s_visual_484fb0, 0, 0, 0, &s_choice_4850a0, 1 },
+    { NULL, 0, 0, s_visual_484fe0, 0, 0, 0, &s_choice_4850b8, 1 },
 };
 
 static struct menu_item s_items_4853c0[3] = {
-    { (s32 *)(g_settings + 0xc), 0, 0, s_visual_4851b0, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x10), 0, 1, s_visual_4852a0, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x14), 0, 1, s_visual_485330, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0xc), 0, 0, s_visual_4851b0, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x10), 0, 1, s_visual_4852a0, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x14), 0, 1, s_visual_485330, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_485808[6] = {
-    { (s32 *)(g_settings + 0x10b), 0, 2, s_visual_485418, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x103), 0, 3, s_visual_4854d8, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x15b), 0, 1, s_visual_4855c8, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x10f), 0, 1, s_visual_485658, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x113), 0, 1, s_visual_4856e8, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x117), 0, 1, s_visual_485778, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x10b), 0, 2, s_visual_485418, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x103), 0, 3, s_visual_4854d8, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x15b), 0, 1, s_visual_4855c8, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x10f), 0, 1, s_visual_485658, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x113), 0, 1, s_visual_4856e8, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x117), 0, 1, s_visual_485778, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_4860c0[3] = {
-    { (s32 *)(g_settings + 0xfb), 0, 1, s_visual_4858b0, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0xff), 0, 10, s_visual_485940, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0xf7), -1, 7, s_visual_485b80, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0xfb), 0, 1, s_visual_4858b0, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0xff), 0, 10, s_visual_485940, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0xf7), -1, 7, s_visual_485b80, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_486400[7] = {
-    { NULL, 0, 0, s_visual_486118, 0, 0, &s_choice_4863e8, 1 },
-    { (s32 *)(g_settings + 0x48), 0, 1, s_visual_486148, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x123), 0, 3, s_visual_4861d8, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x12b), 0, 1, s_visual_4862c8, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_486358, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_486388, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_4863b8, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_486118, 0, 0, 0, &s_choice_4863e8, 1 },
+    { (s32 *)(g_settings + 0x48), 0, 1, s_visual_486148, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x123), 0, 3, s_visual_4861d8, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x12b), 0, 1, s_visual_4862c8, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_486358, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_486388, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_4863b8, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_4867b0[7] = {
-    { NULL, 0, 0, s_visual_4864c8, 0, 0, &s_choice_486798, 1 },
-    { (s32 *)(g_settings + 0x68), 0, 1, s_visual_4864f8, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x127), 0, 3, s_visual_486588, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x12f), 0, 1, s_visual_486678, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_486708, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_486738, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_486768, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_4864c8, 0, 0, 0, &s_choice_486798, 1 },
+    { (s32 *)(g_settings + 0x68), 0, 1, s_visual_4864f8, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x127), 0, 3, s_visual_486588, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x12f), 0, 1, s_visual_486678, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_486708, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_486738, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_486768, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_486878[1] = {
-    { NULL, 0, 0, NULL, 0, 0, NULL, 1 },
+    { NULL, 0, 0, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_486b38[7] = {
-    { NULL, 0, 0, s_visual_486898, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_4868f8, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_486958, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_4869b8, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_486a18, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_486a78, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_486ad8, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_486898, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_4868f8, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_486958, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_4869b8, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_486a18, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_486a78, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_486ad8, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_486c00[1] = {
-    { (s32 *)(g_settings + 0x40), 0, 10, NULL, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x40), 0, 10, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_486c20[1] = {
-    { (s32 *)(g_settings + 0x44), 0, 10, NULL, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x44), 0, 10, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_486d90[4] = {
-    { NULL, 0, 0, s_visual_486c40, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_486ca0, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_486cd0, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_486d30, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_486c40, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_486ca0, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_486cd0, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_486d30, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_486e00[2] = {
-    { NULL, 0, 0, NULL, 0, 0, NULL, 1 },
-    { NULL, 0, 0, NULL, 0, 0, NULL, 1 },
+    { NULL, 0, 0, NULL, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_486ec8[2] = {
-    { NULL, 0, 0, s_visual_486e38, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_486e68, 3, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_486e38, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_486e68, 3, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_487110[2] = {
-    { (s32 *)(g_settings + 0x57f), 0, 6, s_visual_486f00, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x583), 0, 1, s_visual_487080, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x57f), 0, 6, s_visual_486f00, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x583), 0, 1, s_visual_487080, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_487298[7] = {
-    { NULL, 0, 0, s_visual_487148, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_487178, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_4871a8, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_4871d8, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_487208, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_487238, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_487268, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_487148, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_487178, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_4871a8, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_4871d8, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_487208, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_487238, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_487268, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_487480[5] = {
-    { NULL, 0, 0, s_visual_487360, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_487390, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_4873f0, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_487420, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_487450, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_487360, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_487390, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_4873f0, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_487420, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_487450, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_4879b0[2] = {
-    { NULL, 0, 0, s_visual_487950, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_487980, 65535, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_487950, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_487980, -1, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_4879e8[2] = {
-    { NULL, 0, 0, s_visual_487950, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_487980, 65535, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_487950, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_487980, -1, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_487a20[2] = {
-    { NULL, 0, 0, s_visual_487950, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_487980, 65535, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_487950, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_487980, -1, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_487a58[1] = {
-    { NULL, 0, 0, NULL, 0, 0, NULL, 1 },
+    { NULL, 0, 0, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_487a78[1] = {
-    { NULL, 0, 0, NULL, 0, 0, NULL, 1 },
+    { NULL, 0, 0, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_487a98[1] = {
-    { NULL, 0, 0, NULL, 0, 0, NULL, 1 },
+    { NULL, 0, 0, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_487ab8[1] = {
-    { NULL, 0, 0, NULL, 0, 0, NULL, 1 },
+    { NULL, 0, 0, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_487d18[8] = {
-    { NULL, 0, 0, s_visual_487ad8, 0, 0, &s_choice_487c58, 1 },
-    { NULL, 0, 0, s_visual_487b08, 0, 0, &s_choice_487c70, 1 },
-    { NULL, 0, 0, s_visual_487b38, 0, 0, &s_choice_487c88, 1 },
-    { NULL, 0, 0, s_visual_487b68, 0, 0, &s_choice_487ca0, 1 },
-    { NULL, 0, 0, s_visual_487b98, 0, 0, &s_choice_487cb8, 1 },
-    { NULL, 0, 0, s_visual_487bc8, 0, 0, &s_choice_487cd0, 1 },
-    { NULL, 0, 0, s_visual_487bf8, 0, 0, &s_choice_487ce8, 1 },
-    { NULL, 0, 0, s_visual_487c28, 0, 0, &s_choice_487d00, 1 },
+    { NULL, 0, 0, s_visual_487ad8, 0, 0, 0, &s_choice_487c58, 1 },
+    { NULL, 0, 0, s_visual_487b08, 0, 0, 0, &s_choice_487c70, 1 },
+    { NULL, 0, 0, s_visual_487b38, 0, 0, 0, &s_choice_487c88, 1 },
+    { NULL, 0, 0, s_visual_487b68, 0, 0, 0, &s_choice_487ca0, 1 },
+    { NULL, 0, 0, s_visual_487b98, 0, 0, 0, &s_choice_487cb8, 1 },
+    { NULL, 0, 0, s_visual_487bc8, 0, 0, 0, &s_choice_487cd0, 1 },
+    { NULL, 0, 0, s_visual_487bf8, 0, 0, 0, &s_choice_487ce8, 1 },
+    { NULL, 0, 0, s_visual_487c28, 0, 0, 0, &s_choice_487d00, 1 },
 };
 
 static struct menu_item s_items_488038[8] = {
-    { NULL, 0, 0, s_visual_487df8, 0, 0, &s_choice_487f78, 1 },
-    { NULL, 0, 0, s_visual_487e28, 0, 0, &s_choice_487f90, 1 },
-    { NULL, 0, 0, s_visual_487e58, 0, 0, &s_choice_487fa8, 1 },
-    { NULL, 0, 0, s_visual_487e88, 0, 0, &s_choice_487fc0, 1 },
-    { NULL, 0, 0, s_visual_487eb8, 0, 0, &s_choice_487fd8, 1 },
-    { NULL, 0, 0, s_visual_487ee8, 0, 0, &s_choice_487ff0, 1 },
-    { NULL, 0, 0, s_visual_487f18, 0, 0, &s_choice_488008, 1 },
-    { NULL, 0, 0, s_visual_487f48, 0, 0, &s_choice_488020, 1 },
+    { NULL, 0, 0, s_visual_487df8, 0, 0, 0, &s_choice_487f78, 1 },
+    { NULL, 0, 0, s_visual_487e28, 0, 0, 0, &s_choice_487f90, 1 },
+    { NULL, 0, 0, s_visual_487e58, 0, 0, 0, &s_choice_487fa8, 1 },
+    { NULL, 0, 0, s_visual_487e88, 0, 0, 0, &s_choice_487fc0, 1 },
+    { NULL, 0, 0, s_visual_487eb8, 0, 0, 0, &s_choice_487fd8, 1 },
+    { NULL, 0, 0, s_visual_487ee8, 0, 0, 0, &s_choice_487ff0, 1 },
+    { NULL, 0, 0, s_visual_487f18, 0, 0, 0, &s_choice_488008, 1 },
+    { NULL, 0, 0, s_visual_487f48, 0, 0, 0, &s_choice_488020, 1 },
 };
 
 static struct menu_item s_items_488328[3] = {
-    { (s32 *)(g_settings + 0xc), 0, 0, s_visual_488118, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x10), 0, 1, s_visual_488208, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x14), 0, 1, s_visual_488298, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0xc), 0, 0, s_visual_488118, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x10), 0, 1, s_visual_488208, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x14), 0, 1, s_visual_488298, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_488770[6] = {
-    { (s32 *)(g_settings + 0x10b), 0, 2, s_visual_488380, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x103), 0, 3, s_visual_488440, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x15b), 0, 1, s_visual_488530, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x10f), 0, 1, s_visual_4885c0, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x113), 0, 1, s_visual_488650, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x117), 0, 1, s_visual_4886e0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x10b), 0, 2, s_visual_488380, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x103), 0, 3, s_visual_488440, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x15b), 0, 1, s_visual_488530, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x10f), 0, 1, s_visual_4885c0, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x113), 0, 1, s_visual_488650, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x117), 0, 1, s_visual_4886e0, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_489028[3] = {
-    { (s32 *)(g_settings + 0xfb), 0, 1, s_visual_488818, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0xff), 0, 10, s_visual_4888a8, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0xf7), -1, 7, s_visual_488ae8, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0xfb), 0, 1, s_visual_488818, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0xff), 0, 10, s_visual_4888a8, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0xf7), -1, 7, s_visual_488ae8, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_489368[7] = {
-    { NULL, 0, 0, s_visual_489080, 0, 0, &s_choice_489350, 1 },
-    { (s32 *)(g_settings + 0x48), 0, 1, s_visual_4890b0, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x123), 0, 3, s_visual_489140, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x12b), 0, 1, s_visual_489230, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_4892c0, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_4892f0, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_489320, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_489080, 0, 0, 0, &s_choice_489350, 1 },
+    { (s32 *)(g_settings + 0x48), 0, 1, s_visual_4890b0, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x123), 0, 3, s_visual_489140, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x12b), 0, 1, s_visual_489230, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_4892c0, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_4892f0, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_489320, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_489718[7] = {
-    { NULL, 0, 0, s_visual_489430, 0, 0, &s_choice_489700, 1 },
-    { (s32 *)(g_settings + 0x68), 0, 1, s_visual_489460, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x127), 0, 3, s_visual_4894f0, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x12f), 0, 1, s_visual_4895e0, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_489670, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_4896a0, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_4896d0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_489430, 0, 0, 0, &s_choice_489700, 1 },
+    { (s32 *)(g_settings + 0x68), 0, 1, s_visual_489460, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x127), 0, 3, s_visual_4894f0, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x12f), 0, 1, s_visual_4895e0, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_489670, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_4896a0, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_4896d0, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_4897e0[1] = {
-    { NULL, 0, 0, NULL, 0, 0, NULL, 1 },
+    { NULL, 0, 0, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_489aa0[7] = {
-    { NULL, 0, 0, s_visual_489800, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_489860, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_4898c0, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_489920, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_489980, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_4899e0, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_489a40, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_489800, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_489860, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_4898c0, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_489920, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_489980, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_4899e0, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_489a40, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_489b68[1] = {
-    { (s32 *)(g_settings + 0x40), 0, 10, NULL, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x40), 0, 10, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_489b88[1] = {
-    { (s32 *)(g_settings + 0x44), 0, 10, NULL, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x44), 0, 10, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_489cf8[4] = {
-    { NULL, 0, 0, s_visual_489ba8, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_489c08, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_489c38, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_489c98, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_489ba8, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_489c08, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_489c38, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_489c98, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_489d68[2] = {
-    { NULL, 0, 0, NULL, 0, 0, NULL, 1 },
-    { NULL, 0, 0, NULL, 0, 0, NULL, 1 },
+    { NULL, 0, 0, NULL, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_489e30[2] = {
-    { NULL, 0, 0, s_visual_489da0, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_489dd0, 3, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_489da0, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_489dd0, 3, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_48a078[2] = {
-    { (s32 *)(g_settings + 0x57f), 0, 6, s_visual_489e68, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x583), 0, 1, s_visual_489fe8, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x57f), 0, 6, s_visual_489e68, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x583), 0, 1, s_visual_489fe8, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_48a200[7] = {
-    { NULL, 0, 0, s_visual_48a0b0, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48a0e0, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48a110, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48a140, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48a170, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48a1a0, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48a1d0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48a0b0, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48a0e0, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48a110, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48a140, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48a170, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48a1a0, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48a1d0, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_48a3e8[5] = {
-    { NULL, 0, 0, s_visual_48a2c8, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48a2f8, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48a358, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48a388, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48a3b8, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48a2c8, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48a2f8, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48a358, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48a388, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48a3b8, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_48a918[2] = {
-    { NULL, 0, 0, s_visual_48a8b8, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48a8e8, 65535, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48a8b8, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48a8e8, -1, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_48a950[2] = {
-    { NULL, 0, 0, s_visual_48a8b8, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48a8e8, 65535, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48a8b8, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48a8e8, -1, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_48a988[2] = {
-    { NULL, 0, 0, s_visual_48a8b8, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48a8e8, 65535, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48a8b8, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48a8e8, -1, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_48a9c0[1] = {
-    { NULL, 0, 0, NULL, 0, 0, NULL, 1 },
+    { NULL, 0, 0, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_48a9e0[1] = {
-    { NULL, 0, 0, NULL, 0, 0, NULL, 1 },
+    { NULL, 0, 0, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_48aa00[1] = {
-    { NULL, 0, 0, NULL, 0, 0, NULL, 1 },
+    { NULL, 0, 0, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_48aa20[1] = {
-    { NULL, 0, 0, NULL, 0, 0, NULL, 1 },
+    { NULL, 0, 0, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_48ac80[8] = {
-    { NULL, 0, 0, s_visual_48aa40, 0, 0, &s_choice_48abc0, 1 },
-    { NULL, 0, 0, s_visual_48aa70, 0, 0, &s_choice_48abd8, 1 },
-    { NULL, 0, 0, s_visual_48aaa0, 0, 0, &s_choice_48abf0, 1 },
-    { NULL, 0, 0, s_visual_48aad0, 0, 0, &s_choice_48ac08, 1 },
-    { NULL, 0, 0, s_visual_48ab00, 0, 0, &s_choice_48ac20, 1 },
-    { NULL, 0, 0, s_visual_48ab30, 0, 0, &s_choice_48ac38, 1 },
-    { NULL, 0, 0, s_visual_48ab60, 0, 0, &s_choice_48ac50, 1 },
-    { NULL, 0, 0, s_visual_48ab90, 0, 0, &s_choice_48ac68, 1 },
+    { NULL, 0, 0, s_visual_48aa40, 0, 0, 0, &s_choice_48abc0, 1 },
+    { NULL, 0, 0, s_visual_48aa70, 0, 0, 0, &s_choice_48abd8, 1 },
+    { NULL, 0, 0, s_visual_48aaa0, 0, 0, 0, &s_choice_48abf0, 1 },
+    { NULL, 0, 0, s_visual_48aad0, 0, 0, 0, &s_choice_48ac08, 1 },
+    { NULL, 0, 0, s_visual_48ab00, 0, 0, 0, &s_choice_48ac20, 1 },
+    { NULL, 0, 0, s_visual_48ab30, 0, 0, 0, &s_choice_48ac38, 1 },
+    { NULL, 0, 0, s_visual_48ab60, 0, 0, 0, &s_choice_48ac50, 1 },
+    { NULL, 0, 0, s_visual_48ab90, 0, 0, 0, &s_choice_48ac68, 1 },
 };
 
 static struct menu_item s_items_48afa0[8] = {
-    { NULL, 0, 0, s_visual_48ad60, 0, 0, &s_choice_48aee0, 1 },
-    { NULL, 0, 0, s_visual_48ad90, 0, 0, &s_choice_48aef8, 1 },
-    { NULL, 0, 0, s_visual_48adc0, 0, 0, &s_choice_48af10, 1 },
-    { NULL, 0, 0, s_visual_48adf0, 0, 0, &s_choice_48af28, 1 },
-    { NULL, 0, 0, s_visual_48ae20, 0, 0, &s_choice_48af40, 1 },
-    { NULL, 0, 0, s_visual_48ae50, 0, 0, &s_choice_48af58, 1 },
-    { NULL, 0, 0, s_visual_48ae80, 0, 0, &s_choice_48af70, 1 },
-    { NULL, 0, 0, s_visual_48aeb0, 0, 0, &s_choice_48af88, 1 },
+    { NULL, 0, 0, s_visual_48ad60, 0, 0, 0, &s_choice_48aee0, 1 },
+    { NULL, 0, 0, s_visual_48ad90, 0, 0, 0, &s_choice_48aef8, 1 },
+    { NULL, 0, 0, s_visual_48adc0, 0, 0, 0, &s_choice_48af10, 1 },
+    { NULL, 0, 0, s_visual_48adf0, 0, 0, 0, &s_choice_48af28, 1 },
+    { NULL, 0, 0, s_visual_48ae20, 0, 0, 0, &s_choice_48af40, 1 },
+    { NULL, 0, 0, s_visual_48ae50, 0, 0, 0, &s_choice_48af58, 1 },
+    { NULL, 0, 0, s_visual_48ae80, 0, 0, 0, &s_choice_48af70, 1 },
+    { NULL, 0, 0, s_visual_48aeb0, 0, 0, 0, &s_choice_48af88, 1 },
 };
 
 static struct menu_item s_items_48b290[3] = {
-    { (s32 *)(g_settings + 0xc), 0, 0, s_visual_48b080, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x10), 0, 1, s_visual_48b170, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x14), 0, 1, s_visual_48b200, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0xc), 0, 0, s_visual_48b080, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x10), 0, 1, s_visual_48b170, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x14), 0, 1, s_visual_48b200, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_48b6d8[6] = {
-    { (s32 *)(g_settings + 0x10b), 0, 2, s_visual_48b2e8, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x103), 0, 3, s_visual_48b3a8, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x15b), 0, 1, s_visual_48b498, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x10f), 0, 1, s_visual_48b528, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x113), 0, 1, s_visual_48b5b8, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x117), 0, 1, s_visual_48b648, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x10b), 0, 2, s_visual_48b2e8, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x103), 0, 3, s_visual_48b3a8, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x15b), 0, 1, s_visual_48b498, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x10f), 0, 1, s_visual_48b528, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x113), 0, 1, s_visual_48b5b8, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x117), 0, 1, s_visual_48b648, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_48bf90[3] = {
-    { (s32 *)(g_settings + 0xfb), 0, 1, s_visual_48b780, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0xff), 0, 10, s_visual_48b810, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0xf7), -1, 7, s_visual_48ba50, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0xfb), 0, 1, s_visual_48b780, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0xff), 0, 10, s_visual_48b810, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0xf7), -1, 7, s_visual_48ba50, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_48c2d0[7] = {
-    { NULL, 0, 0, s_visual_48bfe8, 0, 0, &s_choice_48c2b8, 1 },
-    { (s32 *)(g_settings + 0x48), 0, 1, s_visual_48c018, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x123), 0, 3, s_visual_48c0a8, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x12b), 0, 1, s_visual_48c198, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48c228, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48c258, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48c288, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48bfe8, 0, 0, 0, &s_choice_48c2b8, 1 },
+    { (s32 *)(g_settings + 0x48), 0, 1, s_visual_48c018, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x123), 0, 3, s_visual_48c0a8, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x12b), 0, 1, s_visual_48c198, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48c228, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48c258, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48c288, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_48c680[7] = {
-    { NULL, 0, 0, s_visual_48c398, 0, 0, &s_choice_48c668, 1 },
-    { (s32 *)(g_settings + 0x68), 0, 1, s_visual_48c3c8, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x127), 0, 3, s_visual_48c458, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x12f), 0, 1, s_visual_48c548, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48c5d8, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48c608, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48c638, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48c398, 0, 0, 0, &s_choice_48c668, 1 },
+    { (s32 *)(g_settings + 0x68), 0, 1, s_visual_48c3c8, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x127), 0, 3, s_visual_48c458, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x12f), 0, 1, s_visual_48c548, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48c5d8, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48c608, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48c638, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_48c748[1] = {
-    { NULL, 0, 0, NULL, 0, 0, NULL, 1 },
+    { NULL, 0, 0, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_48ca08[7] = {
-    { NULL, 0, 0, s_visual_48c768, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48c7c8, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48c828, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48c888, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48c8e8, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48c948, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48c9a8, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48c768, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48c7c8, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48c828, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48c888, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48c8e8, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48c948, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48c9a8, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_48cad0[1] = {
-    { (s32 *)(g_settings + 0x40), 0, 10, NULL, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x40), 0, 10, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_48caf0[1] = {
-    { (s32 *)(g_settings + 0x44), 0, 10, NULL, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x44), 0, 10, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_48cc60[4] = {
-    { NULL, 0, 0, s_visual_48cb10, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48cb70, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48cba0, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48cc00, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48cb10, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48cb70, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48cba0, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48cc00, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_48ccd0[2] = {
-    { NULL, 0, 0, NULL, 0, 0, NULL, 1 },
-    { NULL, 0, 0, NULL, 0, 0, NULL, 1 },
+    { NULL, 0, 0, NULL, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_48cd98[2] = {
-    { NULL, 0, 0, s_visual_48cd08, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48cd38, 3, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48cd08, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48cd38, 3, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_48cfe0[2] = {
-    { (s32 *)(g_settings + 0x57f), 0, 6, s_visual_48cdd0, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x583), 0, 1, s_visual_48cf50, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x57f), 0, 6, s_visual_48cdd0, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x583), 0, 1, s_visual_48cf50, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_48d168[7] = {
-    { NULL, 0, 0, s_visual_48d018, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48d048, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48d078, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48d0a8, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48d0d8, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48d108, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48d138, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48d018, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48d048, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48d078, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48d0a8, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48d0d8, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48d108, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48d138, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_48d350[5] = {
-    { NULL, 0, 0, s_visual_48d230, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48d260, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48d2c0, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48d2f0, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48d320, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48d230, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48d260, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48d2c0, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48d2f0, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48d320, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_48d880[2] = {
-    { NULL, 0, 0, s_visual_48d820, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48d850, 65535, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48d820, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48d850, -1, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_48d8b8[2] = {
-    { NULL, 0, 0, s_visual_48d820, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48d850, 65535, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48d820, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48d850, -1, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_48d8f0[2] = {
-    { NULL, 0, 0, s_visual_48d820, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48d850, 65535, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48d820, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48d850, -1, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_48d928[1] = {
-    { NULL, 0, 0, NULL, 0, 0, NULL, 1 },
+    { NULL, 0, 0, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_48d948[1] = {
-    { NULL, 0, 0, NULL, 0, 0, NULL, 1 },
+    { NULL, 0, 0, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_48d968[1] = {
-    { NULL, 0, 0, NULL, 0, 0, NULL, 1 },
+    { NULL, 0, 0, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_48d988[1] = {
-    { NULL, 0, 0, NULL, 0, 0, NULL, 1 },
+    { NULL, 0, 0, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_48dbe8[8] = {
-    { NULL, 0, 0, s_visual_48d9a8, 0, 0, &s_choice_48db28, 1 },
-    { NULL, 0, 0, s_visual_48d9d8, 0, 0, &s_choice_48db40, 1 },
-    { NULL, 0, 0, s_visual_48da08, 0, 0, &s_choice_48db58, 1 },
-    { NULL, 0, 0, s_visual_48da38, 0, 0, &s_choice_48db70, 1 },
-    { NULL, 0, 0, s_visual_48da68, 0, 0, &s_choice_48db88, 1 },
-    { NULL, 0, 0, s_visual_48da98, 0, 0, &s_choice_48dba0, 1 },
-    { NULL, 0, 0, s_visual_48dac8, 0, 0, &s_choice_48dbb8, 1 },
-    { NULL, 0, 0, s_visual_48daf8, 0, 0, &s_choice_48dbd0, 1 },
+    { NULL, 0, 0, s_visual_48d9a8, 0, 0, 0, &s_choice_48db28, 1 },
+    { NULL, 0, 0, s_visual_48d9d8, 0, 0, 0, &s_choice_48db40, 1 },
+    { NULL, 0, 0, s_visual_48da08, 0, 0, 0, &s_choice_48db58, 1 },
+    { NULL, 0, 0, s_visual_48da38, 0, 0, 0, &s_choice_48db70, 1 },
+    { NULL, 0, 0, s_visual_48da68, 0, 0, 0, &s_choice_48db88, 1 },
+    { NULL, 0, 0, s_visual_48da98, 0, 0, 0, &s_choice_48dba0, 1 },
+    { NULL, 0, 0, s_visual_48dac8, 0, 0, 0, &s_choice_48dbb8, 1 },
+    { NULL, 0, 0, s_visual_48daf8, 0, 0, 0, &s_choice_48dbd0, 1 },
 };
 
 static struct menu_item s_items_48df08[8] = {
-    { NULL, 0, 0, s_visual_48dcc8, 0, 0, &s_choice_48de48, 1 },
-    { NULL, 0, 0, s_visual_48dcf8, 0, 0, &s_choice_48de60, 1 },
-    { NULL, 0, 0, s_visual_48dd28, 0, 0, &s_choice_48de78, 1 },
-    { NULL, 0, 0, s_visual_48dd58, 0, 0, &s_choice_48de90, 1 },
-    { NULL, 0, 0, s_visual_48dd88, 0, 0, &s_choice_48dea8, 1 },
-    { NULL, 0, 0, s_visual_48ddb8, 0, 0, &s_choice_48dec0, 1 },
-    { NULL, 0, 0, s_visual_48dde8, 0, 0, &s_choice_48ded8, 1 },
-    { NULL, 0, 0, s_visual_48de18, 0, 0, &s_choice_48def0, 1 },
+    { NULL, 0, 0, s_visual_48dcc8, 0, 0, 0, &s_choice_48de48, 1 },
+    { NULL, 0, 0, s_visual_48dcf8, 0, 0, 0, &s_choice_48de60, 1 },
+    { NULL, 0, 0, s_visual_48dd28, 0, 0, 0, &s_choice_48de78, 1 },
+    { NULL, 0, 0, s_visual_48dd58, 0, 0, 0, &s_choice_48de90, 1 },
+    { NULL, 0, 0, s_visual_48dd88, 0, 0, 0, &s_choice_48dea8, 1 },
+    { NULL, 0, 0, s_visual_48ddb8, 0, 0, 0, &s_choice_48dec0, 1 },
+    { NULL, 0, 0, s_visual_48dde8, 0, 0, 0, &s_choice_48ded8, 1 },
+    { NULL, 0, 0, s_visual_48de18, 0, 0, 0, &s_choice_48def0, 1 },
 };
 
 static struct menu_item s_items_48e1f8[3] = {
-    { (s32 *)(g_settings + 0xc), 0, 0, s_visual_48dfe8, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x10), 0, 1, s_visual_48e0d8, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x14), 0, 1, s_visual_48e168, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0xc), 0, 0, s_visual_48dfe8, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x10), 0, 1, s_visual_48e0d8, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x14), 0, 1, s_visual_48e168, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_48e640[6] = {
-    { (s32 *)(g_settings + 0x10b), 0, 2, s_visual_48e250, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x103), 0, 3, s_visual_48e310, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x15b), 0, 1, s_visual_48e400, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x10f), 0, 1, s_visual_48e490, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x113), 0, 1, s_visual_48e520, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x117), 0, 1, s_visual_48e5b0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x10b), 0, 2, s_visual_48e250, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x103), 0, 3, s_visual_48e310, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x15b), 0, 1, s_visual_48e400, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x10f), 0, 1, s_visual_48e490, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x113), 0, 1, s_visual_48e520, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x117), 0, 1, s_visual_48e5b0, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_48eef8[3] = {
-    { (s32 *)(g_settings + 0xfb), 0, 1, s_visual_48e6e8, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0xff), 0, 10, s_visual_48e778, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0xf7), -1, 7, s_visual_48e9b8, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0xfb), 0, 1, s_visual_48e6e8, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0xff), 0, 10, s_visual_48e778, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0xf7), -1, 7, s_visual_48e9b8, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_48f238[7] = {
-    { NULL, 0, 0, s_visual_48ef50, 0, 0, &s_choice_48f220, 1 },
-    { (s32 *)(g_settings + 0x48), 0, 1, s_visual_48ef80, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x123), 0, 3, s_visual_48f010, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x12b), 0, 1, s_visual_48f100, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48f190, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48f1c0, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48f1f0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48ef50, 0, 0, 0, &s_choice_48f220, 1 },
+    { (s32 *)(g_settings + 0x48), 0, 1, s_visual_48ef80, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x123), 0, 3, s_visual_48f010, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x12b), 0, 1, s_visual_48f100, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48f190, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48f1c0, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48f1f0, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_48f5e8[7] = {
-    { NULL, 0, 0, s_visual_48f300, 0, 0, &s_choice_48f5d0, 1 },
-    { (s32 *)(g_settings + 0x68), 0, 1, s_visual_48f330, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x127), 0, 3, s_visual_48f3c0, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x12f), 0, 1, s_visual_48f4b0, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48f540, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48f570, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48f5a0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48f300, 0, 0, 0, &s_choice_48f5d0, 1 },
+    { (s32 *)(g_settings + 0x68), 0, 1, s_visual_48f330, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x127), 0, 3, s_visual_48f3c0, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x12f), 0, 1, s_visual_48f4b0, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48f540, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48f570, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48f5a0, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_48f6b0[1] = {
-    { NULL, 0, 0, NULL, 0, 0, NULL, 1 },
+    { NULL, 0, 0, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_48f970[7] = {
-    { NULL, 0, 0, s_visual_48f6d0, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48f730, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48f790, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48f7f0, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48f850, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48f8b0, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48f910, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48f6d0, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48f730, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48f790, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48f7f0, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48f850, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48f8b0, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48f910, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_48fa38[1] = {
-    { (s32 *)(g_settings + 0x40), 0, 10, NULL, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x40), 0, 10, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_48fa58[1] = {
-    { (s32 *)(g_settings + 0x44), 0, 10, NULL, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x44), 0, 10, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_48fbc8[4] = {
-    { NULL, 0, 0, s_visual_48fa78, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48fad8, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48fb08, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48fb68, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48fa78, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48fad8, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48fb08, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48fb68, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_48fc38[2] = {
-    { NULL, 0, 0, NULL, 0, 0, NULL, 1 },
-    { NULL, 0, 0, NULL, 0, 0, NULL, 1 },
+    { NULL, 0, 0, NULL, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, NULL, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_48fd00[2] = {
-    { NULL, 0, 0, s_visual_48fc70, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48fca0, 3, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48fc70, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48fca0, 3, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_48ff48[2] = {
-    { (s32 *)(g_settings + 0x57f), 0, 6, s_visual_48fd38, 0, 0, NULL, 1 },
-    { (s32 *)(g_settings + 0x583), 0, 1, s_visual_48feb8, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x57f), 0, 6, s_visual_48fd38, 0, 0, 0, NULL, 1 },
+    { (s32 *)(g_settings + 0x583), 0, 1, s_visual_48feb8, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_4900d0[7] = {
-    { NULL, 0, 0, s_visual_48ff80, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48ffb0, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_48ffe0, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_490010, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_490040, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_490070, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_4900a0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48ff80, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48ffb0, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_48ffe0, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_490010, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_490040, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_490070, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_4900a0, 0, 0, 0, NULL, 1 },
 };
 
 static struct menu_item s_items_4902b8[5] = {
-    { NULL, 0, 0, s_visual_490198, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_4901c8, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_490228, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_490258, 0, 0, NULL, 1 },
-    { NULL, 0, 0, s_visual_490288, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_490198, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_4901c8, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_490228, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_490258, 0, 0, 0, NULL, 1 },
+    { NULL, 0, 0, s_visual_490288, 0, 0, 0, NULL, 1 },
 };
 
-const s32 g_menu_page_style[16] = {
-    0xfa00, 0x0, 0x0, 0xfa0000, 0x0, 0x0, 0x0, 0x6, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0
+const s8 g_menu_keymap[256] = {
+    0, -6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -6, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0, -3, 0, 3, 0, 0,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+};
+
+const s8 g_menu_keymap_default[256] = {
+    0, -6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, -2, 0, 0, -4, 0, 4, 0, 0,
+    2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+};
+
+const u8 g_menu_text_chars[0x54] = {
+    0xff, 0xff, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x30,
+    0x2d, 0x3d, 0xff, 0xff, 0x51, 0x57, 0x45, 0x52, 0x54, 0x59, 0x55, 0x49,
+    0x4f, 0x50, 0x7b, 0x7d, 0xff, 0xff, 0x41, 0x53, 0x44, 0x46, 0x47, 0x48,
+    0x4a, 0x4b, 0x4c, 0x3b, 0x27, 0xff, 0xff, 0x5c, 0x5a, 0x58, 0x43, 0x56,
+    0x42, 0x4e, 0x4d, 0x2c, 0x2e, 0x2f, 0xff, 0x2a, 0xff, 0x20, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x37,
+    0x38, 0x39, 0x2d, 0x34, 0x35, 0x36, 0x2b, 0x31, 0x32, 0x33, 0x30, 0x2e,
+};
+
+const u8 g_menu_bindable[256] = {
+    1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1,
+    1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 };
 
 static struct menu_page s_page_481628 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 2, s_items_47eb40, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 2, s_items_47eb40, 0
 };
 
 static struct menu_page s_page_481640 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 2, s_items_47eb78, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 2, s_items_47eb78, 0
 };
 
 static struct menu_page s_page_481658 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 2, s_items_47ebb0, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 2, s_items_47ebb0, 0
 };
 
 static struct menu_page s_page_481670 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 1, s_items_47ebe8, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 1, s_items_47ebe8, 0
 };
 
 static struct menu_page s_page_481688 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 1, s_items_47ec08, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 1, s_items_47ec08, 0
 };
 
 static struct menu_page s_page_4816a0 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 1, s_items_47ec28, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 1, s_items_47ec28, 0
 };
 
 static struct menu_page s_page_4816b8 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 1, s_items_47ec48, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 1, s_items_47ec48, 0
 };
 
 static struct menu_page s_page_4816d0 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 8, s_items_47eea8, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 8, s_items_47eea8, 0
 };
 
 static struct menu_page s_page_4816e8 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 8, s_items_47f1c8, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 8, s_items_47f1c8, 0
 };
 
 static struct menu_page s_page_481700 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 3, s_items_47f4b8, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 3, s_items_47f4b8, 0
 };
 
 static struct menu_page s_page_481718 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 6, s_items_47f900, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 6, s_items_47f900, 0
 };
 
 static struct menu_page s_page_481730 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 3, s_items_4801b8, 1
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 3, s_items_4801b8, 1
 };
 
 static struct menu_page s_page_481748 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 7, s_items_4804f8, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 7, s_items_4804f8, 0
 };
 
 static struct menu_page s_page_481760 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 7, s_items_4808a8, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 7, s_items_4808a8, 0
 };
 
 static struct menu_page s_page_481778 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 1, s_items_480970, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 1, s_items_480970, 0
 };
 
 static struct menu_page s_page_481790 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 7, s_items_480c30, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 7, s_items_480c30, 0
 };
 
 static struct menu_page s_page_4817a8 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 1, s_items_480d18, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 1, s_items_480d18, 0
 };
 
 static struct menu_page s_page_4817c0 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 1, s_items_480cf8, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 1, s_items_480cf8, 0
 };
 
 static struct menu_page s_page_4817d8 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 4, s_items_480e88, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 4, s_items_480e88, 0
 };
 
 static struct menu_page s_page_4817f0 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 2, s_items_480ef8, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 2, s_items_480ef8, 0
 };
 
 static struct menu_page s_page_481808 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 2, s_items_480fc0, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 2, s_items_480fc0, 0
 };
 
 static struct menu_page s_page_481820 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 2, s_items_481208, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 2, s_items_481208, 0
 };
 
 static struct menu_page s_page_481838 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 7, s_items_481390, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 7, s_items_481390, 0
 };
 
 static struct menu_page s_page_481850 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 5, s_items_481578, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 5, s_items_481578, 0
 };
 
 static struct menu_page s_page_481868 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 1, s_items_481608, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 1, s_items_481608, 0
 };
 
 static struct menu_page s_page_4845a8 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 2, s_items_481ae0, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 2, s_items_481ae0, 0
 };
 
 static struct menu_page s_page_4845c0 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 2, s_items_481b18, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 2, s_items_481b18, 0
 };
 
 static struct menu_page s_page_4845d8 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 2, s_items_481b50, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 2, s_items_481b50, 0
 };
 
 static struct menu_page s_page_4845f0 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 1, s_items_481b88, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 1, s_items_481b88, 0
 };
 
 static struct menu_page s_page_484608 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 1, s_items_481ba8, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 1, s_items_481ba8, 0
 };
 
 static struct menu_page s_page_484620 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 1, s_items_481bc8, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 1, s_items_481bc8, 0
 };
 
 static struct menu_page s_page_484638 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 1, s_items_481be8, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 1, s_items_481be8, 0
 };
 
 static struct menu_page s_page_484650 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 8, s_items_481e48, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 8, s_items_481e48, 0
 };
 
 static struct menu_page s_page_484668 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 8, s_items_482168, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 8, s_items_482168, 0
 };
 
 static struct menu_page s_page_484680 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 3, s_items_482458, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 3, s_items_482458, 0
 };
 
 static struct menu_page s_page_484698 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 6, s_items_4828a0, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 6, s_items_4828a0, 0
 };
 
 static struct menu_page s_page_4846b0 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 3, s_items_483158, 1
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 3, s_items_483158, 1
 };
 
 static struct menu_page s_page_4846c8 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 7, s_items_483498, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 7, s_items_483498, 0
 };
 
 static struct menu_page s_page_4846e0 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 7, s_items_483848, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 7, s_items_483848, 0
 };
 
 static struct menu_page s_page_4846f8 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 1, s_items_483910, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 1, s_items_483910, 0
 };
 
 static struct menu_page s_page_484710 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 7, s_items_483bd0, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 7, s_items_483bd0, 0
 };
 
 static struct menu_page s_page_484728 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 1, s_items_483cb8, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 1, s_items_483cb8, 0
 };
 
 static struct menu_page s_page_484740 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 1, s_items_483c98, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 1, s_items_483c98, 0
 };
 
 static struct menu_page s_page_484758 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 4, s_items_483e28, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 4, s_items_483e28, 0
 };
 
 static struct menu_page s_page_484770 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 2, s_items_483e98, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 2, s_items_483e98, 0
 };
 
 static struct menu_page s_page_484788 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 2, s_items_483f60, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 2, s_items_483f60, 0
 };
 
 static struct menu_page s_page_4847a0 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 2, s_items_4841a8, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 2, s_items_4841a8, 0
 };
 
 static struct menu_page s_page_4847b8 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 7, s_items_484330, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 7, s_items_484330, 0
 };
 
 static struct menu_page s_page_4847d0 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 5, s_items_484518, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 5, s_items_484518, 0
 };
 
 static struct menu_page s_page_487510 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 2, s_items_484a48, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 2, s_items_484a48, 0
 };
 
 static struct menu_page s_page_487528 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 2, s_items_484a80, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 2, s_items_484a80, 0
 };
 
 static struct menu_page s_page_487540 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 2, s_items_484ab8, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 2, s_items_484ab8, 0
 };
 
 static struct menu_page s_page_487558 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 1, s_items_484af0, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 1, s_items_484af0, 0
 };
 
 static struct menu_page s_page_487570 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 1, s_items_484b10, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 1, s_items_484b10, 0
 };
 
 static struct menu_page s_page_487588 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 1, s_items_484b30, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 1, s_items_484b30, 0
 };
 
 static struct menu_page s_page_4875a0 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 1, s_items_484b50, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 1, s_items_484b50, 0
 };
 
 static struct menu_page s_page_4875b8 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 8, s_items_484db0, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 8, s_items_484db0, 0
 };
 
 static struct menu_page s_page_4875d0 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 8, s_items_4850d0, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 8, s_items_4850d0, 0
 };
 
 static struct menu_page s_page_4875e8 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 3, s_items_4853c0, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 3, s_items_4853c0, 0
 };
 
 static struct menu_page s_page_487600 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 6, s_items_485808, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 6, s_items_485808, 0
 };
 
 static struct menu_page s_page_487618 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 3, s_items_4860c0, 1
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 3, s_items_4860c0, 1
 };
 
 static struct menu_page s_page_487630 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 7, s_items_486400, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 7, s_items_486400, 0
 };
 
 static struct menu_page s_page_487648 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 7, s_items_4867b0, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 7, s_items_4867b0, 0
 };
 
 static struct menu_page s_page_487660 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 1, s_items_486878, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 1, s_items_486878, 0
 };
 
 static struct menu_page s_page_487678 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 7, s_items_486b38, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 7, s_items_486b38, 0
 };
 
 static struct menu_page s_page_487690 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 1, s_items_486c20, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 1, s_items_486c20, 0
 };
 
 static struct menu_page s_page_4876a8 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 1, s_items_486c00, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 1, s_items_486c00, 0
 };
 
 static struct menu_page s_page_4876c0 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 4, s_items_486d90, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 4, s_items_486d90, 0
 };
 
 static struct menu_page s_page_4876d8 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 2, s_items_486e00, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 2, s_items_486e00, 0
 };
 
 static struct menu_page s_page_4876f0 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 2, s_items_486ec8, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 2, s_items_486ec8, 0
 };
 
 static struct menu_page s_page_487708 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 2, s_items_487110, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 2, s_items_487110, 0
 };
 
 static struct menu_page s_page_487720 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 7, s_items_487298, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 7, s_items_487298, 0
 };
 
 static struct menu_page s_page_487738 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 5, s_items_487480, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 5, s_items_487480, 0
 };
 
 static struct menu_page s_page_48a478 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 2, s_items_4879b0, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 2, s_items_4879b0, 0
 };
 
 static struct menu_page s_page_48a490 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 2, s_items_4879e8, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 2, s_items_4879e8, 0
 };
 
 static struct menu_page s_page_48a4a8 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 2, s_items_487a20, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 2, s_items_487a20, 0
 };
 
 static struct menu_page s_page_48a4c0 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 1, s_items_487a58, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 1, s_items_487a58, 0
 };
 
 static struct menu_page s_page_48a4d8 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 1, s_items_487a78, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 1, s_items_487a78, 0
 };
 
 static struct menu_page s_page_48a4f0 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 1, s_items_487a98, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 1, s_items_487a98, 0
 };
 
 static struct menu_page s_page_48a508 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 1, s_items_487ab8, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 1, s_items_487ab8, 0
 };
 
 static struct menu_page s_page_48a520 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 8, s_items_487d18, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 8, s_items_487d18, 0
 };
 
 static struct menu_page s_page_48a538 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 8, s_items_488038, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 8, s_items_488038, 0
 };
 
 static struct menu_page s_page_48a550 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 3, s_items_488328, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 3, s_items_488328, 0
 };
 
 static struct menu_page s_page_48a568 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 6, s_items_488770, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 6, s_items_488770, 0
 };
 
 static struct menu_page s_page_48a580 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 3, s_items_489028, 1
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 3, s_items_489028, 1
 };
 
 static struct menu_page s_page_48a598 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 7, s_items_489368, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 7, s_items_489368, 0
 };
 
 static struct menu_page s_page_48a5b0 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 7, s_items_489718, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 7, s_items_489718, 0
 };
 
 static struct menu_page s_page_48a5c8 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 1, s_items_4897e0, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 1, s_items_4897e0, 0
 };
 
 static struct menu_page s_page_48a5e0 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 7, s_items_489aa0, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 7, s_items_489aa0, 0
 };
 
 static struct menu_page s_page_48a5f8 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 1, s_items_489b88, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 1, s_items_489b88, 0
 };
 
 static struct menu_page s_page_48a610 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 1, s_items_489b68, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 1, s_items_489b68, 0
 };
 
 static struct menu_page s_page_48a628 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 4, s_items_489cf8, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 4, s_items_489cf8, 0
 };
 
 static struct menu_page s_page_48a640 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 2, s_items_489d68, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 2, s_items_489d68, 0
 };
 
 static struct menu_page s_page_48a658 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 2, s_items_489e30, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 2, s_items_489e30, 0
 };
 
 static struct menu_page s_page_48a670 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 2, s_items_48a078, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 2, s_items_48a078, 0
 };
 
 static struct menu_page s_page_48a688 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 7, s_items_48a200, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 7, s_items_48a200, 0
 };
 
 static struct menu_page s_page_48a6a0 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 5, s_items_48a3e8, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 5, s_items_48a3e8, 0
 };
 
 static struct menu_page s_page_48d3e0 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 2, s_items_48a918, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 2, s_items_48a918, 0
 };
 
 static struct menu_page s_page_48d3f8 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 2, s_items_48a950, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 2, s_items_48a950, 0
 };
 
 static struct menu_page s_page_48d410 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 2, s_items_48a988, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 2, s_items_48a988, 0
 };
 
 static struct menu_page s_page_48d428 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 1, s_items_48a9c0, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 1, s_items_48a9c0, 0
 };
 
 static struct menu_page s_page_48d440 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 1, s_items_48a9e0, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 1, s_items_48a9e0, 0
 };
 
 static struct menu_page s_page_48d458 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 1, s_items_48aa00, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 1, s_items_48aa00, 0
 };
 
 static struct menu_page s_page_48d470 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 1, s_items_48aa20, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 1, s_items_48aa20, 0
 };
 
 static struct menu_page s_page_48d488 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 8, s_items_48ac80, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 8, s_items_48ac80, 0
 };
 
 static struct menu_page s_page_48d4a0 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 8, s_items_48afa0, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 8, s_items_48afa0, 0
 };
 
 static struct menu_page s_page_48d4b8 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 3, s_items_48b290, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 3, s_items_48b290, 0
 };
 
 static struct menu_page s_page_48d4d0 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 6, s_items_48b6d8, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 6, s_items_48b6d8, 0
 };
 
 static struct menu_page s_page_48d4e8 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 3, s_items_48bf90, 1
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 3, s_items_48bf90, 1
 };
 
 static struct menu_page s_page_48d500 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 7, s_items_48c2d0, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 7, s_items_48c2d0, 0
 };
 
 static struct menu_page s_page_48d518 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 7, s_items_48c680, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 7, s_items_48c680, 0
 };
 
 static struct menu_page s_page_48d530 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 1, s_items_48c748, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 1, s_items_48c748, 0
 };
 
 static struct menu_page s_page_48d548 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 7, s_items_48ca08, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 7, s_items_48ca08, 0
 };
 
 static struct menu_page s_page_48d560 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 1, s_items_48caf0, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 1, s_items_48caf0, 0
 };
 
 static struct menu_page s_page_48d578 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 1, s_items_48cad0, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 1, s_items_48cad0, 0
 };
 
 static struct menu_page s_page_48d590 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 4, s_items_48cc60, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 4, s_items_48cc60, 0
 };
 
 static struct menu_page s_page_48d5a8 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 2, s_items_48ccd0, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 2, s_items_48ccd0, 0
 };
 
 static struct menu_page s_page_48d5c0 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 2, s_items_48cd98, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 2, s_items_48cd98, 0
 };
 
 static struct menu_page s_page_48d5d8 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 2, s_items_48cfe0, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 2, s_items_48cfe0, 0
 };
 
 static struct menu_page s_page_48d5f0 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 7, s_items_48d168, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 7, s_items_48d168, 0
 };
 
 static struct menu_page s_page_48d608 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 5, s_items_48d350, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 5, s_items_48d350, 0
 };
 
 static struct menu_page s_page_490348 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 2, s_items_48d880, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 2, s_items_48d880, 0
 };
 
 static struct menu_page s_page_490360 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 2, s_items_48d8b8, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 2, s_items_48d8b8, 0
 };
 
 static struct menu_page s_page_490378 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 2, s_items_48d8f0, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 2, s_items_48d8f0, 0
 };
 
 static struct menu_page s_page_490390 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 1, s_items_48d928, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 1, s_items_48d928, 0
 };
 
 static struct menu_page s_page_4903a8 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 1, s_items_48d948, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 1, s_items_48d948, 0
 };
 
 static struct menu_page s_page_4903c0 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 1, s_items_48d968, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 1, s_items_48d968, 0
 };
 
 static struct menu_page s_page_4903d8 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 1, s_items_48d988, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 1, s_items_48d988, 0
 };
 
 static struct menu_page s_page_4903f0 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 8, s_items_48dbe8, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 8, s_items_48dbe8, 0
 };
 
 static struct menu_page s_page_490408 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 8, s_items_48df08, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 8, s_items_48df08, 0
 };
 
 static struct menu_page s_page_490420 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 3, s_items_48e1f8, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 3, s_items_48e1f8, 0
 };
 
 static struct menu_page s_page_490438 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 6, s_items_48e640, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 6, s_items_48e640, 0
 };
 
 static struct menu_page s_page_490450 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 3, s_items_48eef8, 1
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 3, s_items_48eef8, 1
 };
 
 static struct menu_page s_page_490468 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 7, s_items_48f238, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 7, s_items_48f238, 0
 };
 
 static struct menu_page s_page_490480 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 7, s_items_48f5e8, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 7, s_items_48f5e8, 0
 };
 
 static struct menu_page s_page_490498 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 1, s_items_48f6b0, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 1, s_items_48f6b0, 0
 };
 
 static struct menu_page s_page_4904b0 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 7, s_items_48f970, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 7, s_items_48f970, 0
 };
 
 static struct menu_page s_page_4904c8 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 1, s_items_48fa58, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 1, s_items_48fa58, 0
 };
 
 static struct menu_page s_page_4904e0 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 1, s_items_48fa38, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 1, s_items_48fa38, 0
 };
 
 static struct menu_page s_page_4904f8 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 4, s_items_48fbc8, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 4, s_items_48fbc8, 0
 };
 
 static struct menu_page s_page_490510 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 2, s_items_48fc38, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 2, s_items_48fc38, 0
 };
 
 static struct menu_page s_page_490528 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 2, s_items_48fd00, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 2, s_items_48fd00, 0
 };
 
 static struct menu_page s_page_490540 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 2, s_items_48ff48, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 2, s_items_48ff48, 0
 };
 
 static struct menu_page s_page_490558 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 7, s_items_4900d0, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 7, s_items_4900d0, 0
 };
 
 static struct menu_page s_page_490570 = {
-    menu_page_handler_a, menu_page_handler_b, g_menu_page_style, 5, s_items_4902b8, 0
+    menu_page_handler_a, menu_page_handler_b, g_menu_keymap, 5, s_items_4902b8, 0
 };
 
 struct menu_page *const g_menu_pages[MENU_LANGUAGES][MENU_PAGE_SLOTS] = {

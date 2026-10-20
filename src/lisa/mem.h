@@ -34,6 +34,9 @@ void *mem_calloc(int pool, u32 size);
 /* Frees one block of a pool. Returns 0 when the pool does not hold it. */
 int mem_free(int pool, void *block);
 
+/* Whether pool `pool` exists. */
+int mem_pool_exists(int pool);
+
 /* Frees every block of a pool and the pool. Returns 1. */
 int mem_pool_destroy(int pool);
 

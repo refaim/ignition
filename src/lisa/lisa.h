@@ -8,5 +8,6 @@
 
 int lisa_init(void);
 int lisa_shutdown(void);
+void render_init(void);
 
 #endif /* IGN_LISA_H */

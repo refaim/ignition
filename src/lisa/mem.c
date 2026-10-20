@@ -188,6 +188,11 @@ int mem_free(int pool, void *block)
     return 0;
 }
 
+int mem_pool_exists(int pool)
+{
+    return pool >= 0 && pool < MEM_MAX_POOLS && s_pools[pool] != NULL;
+}
+
 /* 0x45b080 */
 int mem_pool_destroy(int pool)
 {

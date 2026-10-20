@@ -1,14 +1,15 @@
 /*
  * main.c - entry point. WinMain 0x4120a0.
  *
- *   ignition [--data DIR] [--view FILE.PIC] [--text TEXT]
+ *   ignition [--data DIR] [--view FILE.PIC] [--text TEXT] [--press MS:KEY]...
  *
  * --data is the folder with the game files, the disc root as extracted
  * by `make extract`. --view shows one picture through the renderer, with
  * its own palette. --text runs the game's start up, then draws TEXT the
  * way the front end draws "LOADING" (0x402b24): small.lft, centred on
  * x 160 at y 94 of the cleared 320 x 200 buffer, with menu.col. Both
- * exit on Escape.
+ * exit on Escape. --press presses a key (DirectInput scan code, hex) MS
+ * milliseconds after start up, for scripted runs.
  */
 
 #include <stdio.h>
@@ -111,6 +112,12 @@ int main(int argc, char **argv)
             data = argv[++i];
         } else if (strcmp(argv[i], "--view") == 0 && i + 1 < argc) {
             view_name = argv[++i];
+        } else if (strcmp(argv[i], "--press") == 0 && i + 1 < argc) {
+            unsigned ms, key;
+
+            if (sscanf(argv[++i], "%u:%x", &ms, &key) == 2) {
+                plat_schedule_key(ms, (int)key);
+            }
         } else if (strcmp(argv[i], "--text") == 0 && i + 1 < argc) {
             text_arg = argv[++i];
         } else {

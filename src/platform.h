@@ -43,6 +43,10 @@ int plat_next_key_event(int *key, int *down);
  * that polls input sees the keyboard, as DirectInput did. */
 void plat_pump_events(void);
 
+/* Queues a press and release of `key` `ms` after start up, as if typed;
+ * for scripted test runs. */
+void plat_schedule_key(u32 ms, int key);
+
 /* Runs the message loop until the game quits: while the app is active,
  * app_tick runs whenever no message is waiting; while inactive the loop
  * waits for messages. Returns the exit code. */

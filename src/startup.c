@@ -37,7 +37,7 @@ s32 g_screen_size;              /* 0x552fc0, the SCREEN SIZE option */
 u8 *g_menu_background;          /* 0x4bcd50 */
 u8 g_menu_remap[256];           /* 0x4bcc48 */
 u8 *g_cone_table;               /* 0x553080 */
-s32 g_startup_cleared[10];      /* 0x54f920 */
+s32 g_cheats[10];               /* 0x54f920, one flag a cheat code */
 
 static u8 s_identity_table[0x10000];   /* in 0x619330, 64 KB aligned */
 static u8 s_black_palette[0x300];       /* 0x553470 */
@@ -234,7 +234,7 @@ int game_video_init(void)
     menu_load_background();
     cone_table_init();
     game_set_menu_mode();
-    memset(g_startup_cleared, 0, sizeof(g_startup_cleared));
+    memset(g_cheats, 0, sizeof(g_cheats));
     joystick_init();
     cd_open();
     cd_set_volume(0xff);

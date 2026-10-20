@@ -199,6 +199,8 @@ int menu_apply_settings(void)
     return 1;
 }
 
+s32 g_net_players;          /* 0x50f7a8 */
+
 int net_send_settings(void *state, void *settings)
 {
     (void)state;
@@ -257,13 +259,6 @@ int raster_set_screen(int w, int h, int flags)
 }
 
 
-int menu_page_handler_b(int key, int action)
-{
-    (void)key;
-    (void)action;
-    STUB(0x409610, "menu_page_handler_b");
-    return 0;
-}
 
 #define STUB_CB(addr, name) \
     int name(int arg0, int arg1) { (void)arg0; (void)arg1; STUB(addr, #name); return 0; }

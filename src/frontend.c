@@ -98,6 +98,30 @@ double menu_dt(void)
     return s_dt;
 }
 
+/* The animation the intro plays (0x4be5b8; 0x4be5c8 its palette,
+ * +0x14 its kind). */
+static struct {
+    void *file;
+    u8 *screen;         /* +0x04 */
+    s32 f04[2];
+    u8 *palette;
+    s16 f14;
+    s16 f16;
+} s_intro_anim;
+
+int frontend_load_language(void)
+{
+    return s_load_language;
+}
+
+/* Starts the intro's first animation into `screen` (0x409b4f). */
+void frontend_intro_start(void *file, u8 *screen)
+{
+    s_intro_anim.file = file;
+    s_intro_anim.screen = screen;
+    cdp_open(&s_intro_anim);
+}
+
 /* 0x403df0
  * Ticks of 1 / 0.036 ms since the last call: 0.01 when no time passed,
  * at most 10.8. */
@@ -456,15 +480,6 @@ int menu_init(void)
     return menu_load_assets();
 }
 
-/* The animation the intro plays (0x4be5b8; 0x4be5c8 its palette,
- * +0x14 its kind). */
-static struct {
-    void *file;
-    s32 f04[3];
-    u8 *palette;
-    s16 f14;
-    s16 f16;
-} s_intro_anim;
 
 static s32 s_step;                  /* 0x4be878 */
 static double s_step_part;          /* 0x4be578 */

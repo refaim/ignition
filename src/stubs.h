@@ -51,7 +51,6 @@ int cd_read_tracks(void);           /* 0x457da0 */
  * menu_cb_4045b0 0x4045b0, menu_cb_4045e0 0x4045e0,
  * menu_cb_404610 0x404610, menu_cb_404740 0x404740,
  * menu_cb_404790 0x404790 */
-int menu_page_handler_b(int key, int action);   /* 0x409610 */
 int menu_cb_4045b0(int arg0, int arg1);         /* 0x4045b0 */
 int menu_cb_4045e0(int arg0, int arg1);         /* 0x4045e0 */
 int menu_cb_404610(int arg0, int arg1);         /* 0x404610 */
@@ -88,6 +87,7 @@ int car3d_draw(s32 car, int spin, double scale, int x, int y);   /* 0x40c5a0 */
 int menucar_load(void);             /* 0x40ca60 */
 int menu_apply_settings(void);      /* 0x404800 */
 int net_send_settings(void *state, void *settings);    /* 0x40d200 */
+extern s32 g_net_players;           /* 0x50f7a8 */
 
 /* 3D scene; the renderer's buffers are replaced by OpenGL */
 void *scene_create(void);           /* 0x4468d0: returns the camera */

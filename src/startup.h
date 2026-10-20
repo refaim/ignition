@@ -28,6 +28,7 @@ extern s32 g_screen_size;
 extern u8 *g_menu_background;
 extern u8 g_menu_remap[256];
 extern u8 *g_cone_table;
+extern s32 g_cheats[10];
 
 int game_video_init(void);
 

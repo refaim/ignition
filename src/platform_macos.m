@@ -133,6 +133,38 @@ static void key_event(int dik, int down)
     g_plat_keys[dik] = down ? 0x80 : 0;
 }
 
+enum { SCHEDULED = 32 };
+
+static struct { u32 ms; int key; int state; } s_scheduled[SCHEDULED];
+static int s_scheduled_count;
+
+void plat_schedule_key(u32 ms, int key)
+{
+    if (s_scheduled_count < SCHEDULED) {
+        s_scheduled[s_scheduled_count].ms = ms;
+        s_scheduled[s_scheduled_count].key = key;
+        s_scheduled[s_scheduled_count].state = 0;
+        s_scheduled_count++;
+    }
+}
+
+/* A scheduled key goes down when its time comes and up 60 ms later. */
+static void run_scheduled(void)
+{
+    u32 now = plat_time_ms();
+    int i;
+
+    for (i = 0; i < s_scheduled_count; i++) {
+        if (s_scheduled[i].state == 0 && now >= s_scheduled[i].ms) {
+            key_event(s_scheduled[i].key, 1);
+            s_scheduled[i].state = 1;
+        } else if (s_scheduled[i].state == 1 && now >= s_scheduled[i].ms + 60) {
+            key_event(s_scheduled[i].key, 0);
+            s_scheduled[i].state = 2;
+        }
+    }
+}
+
 int plat_next_key_event(int *key, int *down)
 {
     if (s_key_tail == s_key_head) {
@@ -283,6 +315,7 @@ void plat_request_quit(void)
 
 void plat_pump_events(void)
 {
+    run_scheduled();
     @autoreleasepool {
         NSEvent *ev;
 

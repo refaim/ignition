@@ -8,13 +8,16 @@
  * the language.
  */
 
+#include <ctype.h>
 #include <math.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "app.h"
 #include "frontend.h"
 #include "frontend_state.h"
 #include "input.h"
+#include "lisa/file.h"
 #include "lisa/font.h"
 #include "lisa/gfx.h"
 #include "lisa/sprite.h"
@@ -26,6 +29,7 @@
 #include "settings.h"
 #include "startup.h"
 #include "stubs.h"
+#include "video.h"
 
 enum {
     PAGE_CAR_P1 = 4,
@@ -419,6 +423,278 @@ int menu_page_handler_a(void)
         draw_sprite_at(g_position_icons[1], mode[0] - r[2], 0);
         draw_sprite_at(g_position_icons[2], 0, mode[1] - r[3]);
         draw_sprite_at(g_position_icons[3], mode[0] - r[2], mode[1] - r[3]);
+    }
+    return 0;
+}
+
+/* The cheat codes, typed anywhere in the menus (0x47df88). */
+static const char *const s_cheat_codes[7] = {
+    "BANARNE", "SURMULE", "SLASKTRATT", "FILMJOLK", "SKUNK", "SVINPOLE", "STRINGS"
+};
+
+/* The intro's animations (0x47dc50). */
+static const char *const s_intro_files[6] = {
+    "baltazar\\data\\ign1.cdp", "baltazar\\data\\ign2.cdp",
+    "baltazar\\data\\ign3_0.cdp", "baltazar\\data\\ign3_1.cdp",
+    "baltazar\\data\\ign3_2.cdp", "baltazar\\data\\ign3_3.cdp"
+};
+
+/* 0x456120
+ * Whether the last typed characters hold `code`; a match clears them.
+ * The original upper cases the code in place first. */
+static int typed_code(const char *code)
+{
+    char upper[16];
+    size_t i;
+
+    for (i = 0; code[i] != '\0' && i < sizeof(upper) - 1; i++) {
+        upper[i] = (char)toupper((unsigned char)code[i]);
+    }
+    upper[i] = '\0';
+    if (strstr(g_typed, upper) == NULL) {
+        return 0;
+    }
+    memset(g_typed, 0xff, 64);
+    return 1;
+}
+
+/* 0x409ef0 */
+static void cheats_check(void)
+{
+    int i;
+
+    for (i = 0; i < 7; i++) {
+        if (typed_code(s_cheat_codes[i])) {
+            g_cheats[i] ^= 1;
+            sound_load(0, 0, 0xfde8, 0x55f0);
+        }
+    }
+    /* SURMULE: all difficulty levels. */
+    if (g_cheats[1]) {
+        page(PAGE_DIFFICULTY)->items[0].max = 3;
+        fe_4be58c = 1;
+        fe_4be728 = 1;
+    }
+    /* SLASKTRATT: all eleven cars. */
+    if (g_cheats[2]) {
+        for (i = 0; i < 11; i++) {
+            g_car_order[i] = i;
+        }
+        g_car_count = 11;
+        page(PAGE_CAR_P1)->items[0].max = 10;
+        page(PAGE_CAR_P2)->items[0].max = g_car_count - 1;
+        fe_4be58c = 1;
+    }
+}
+
+/* The cars a player may choose: all eleven less the ones not yet won,
+ * by the difficulty reached (0x4099c2). */
+static void build_car_order(void)
+{
+    static const s8 locked[4] = { 10, 9, 6, 1 };
+    int n = 4 - settings_get(0x587);
+    int car, count = 0;
+
+    if (settings_get(0x58b)) {
+        n--;
+    }
+    for (car = 0; car < 11; car++) {
+        int j = 0;
+
+        if (n > 0) {
+            while (j < n && locked[j] != car) {
+                j++;
+            }
+        }
+        if (j == n) {
+            g_car_order[count++] = car;
+        }
+    }
+    g_car_count = count;
+    page(PAGE_CAR_P1)->items[0].max = count - 1;
+    page(PAGE_CAR_P2)->items[0].max = count - 1;
+    if (page(PAGE_CAR_P1)->items[0].max < settings_get(0x40)) {
+        settings_set(0x40, page(PAGE_CAR_P1)->items[0].max);
+    }
+    if (page(PAGE_CAR_P2)->items[0].max < settings_get(0x44)) {
+        settings_set(0x44, page(PAGE_CAR_P2)->items[0].max);
+    }
+}
+
+/* Return on the language page: the language's tables, the cars, and
+ * the intro the first time (0x40998d). */
+static void choose_language(void)
+{
+    s32 lang = settings_get(SET_LANGUAGE);
+    int i;
+
+    g_menu_language = lang;
+    g_menu.pages = g_frontend_lists[lang];
+    memcpy(g_frontend_pages, g_frontend_page_rows[lang], sizeof(g_frontend_pages));
+    build_car_order();
+    if (frontend_load_language()) {
+        const char *loading;
+
+        fe_4be560 = 0.0;
+        fe_4be56c = 0;
+        fe_4be850 = 0.01;
+        memset(g_menu_screen, 0, 64000);
+        loading = ui_text(0x47e0a0 + 200 * g_menu_language);
+        text_draw(loading, g_fonts_menu[7], 160 - text_width(loading, g_fonts_menu[7]) / 2, 0x5e);
+        menu_present();
+        for (i = 0; i < 6; i++) {
+            long size = file_size(s_intro_files[i]);
+
+            fe_4be880[i] = malloc((size_t)size);
+            file_read_at(s_intro_files[i], fe_4be880[i], (u32)size, 0);
+        }
+        memset(g_menu_screen, 0, 64000);
+        menu_present();
+        frontend_intro_start(fe_4be880[0], g_menu_screen);
+    } else {
+        fe_4be5a8 = 0.01;
+        sound_music(0, 0, 3);
+        menucar_load();
+    }
+}
+
+/* A key bound twice: KEY ALREADY ASSIGNED for a while (0x409cfa). */
+static int key_taken(void)
+{
+    fe_4bf564 = 1;
+    menu_set_delay(0x44c);
+    sound_load(0, 2, 0xfde8, 0x55f0);
+    return MENU_KEY_TAKEN;
+}
+
+/* Whether `key` is bound on page `a`, item `i`, other than the item
+ * being set. */
+static int bound(int a, int i, int key)
+{
+    return page(a)->items[i].choice->data[0] == (u8)key;
+}
+
+/* 0x409610 */
+int menu_page_handler_b(int key, int action)
+{
+    struct menu_page *cur = g_menu_view.page;
+    int a = abs(action);
+    int i;
+
+    cheats_check();
+    if (fe_4be598 != 0.0) {
+        if (fe_4be598 >= 1080.0) {
+            fe_4be598 = 0.0;
+            fe_4be58c = 1;
+            return MENU_KEY_TAKEN;
+        }
+        fe_4be598 = 0.0;
+    }
+    /* A key skips the intro. */
+    if (0.0 < fe_4be850 && fe_4be850 < 1278.0) {
+        fe_4be850 = 1278.0;
+        video_set_palette(g_menu_white);
+        fe_4be584 = sound_play(fe_4be8b0);
+        if (fe_4be584 != NULL) {
+            ((s32 *)fe_4be584)[4] = 0;
+        }
+        fe_4be584 = sound_play(fe_4be8b4);
+        if (fe_4be584 != NULL) {
+            ((s32 *)fe_4be584)[4] = 0;
+        }
+        sound_stop_all();
+        return MENU_KEY_TAKEN;
+    }
+    if (cur == page(PAGE_NETWORK)) {
+        if (action == MENU_KEY_BACK && (fe_4be710 == 4 || fe_4be710 == 3)) {
+            return MENU_KEY_TAKEN;
+        }
+        if (!(action == MENU_KEY_ACTIVATE && fe_4be710 == 3 && g_net_players > 0)) {
+            return MENU_KEY_TAKEN;
+        }
+    }
+    if (a != 0 || g_menu_view.edit != 0) {
+        fe_4be58c = 1;
+    }
+    if (cur == page(PAGE_DIFFICULTY) && g_menu_view.selected == 0
+        && page(PAGE_DIFFICULTY)->items[0].max == 0 && a == 3) {
+        sound_load(0, 2, 0xfde8, 0x55f0);
+        return MENU_KEY_TAKEN;
+    }
+    if (cur != page(PAGE_LANGUAGE) && a >= 1 && a <= 6) {
+        sound_load(0, a == 6 ? 0 : 1, 0xc350, 0x55f0);
+    }
+    /* The two players cannot both take the one joystick. */
+    if (cur == page(11) && g_menu_view.selected == 2
+        && (settings_get(0x127) == 1 || settings_get(0x127) == 2)) {
+        if (settings_get(0x123) == 0 && action == 3) {
+            settings_set(0x123, 2);
+        } else if (settings_get(0x123) == 3 && action == -3) {
+            settings_set(0x123, 1);
+        }
+    }
+    if (cur == page(12) && g_menu_view.selected == 2
+        && (settings_get(0x123) == 1 || settings_get(0x123) == 2)) {
+        if (settings_get(0x127) == 0 && action == 3) {
+            settings_set(0x127, 2);
+        } else if (settings_get(0x127) == 3 && action == -3) {
+            settings_set(0x127, 1);
+        }
+    }
+    if (cur == page(PAGE_LANGUAGE)) {
+        if (action != 0) {
+            fe_4be6d8 = 1;
+        }
+        /* The second language is left out: steps go round it. */
+        if ((settings_get(SET_LANGUAGE) == 0 && action == 3)
+            || (settings_get(SET_LANGUAGE) == 2 && action == -3)) {
+            settings_set(SET_LANGUAGE, 1);
+        }
+        if (action == MENU_KEY_ACTIVATE && fe_4be850 == 0.0) {
+            choose_language();
+        }
+    }
+    if (cur == page(0) && action == MENU_KEY_BACK) {
+        return MENU_KEY_TAKEN;
+    }
+    if (cur == page(0) && action == MENU_KEY_ACTIVATE) {
+        page(3)->items[0].kind = 1;
+    }
+    if (cur == page(2) && action == MENU_KEY_ACTIVATE) {
+        page(3)->items[0].kind = (s16)(page(2)->selected ^ 1);
+        if (page(3)->items[0].kind == 0 && page(3)->selected == 0) {
+            page(3)->selected = 1;
+        }
+    }
+    if (cur == page(PAGE_TRACK) && (a == 1 || a == 2)) {
+        if (fe_4be724 == 0) {
+            fe_4be724 = 1;
+        } else if (fe_4be724 > 200) {
+            fe_4be728 = 1;
+        }
+    }
+    if (cur == page(13) && g_menu_view.edit == 3) {
+        for (i = 0; i < page(13)->count; i++) {
+            if ((cur->selected != i && bound(13, i, key)) || bound(14, i, key)) {
+                return key_taken();
+            }
+        }
+    }
+    if (cur == page(14) && g_menu_view.edit == 3) {
+        for (i = 0; i < page(14)->count; i++) {
+            if ((cur->selected != i && bound(14, i, key)) || bound(13, i, key)) {
+                return key_taken();
+            }
+        }
+    }
+    if ((cur == page(PAGE_CAR_P1) || cur == page(PAGE_CAR_P2)) && (a == 3 || a == 4)) {
+        fe_4be87c = 1;
+        menu_set_delay(400);
+        if (action < 0) {
+            fe_4be5fc = -1;
+            return 0;
+        }
+        fe_4be5fc = 1;
     }
     return 0;
 }

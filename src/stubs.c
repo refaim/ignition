@@ -22,31 +22,39 @@ void input_reset(void)
     STUB(0x455ab0, "input_reset");
 }
 
-int lisa_tasks_init(void)
+
+
+
+
+
+#define STUB_VOID(addr, name) void name(void) { STUB(addr, #name); }
+
+STUB_VOID(0x45f490, render_init_45f490)
+STUB_VOID(0x460740, render_init_460740)
+STUB_VOID(0x4614d0, render_init_4614d0)
+STUB_VOID(0x4607c0, render_init_4607c0)
+STUB_VOID(0x45f640, render_init_45f640)
+STUB_VOID(0x45fa50, render_init_45fa50)
+STUB_VOID(0x460b50, render_init_460b50)
+STUB_VOID(0x45d840, gfx_init_45d840)
+STUB_VOID(0x45c9f0, gfx_init_spans)
+
+int joystick_init(void)
 {
-    STUB(0x45b1f0, "lisa_tasks_init");
+    STUB(0x4596a0, "joystick_init");
     return 1;
 }
 
-int lisa_tasks_shutdown(void)
+int cd_open(void)
 {
-    STUB(0x45b240, "lisa_tasks_shutdown");
+    STUB(0x458040, "cd_open");
     return 1;
 }
 
-void lisa_lib_shutdown(void)
+int cd_set_volume(int volume)
 {
-    STUB(0x45b140, "lisa_lib_shutdown");
-}
-
-void render_init(void)
-{
-    STUB(0x45e610, "render_init");
-}
-
-int game_video_init(void)
-{
-    STUB(0x417ea0, "game_video_init");
+    (void)volume;
+    STUB(0x457cf0, "cd_set_volume");
     return 1;
 }
 

@@ -1,11 +1,14 @@
 /*
  * main.c - entry point. WinMain 0x4120a0.
  *
- *   ignition [--data DIR] [--view FILE.PIC]
+ *   ignition [--data DIR] [--view FILE.PIC] [--text TEXT]
  *
  * --data is the folder with the game files, the disc root as extracted
  * by `make extract`. --view shows one picture through the renderer, with
- * its own palette, and exits on Escape.
+ * its own palette. --text runs the game's start up, then draws TEXT the
+ * way the front end draws "LOADING" (0x402b24): small.lft, centred on
+ * x 160 at y 94 of the cleared 320 x 200 buffer, with menu.col. Both
+ * exit on Escape.
  */
 
 #include <stdio.h>
@@ -14,10 +17,13 @@
 #include "app.h"
 #include "dik.h"
 #include "lisa/file.h"
+#include "lisa/font.h"
+#include "lisa/lisa.h"
 #include "lisa/log.h"
 #include "lisa/mem.h"
 #include "pic.h"
 #include "platform.h"
+#include "startup.h"
 #include "vfs.h"
 #include "video.h"
 
@@ -64,10 +70,40 @@ static int view(const char *name)
     return plat_run_with(view_frame, NULL);
 }
 
+static int text_frame(void *user)
+{
+    (void)user;
+    if (g_plat_keys[DIK_ESCAPE]) {
+        return 0;
+    }
+    memcpy(g_video_screen, g_back_buffer, sizeof(g_back_buffer));
+    video_present();
+    return 1;
+}
+
+static int text(const char *s)
+{
+    int font;
+
+    lisa_init();
+    if (!video_create_window()) {
+        return 1;
+    }
+    game_video_init();
+    if (file_read_at("baltazar\\data\\menu.col", g_video_palette, 0x300, 8) != 1) {
+        return 1;
+    }
+    font = g_fonts_menu[7];
+    memset(g_back_buffer, 0, sizeof(g_back_buffer));
+    text_draw(s, font, 160 - text_width(s, font) / 2, 94);
+    return plat_run_with(text_frame, NULL);
+}
+
 int main(int argc, char **argv)
 {
     const char *data = DEFAULT_DATA;
     const char *view_name = NULL;
+    const char *text_arg = NULL;
     int i;
 
     for (i = 1; i < argc; i++) {
@@ -75,14 +111,19 @@ int main(int argc, char **argv)
             data = argv[++i];
         } else if (strcmp(argv[i], "--view") == 0 && i + 1 < argc) {
             view_name = argv[++i];
+        } else if (strcmp(argv[i], "--text") == 0 && i + 1 < argc) {
+            text_arg = argv[++i];
         } else {
-            fprintf(stderr, "usage: %s [--data DIR] [--view FILE.PIC]\n", argv[0]);
+            fprintf(stderr, "usage: %s [--data DIR] [--view FILE.PIC] [--text TEXT]\n", argv[0]);
             return 1;
         }
     }
     vfs_set_root(data);
     if (view_name != NULL) {
         return view(view_name);
+    }
+    if (text_arg != NULL) {
+        return text(text_arg);
     }
     if (!app_startup()) {
         return 0;

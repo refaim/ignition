@@ -250,13 +250,13 @@ void plat_request_quit(void)
     s_quit = 1;
 }
 
-static int run(int (*frame)(void *), void *user)
+static int run(int (*frame)(void *), void *user, int only_active)
 {
     while (!s_quit) {
         @autoreleasepool {
             NSEvent *ev;
 
-            g_app_active = [NSApp isActive] ? 1 : 0;
+            g_app_active = [NSApp isActive] || !only_active ? 1 : 0;
             ev = [NSApp nextEventMatchingMask:NSEventMaskAny
                                     untilDate:g_app_active ? [NSDate distantPast]
                                                            : [NSDate dateWithTimeIntervalSinceNow:0.1]
@@ -287,10 +287,10 @@ static int tick(void *user)
 
 int plat_run(void)
 {
-    return run(tick, NULL);
+    return run(tick, NULL, 1);
 }
 
 int plat_run_with(int (*frame)(void *user), void *user)
 {
-    return run(frame, user);
+    return run(frame, user, 0);
 }

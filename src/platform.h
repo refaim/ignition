@@ -40,7 +40,8 @@ extern u8 g_plat_keys[256];
 int plat_run(void);
 
 /* Like plat_run, but calls `frame` instead of app_tick, for tools that
- * show something without the game. `frame` returns 0 to quit. */
+ * show something without the game, and keeps running while inactive.
+ * `frame` returns 0 to quit. */
 int plat_run_with(int (*frame)(void *user), void *user);
 
 void plat_request_quit(void);

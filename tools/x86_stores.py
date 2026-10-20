@@ -43,6 +43,7 @@ class Machine:
         self.cache = {}         # bytes read from IDA
         self.names = {}
         self.zf = False
+        self.sign_cmp = 0       # sign of the last compare, for jl and kin
 
     def resolve(self, name):
         """Address of a symbol: from its IDA auto name, or by lookup."""
@@ -124,6 +125,12 @@ class Machine:
         m = re.match(r"^'(.)'$", t)
         if m:
             return ("imm", ord(m.group(1)), None)
+        m = re.match(r"^([A-Za-z_][\w@?$]*)\[(\w+)(?:\*(\d))?\]$", t)
+        if m:
+            addr = self.resolve(m.group(1)) + self.get_reg(m.group(2)) * int(m.group(3) or 1)
+            if size is None:
+                size = SIZE_PREFIX.get(m.group(1).split("_")[0], 4)
+            return ("mem", addr & 0xffffffff, size)
         m = re.match(r"^([A-Za-z_][\w@?$]*)(?:\+([0-9A-F]+)h?)?$", t)
         if m:
             addr = self.resolve(m.group(1))
@@ -200,6 +207,36 @@ def main():
                 b = vm.operand(parts[1])
                 size = a[2] or b[2] or 4
                 vm.zf = (vm.value(a, size) & vm.value(b, size)) == 0
+            elif op in ("inc", "dec"):
+                dst = vm.operand(parts[0])
+                size = dst[2] or 4
+                v = (vm.value(dst, size) + (1 if op == "inc" else -1)) & ((1 << 8 * size) - 1)
+                vm.store(dst, size, v)
+                vm.zf = v == 0
+            elif op == "cmp":
+                a = vm.operand(parts[0])
+                b = vm.operand(parts[1])
+                size = a[2] or b[2] or 4
+                bits = 8 * size
+
+                def signed(x):
+                    return x - (1 << bits) if x >> (bits - 1) else x
+                d = signed(vm.value(a, size)) - signed(vm.value(b, size))
+                vm.zf = d == 0
+                vm.sign_cmp = (d > 0) - (d < 0)
+            elif op == "rep" and parts[0].strip() in ("stosd", "stosb"):
+                step = 4 if parts[0].strip() == "stosd" else 1
+                while vm.reg["ecx"]:
+                    vm.write(vm.reg["edi"], step, vm.reg["eax"])
+                    vm.reg["edi"] = (vm.reg["edi"] + step) & 0xffffffff
+                    vm.reg["ecx"] -= 1
+            elif op in ("jl", "jge", "jg", "jle"):
+                target = parts[0].strip().replace("short ", "")
+                s = vm.sign_cmp
+                taken = {"jl": s < 0, "jge": s >= 0, "jg": s > 0, "jle": s <= 0}[op]
+                if taken:
+                    i = labels[target]
+                    continue
             elif op in ("jnz", "jz", "jmp"):
                 target = parts[0].strip().replace("short ", "")
                 taken = op == "jmp" or (op == "jnz") != vm.zf

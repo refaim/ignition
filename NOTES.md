@@ -75,7 +75,18 @@ unidentified globals, then runs `game_video_init` (`0x417ea0`) and
    fonts (`game_load_system_gfx`, `0x418130`), makes five sprite
    objects (`sprite_create`, `0x456d40`), reads `MenuBkg.dat`
    (`menu_load_background`, `0x401000`).
-6. Joystick caps (`0x4596a0`), opens CD audio (`0x458040`).
+6. Builds an 800 x 405 table at `0x553080` (`0x4200e0`), sets the menu
+   mode (`game_set_menu_mode`), clears ten words at `0x54f920`.
+7. Joystick caps (`0x4596a0`), opens CD audio (`0x458040`) at full
+   volume (`0x457cf0`).
+
+It also clears and then passes the static buffer `0x553470` to
+`operator delete`, and deletes `SYS.COL`'s pool block 8 bytes in. The
+port does neither.
+
+The four sprites cut from `N_SYSGFX.PIC` use the rectangle at
+`0x497bb8` (x 236, 20 x 20, one under the other); the fifth (61 x 58) is
+at row 190, column 153.
 
 ## Lisa 2 library
 
@@ -84,13 +95,16 @@ unidentified globals, then runs `game_video_init` (`0x417ea0`) and
 | log | `0x45b4f0`..`0x45b5c0` | `Default.fil`; flags at `0x4bac88` (enabled, stdout, file) |
 | memory pools | `0x45ad50`..`0x45b135` | 256 pools at `0x63c6a0`; see `src/lisa/mem.c` |
 | files | `0x457420`..`0x4576e0` | error codes `0x7d0`..`0x802`, last error at `0x4bab34` |
-| tasks | `0x45b1f0`, `0x45b240` | 200 entry table at `0x5116e0` with callbacks at `0x511a00` |
+| exit handlers | `0x45b1b0`..`0x45b410` | 200 slots at `0x5116e0`; run in two passes by priority (`0x10000`, then `0x20000`) at shut down; see `src/lisa/exit.c` |
+| 2D target | `0x456cc0`, `0x456f60`, `0x457020` | buffer, pitch, size and clip; `src/lisa/gfx.c` |
+| textures | `0x4611d0`..`0x461a60` | `obj_create` (`0x461360`) and `tex_get_info` (`0x4612e0`); see "Textures and sprites" |
+| sprites | `0x45c7f0`..`0x45c8fe`, `0x456d20`..`0x457416`, `0x465bb5` | 2000 records at `0x514bd8`; `src/lisa/sprite.c` |
 | video | `0x45b740`, `0x45bd70` | `DirectDrawCreate`, window, back buffers; function table at `0x50eb6c` |
 | input | `0x455ac0`..`0x455e20` | `DirectInputCreateA`, keyboard device; key names `DIK 00`.. at `0x4931bc` |
 | CD audio | `0x457b10`..`0x4580a0` | MCI strings: `open cdaudio`, `play cdaudio from .. to ..` |
 | sound | `0x4582b0`..`0x459140` | loads `.WAV`, `.PAT` (GF1PATCH110) and `.RW8` from a folder |
 | renderer | `0x45e610`.. | init copies a 16 byte default state to seven render slots |
-| fonts | `0x456180` | `fontExit()`; `.LFT` and `.FNT` files |
+| fonts | `0x456180`..`0x456a31` | 30 fonts of 0x640 bytes at `0x63f2e0`; `.LFT`, see "Data"; `src/lisa/font.c` |
 | 3D file import | `0x461a90`, `0x461ea0` | reads `geo`, `tmp` and `3ds` text formats (tool code) |
 
 ## Video drivers
@@ -121,6 +135,32 @@ object through `obj_create` (`0x461360`), the same object system the
 race uses (`LI_PLACEOBJECT`, `LI_MOVEOBJECT`, `LI_HIDEOBJECT`). Text, in
 contrast, is drawn by the CPU straight into the target buffer
 (`0x456660` and `0x4564d0` through `0x50ebbc`).
+
+### Textures and sprites
+
+`obj_create` (`0x461360`) takes a 0x40 byte descriptor (name, width,
+height, flags, pixels, stride, hot spot x and y in 24.8) and an id: id 0
+makes a texture, a live id redefines it, and a NULL descriptor frees
+it. It copies the pixels into 256 x 256 pages aligned to 64 KB
+(`0x461530`), so a texel's address is page | v << 8 | u, the form the
+rasteriser wants. The table of descriptors (`0x520380`: next free id,
+capacity, slots) grows by 1000; ids start at 1.
+
+A sprite (`gfx_sprite_create`, `0x45c830`) is a record of 12 bytes: a
+texture id and the hot spot. Drawing (`sprite_draw`, `0x456d20` →
+`0x4571b0` → `0x457370`) puts the hot spot at a 24.8 position.
+Unrotated, `0x465bb5` clips to the target and writes
+`table[src << 8 | dst]` for each pixel, through the 64 KB colour table
+at `0x63f2d8`. `game_video_init` points that table at an identity table
+(`table[s << 8 | d] = s`, a plain copy); the front end loads
+`MENU.TAB` into it. With a scale and angle, `0x4571b0` builds the 16.16
+matrix { c, s, s, c } and `0x468c70` draws rotated (not ported yet).
+
+Text (`text_draw`, `0x456660`) draws each glyph as a sprite. Fixed
+fonts advance by cell width plus spacing and centre narrow glyphs in the
+cell; proportional fonts advance by glyph width plus spacing, and a
+space is 0.35 of the cell width. Alignment: 0 left, 1 centred on x, 2
+right aligned to x.
 
 ### The port's renderer
 
@@ -173,6 +213,14 @@ game reads pixels from 0x34e.
 776 bytes: u32 `0x308` (the file size), u32 `0xb123`, then 256 RGB
 entries of 8 bits. The menu reads the palette with
 `file_read_at(.., 0x300, 8)`.
+
+### .LFT
+
+`src/lisa/font.h`. `"LFT\0"`, u16 version 100, u16 glyph count, u16
+cell width, u16 height, then 224 s32 offsets for characters 32..255
+(-1 for none) at 0xc, a 768 byte palette at 0x38c, 224 s16 widths at
+0x68c, and glyph pixels from 0x84c. The shipped fonts stop at `j`
+(106).
 
 ### Other files
 

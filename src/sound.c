@@ -24,7 +24,7 @@ static struct sound_voice s_voices[SOUND_VOICES];  /* 0x63caa4 */
 static struct sound_voice *s_free[SOUND_VOICES];   /* 0x63eea4 */
 static int s_free_count;                           /* 0x63f2a4 */
 static u16 s_seq[SOUND_VOICES];                    /* 0x50ed48 */
-static int s_open = -1;                            /* 0x4ba7a4 */
+static int s_is_open = -1;                            /* 0x4ba7a4 */
 static int s_channels;                             /* 0x5203f4 */
 static s32 s_volume = 0x10000;                     /* 0x63f2a8 */
 
@@ -35,13 +35,13 @@ int sound_open(s32 *params)
 {
     int i;
 
-    if (s_open != -1) {
+    if (s_is_open != -1) {
         return 0;
     }
     if (!audio_init()) {
         return 0;
     }
-    s_open = 1;
+    s_is_open = 1;
     s_channels = params[0];
     s_free_count = 0;
     for (i = SOUND_VOICES - 1; i >= 0; i--) {
@@ -82,14 +82,14 @@ int sound_close(void)
 {
     int b;
 
-    if (s_open == -1) {
+    if (s_is_open == -1) {
         return 0;
     }
     audio_voices_set(NULL, 0, 0);
     for (b = 0; b < SOUND_BANKS; b++) {
         bank_free(b);
     }
-    s_open = -1;
+    s_is_open = -1;
     return 1;
 }
 
@@ -321,7 +321,7 @@ s32 sound_start(const struct sound_request *req)
     struct sound_voice *v;
     int slot;
 
-    if (s_open == -1) {
+    if (s_is_open == -1) {
         return 0;
     }
     s = sample_of(req->bank, req->group, req->index);
@@ -353,7 +353,7 @@ struct sound_voice *sound_voice_of(s32 handle)
 {
     int slot;
 
-    if (handle == 0 || s_open == -1) {
+    if (handle == 0 || s_is_open == -1) {
         return NULL;
     }
     slot = handle >> 16;
@@ -366,7 +366,7 @@ struct sound_voice *sound_voice_of(s32 handle)
 /* 0x457ae0 */
 int sound_set_volume(int volume)
 {
-    if (volume < 0 || volume > 0x10000 || s_open == -1) {
+    if (volume < 0 || volume > 0x10000 || s_is_open == -1) {
         return 0;
     }
     s_volume = volume;
@@ -389,7 +389,7 @@ void sound_stop_all(void)
  * free list unless kept (0x467120). */
 void sound_tick(void)
 {
-    if (s_open == -1) {
+    if (s_is_open == -1) {
         return;
     }
     audio_voices_collect(s_free, &s_free_count);

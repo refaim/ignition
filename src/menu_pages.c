@@ -132,6 +132,163 @@ static void blend_panels(void)
     }
 }
 
+/* A panel around `text` placed as a visual places its text: from the
+ * screen centre, in 19 line rows (0x40b8d6). */
+static void panel_for_text(const char *text, int font, s16 tx, s16 ty, int highlight)
+{
+    const s32 *mode = g_menu_modes[g_menu_mode_index];
+    int y = ty + mode[1] / 2;
+
+    panel_add(tx + mode[0] / 2 - 13, y / 19, text_width(text, g_fonts_menu[font]),
+              y % 19 - 12, highlight);
+}
+
+/* A one line question in a box, for pages 22 to 24 (0x40bd9e). */
+static void dialog(const char *text)
+{
+    int font = g_fonts_menu[3];
+    int w = text_width(text, font);
+
+    panels_clear();
+    panel_add(0x93 - w / 2, 3, w, 1, 1);
+    panels_draw(g_menu_buffer2, g_menu_modes[g_menu_mode_index][0]);
+    text_draw(text, font, 0xa0 - w / 2, 0x46);
+}
+
+/* Lines of centred text in boxes, from y 0x46 down (0x40bf89). */
+static void text_lines(u32 base, int lines)
+{
+    int font = g_fonts_menu[3];
+    int i;
+
+    panels_clear();
+    for (i = 0; i < lines; i++) {
+        const char *t = ui_text(base + 4 * (50 * g_menu_language + i));
+        int w = text_width(t, font);
+        int y = 0x46 + 19 * i;
+
+        panel_add(0x93 - w / 2, y / 19, w, y % 19 - 12, 1);
+    }
+    panels_draw(g_menu_buffer2, g_menu_modes[g_menu_mode_index][0]);
+    for (i = 0; i < lines; i++) {
+        const char *t = ui_text(base + 4 * (50 * g_menu_language + i));
+
+        text_draw(t, font, 0xa0 - text_width(t, font) / 2, 0x46 + 19 * i);
+    }
+}
+
+/* 0x40b820
+ * Redraws the page's layer (g_menu_buffer2, blended over the picture by
+ * handler A): a panel round every item's text, then the texts. While
+ * idle it shows the credits instead, a title and up to three names a
+ * step. */
+int menu_redraw_page(void)
+{
+    const s32 *mode = g_menu_modes[g_menu_mode_index];
+    struct menu_page *cur = g_menu_view.page;
+    const char *title = NULL;
+    const char *names[3] = { NULL, NULL, NULL };
+    int step = 0, i;
+
+    if (g_menu_sound) {
+        sound_tick();
+    }
+    memset(g_menu_buffer2, 0, 64000);
+    if (fe_4be850 != 0.0) {
+        return 0;
+    }
+    set_target(g_menu_buffer2, mode[0], mode[0], mode[1], 8);
+    g_gfx_color_table = g_identity_table;
+    if (fe_4be598 < 1080.0) {
+        panels_clear();
+        for (i = 0; i < cur->count; i++) {
+            struct menu_item *it = &cur->items[i];
+            const struct menu_visual *v = it->visuals;
+
+            if (v == NULL) {
+                continue;
+            }
+            if (v->text != NULL) {
+                panel_for_text(v->text, v->font, v->text_x, v->text_y, 0);
+            }
+            if (it->value != NULL) {
+                const struct menu_visual *vv = &v[(*it->value - it->min) * 2 + 2];
+
+                panel_for_text(vv->text, vv->font, vv->text_x, vv->text_y, 1);
+            } else if (it->choice != NULL) {
+                const struct menu_choice *ch = it->choice;
+                const char *text = ch->words[6] == MENU_CHOICE_KEY
+                                 ? g_key_names[ch->data[0]] : (const char *)ch->data;
+
+                panel_for_text(g_menu_view.edit == 1 ? "WWW|" : text, ch->words[2],
+                               ch->words[0], ch->words[1], 1);
+            }
+        }
+    } else {
+        step = (int)(fe_4be598 - 1080.0) / 0xa8;
+        panels_clear();
+        if (idle_seq(step) >= 0) {
+            title = ui_text(0x47dfe8 + 4 * (idle_seq(step) + 50 * g_menu_language));
+            panel_add(0x0b, 3, text_width(title, g_fonts_menu[1]), 5, 0);
+        }
+        for (i = 0; i < 3; i++) {
+            s16 who = g_idle_seq_raw[(0x47e4e6 - 0x47e4a0) / 2 + 4 * step - i];
+            int y = 0x7b + 19 * i;
+
+            if (who >= 0) {
+                int w;
+
+                names[i] = ui_text(0x47e498 + 4 * who);
+                w = text_width(names[i], g_fonts_menu[3]);
+                panel_add(0x11b - w, y / 19, w, y % 19 - 12, 1);
+            }
+        }
+        panels_draw(g_menu_buffer2, mode[0]);
+    }
+    if (fe_4bf564 == 0 && fe_4be598 < 1080.0) {
+        panels_draw(g_menu_buffer2, mode[0]);
+        menu_draw_items();
+    } else if (fe_4be598 >= 1080.0) {
+        if (title != NULL) {
+            text_draw(title, g_fonts_menu[1], 0x18, 0x4a);
+        }
+        for (i = 0; i < 3; i++) {
+            if (names[i] != NULL) {
+                text_draw(names[i], g_fonts_menu[3],
+                          0x128 - text_width(names[i], g_fonts_menu[3]), 0x7b + 19 * i);
+            }
+        }
+        draw_centred(mini_text(0x47dfec), g_fonts_menu[6], 0xbf);
+    }
+    if (fe_4be598 < 1080.0) {
+        if (fe_4bf564) {
+            const char *t = mini_text(0x47dfe8);
+            int w = text_width(t, g_fonts_menu[1]);
+
+            panels_clear();
+            panel_add(0x93 - w / 2, 4, w, 2, 0);
+            panels_draw(g_menu_buffer2, mode[0]);
+            text_draw(t, g_fonts_menu[1], 0xa0 - w / 2, 0x5a);
+        }
+        if (cur == page(22)) {
+            dialog(mini_text(0x47e0a4));
+        } else if (cur == page(23)) {
+            dialog(mini_text(0x47e0a8));
+        } else if (cur == page(24)) {
+            dialog(mini_text(0x47e0ac));
+        }
+        if (cur == page(17) || cur == page(18)) {
+            text_lines(0x47e060, 4);
+        }
+        if (cur == page(19) || cur == page(20)) {
+            text_lines(0x47e088, 5);
+        }
+    }
+    g_gfx_color_table = g_menu_table;
+    set_target(g_menu_screen, mode[0], mode[0], mode[1], 8);
+    return 0;
+}
+
 /* Player keys move the car selection on page 5; elsewhere the key map
  * is restored (0x40a003). */
 static void player_keys(void)
@@ -317,7 +474,7 @@ int menu_page_handler_a(void)
 
     if (fe_4be58c) {
         fe_4be58c = 0;
-        menu_keys_page();
+        menu_redraw_page();
         if (cur == page(PAGE_BEST_TIMES) && fe_4be598 < 1080.0) {
             menu_best_times();
         }

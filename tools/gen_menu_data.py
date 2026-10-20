@@ -43,7 +43,8 @@ DEFAULT_KEYMAP = 0x4931c8    # for a page without one
 TEXT_CHARS = 0x4932c8        # scan code to character, codes 0..0x53
 BINDABLE = 0x47de70          # 1 for keys a binding may take
 # Runs of string pointers the front end indexes by address arithmetic.
-TEXT_RUNS = [("g_ui_text", 0x47dfe8, 0x47e4dc), ("g_ui_names", 0x47e560, 0x47e58c)]
+TEXT_RUNS = [("g_ui_text", 0x47dfe8, 0x47e4dc), ("g_ui_names", 0x47e560, 0x47e58c),
+             ("g_key_names", 0x493320, 0x493720)]
 KEYMAP_ORIG = 0x47dc70       # a copy of the key map, to undo player keys
 TRACK_PIC_OFFSETS = 0x47dfc8  # 8 offsets into trk_spr.pic, by selection
 IDLE_SEQ, IDLE_SEQ_END = 0x47e4a0, 0x47e570  # idle panels, 4 s16 each; steps -8..17

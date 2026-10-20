@@ -13,6 +13,7 @@ extern s32 g_car_count;
 extern struct sprite *g_sprite_track;
 extern struct sprite *g_sprite_flags[5];
 
+int menu_redraw_page(void);
 void draw_sprite_at(const struct sprite *s, int x, int y);
 void draw_sprite_scaled(const struct sprite *s, int x, int y, float scale, float angle);
 void blend_rect(const u8 *src, int x0, int y0, int x1, int y1, u8 *dst, int dx, int dy,

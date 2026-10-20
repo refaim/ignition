@@ -95,6 +95,7 @@ extern const u8 g_menu_bindable[256];           /* 0x47de70 */
  * 0x47e560); ui_text takes the original address of an entry. */
 extern const char *const g_ui_text[0x13d];
 extern const char *const g_ui_names[11];
+extern const char *const g_key_names[256];      /* 0x493320, by scan code */
 
 static inline const char *ui_text(u32 addr)
 {

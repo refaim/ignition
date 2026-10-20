@@ -78,7 +78,6 @@ int cdp_next_frame(void *anim);     /* 0x412610 */
 int cdp_draw(void *anim);           /* 0x412560 */
 
 /* front end pieces still to port */
-int menu_keys_page(void);           /* 0x40b820 */
 int menu_best_times(void);          /* 0x40c1e0 */
 int menu_network_page(void);        /* 0x40af54, inside menu_page_handler_a */
 /* 3D, for the OpenGL renderer */

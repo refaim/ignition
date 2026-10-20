@@ -272,7 +272,36 @@ c calls `callbacks[-c - 1]` from `0x47df70` (`0x4045b0`, `0x4045e0`,
 the selection stack at `0x4c4e88`, the depth at `0x4c529c`.
 
 The settings, saved as `ign_win.btz`, are 0x597 bytes at `0x4bf580`;
-the file is read only when its first word is 0x1e.
+the file is read only when its first word is 0x1e. `settings_defaults`
+(`0x40c810`) is checked byte for byte against the original routine run
+by `tools/x86_stores.py` (`make test`).
+
+### Frames and pages
+
+`menu_frame` (`0x402c00`) steps the front end's clocks in ticks of
+1 / 0.036 ms: joystick moves become key presses, the intro plays its
+six `.CDP` animations (`ign1.cdp`, `ign2.cdp`, `ign3_0..3.cdp`) from 28.8
+to 1278 ticks with palette fades, and timers count at 27 a tick. After
+the intro, and after about 1080 idle ticks, the idle clock (`0x4be598`)
+runs the attract mode: the credits, a title and up to three names a
+step of 168 ticks, from the table at `0x47e4e0`. Any key leaves it and
+is taken.
+
+Handler A (`0x409fb0`) draws: the 3D background (`0x40c740`, a script
+player over `menucar.msh`), the logo, the idle panels, the chosen car
+and track pictures, the language flags, the 3D car carousel
+(`0x40c5a0`), and the page layer blended through `MENU.TAB`. The page
+layer (`0x40b820`) is a panel round every item's text, made of
+`MenuBkg.dat` tiles (`0x4011c0`), then the item texts (`0x410af0`), and
+the dialogs.
+
+Handler B (`0x409610`) takes each key first: it skips the intro, plays
+menu sounds, switches the language's tables on the language page and
+builds the list of cars won so far, refuses keys bound twice, and
+checks seven cheat codes typed anywhere: BANARNE, SURMULE (all
+difficulty levels), SLASKTRATT (all eleven cars), FILMJOLK, SKUNK,
+SVINPOLE, STRINGS. The language page skips its second language (no
+flag; settings value 1).
 
 ## Data
 

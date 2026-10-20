@@ -631,3 +631,64 @@ void menu_draw_visual(const struct menu_visual *v, const struct sprite *sprite)
     text_draw(v->text, g_menu.fonts[v->font], screen_x(v->text_x), screen_y(v->text_y));
     g_gfx_color_table = table;
 }
+
+/* 0x410af0
+ * Draws the page's items into the 2D target: each label in its look,
+ * the value's text, and a key binding's name or a text field with its
+ * cursor. The cursor goes into the edit buffer, blinking at the
+ * choice's rate, even when the item is not being edited. */
+int menu_draw_items(void)
+{
+    int i;
+
+    for (i = 0; i < s_page->count; i++) {
+        struct menu_item *it = &s_page->items[i];
+        int selected = i == s_selected;
+        int look = selected ^ 1;
+        struct menu_choice *ch;
+
+        if (it->kind == 0) {
+            look += 2;
+            if (it->value != NULL) {
+                look += (it->max - it->min) * 2 + 2;
+            }
+        }
+        if (it->visuals != NULL) {
+            menu_draw_visual(&it->visuals[look], s_sprites[i][0]);
+        }
+        if (it->value != NULL && it->visuals != NULL) {
+            menu_draw_visual(&it->visuals[look + (*it->value - it->min) * 2 + 2], s_sprites[i][0]);
+        }
+        ch = it->choice;
+        if (ch != NULL) {
+            struct menu_visual v;
+
+            memset(&v, 0, sizeof(v));
+            if (ch->words[6] == MENU_CHOICE_KEY && (s_edit == EDIT_NONE || !selected)) {
+                v.text = g_key_names[ch->data[0]];
+            } else {
+                v.text = (const char *)ch->data;
+            }
+            if (selected) {
+                s16 blink = ch->words[5];
+                char cursor = (char)((u16)ch->words[4] >> 8);
+
+                if (s_edit != EDIT_NONE) {
+                    menu_draw_visual(ch->visual, s_sprites[i][1]);
+                    v.text = s_text;
+                }
+                if (blink == 0 || (s32)g_frame_time % blink < (s16)(blink / 2)) {
+                    s_text[s_text_len] = cursor;
+                    s_text[s_text_len + 1] = '\0';
+                } else {
+                    s_text[s_text_len] = '\0';
+                }
+            }
+            v.text_x = ch->words[0];
+            v.text_y = ch->words[1];
+            v.font = selected ? ch->words[2] : ch->words[3];
+            menu_draw_visual(&v, NULL);
+        }
+    }
+    return 1;
+}

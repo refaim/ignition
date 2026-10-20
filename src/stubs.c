@@ -152,11 +152,6 @@ int cdp_draw(void *anim)
     return 0;
 }
 
-int menu_keys_page(void)
-{
-    STUB(0x40b820, "menu_keys_page");
-    return 0;
-}
 
 int menu_best_times(void)
 {

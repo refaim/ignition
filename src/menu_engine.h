@@ -51,6 +51,7 @@ int menu_engine_free(void);
 int menu_set_delay(s32 ms);
 int menu_change_page(int dir);
 void menu_draw_visual(const struct menu_visual *v, const struct sprite *sprite);
+int menu_draw_items(void);
 
 /* An item's label (0) or value (1) sprite, as menu_item_sprite made it. */
 struct sprite *menu_item_sprite_of(int index, int which);

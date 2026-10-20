@@ -331,6 +331,37 @@ cell width, u16 height, then 224 s32 offsets for characters 32..255
 0x68c, and glyph pixels from 0x84c. The shipped fonts stop at `j`
 (106).
 
+### .CDP
+
+`src/cdp.h`. The intro animations. `"CDP\0"`, u16 version 100, u16
+frames, u16 loop, u16 width, u16 height, a 768 byte palette at 0x10,
+and frames from 0x310. Each frame is a byte code drawn over the last
+(`0x499abc`): bytes up to 245 are pixels, 246 takes the next byte as
+a pixel, 247 to 250 skip 2 to 5 pixels, 251 and 252 skip a u8 or u16
+count, 253 is a run with a u8 count (0 is 256), 254 a run with a u16
+count, and 255 ends the frame. IGN1 and IGN2 hold two frames fewer
+than their headers give.
+
+### Sound samples
+
+`src/sound.c`. A bank folder holds numbered group folders, and a group
+folder numbered samples: `.WAV` (PCM mono), `.PAT` (a Gravis GF1
+patch, its first wave), `.XI` (a FastTracker 2 instrument, its first
+sample, delta coded, at 22050 Hz) and `.RW8` (signed 8 bit at
+22050 Hz). The race loads the level `SOUND` folders and
+`GENERAL\SOUND\ROLL`, `SKID` and `COLL` as groups.
+
+### Menu car files
+
+- `MENUCAR.PLC`: s32 count (11), then count entries of 5 s32: the mesh's
+  offset in dwords into the `.MSH`, the car id, and x, y, z.
+- `.MSH`: meshes, each s32 vertex count, s32 face count, the vertices
+  as 3 s32, then 44 byte faces: u32 flags (`0x00110011` on the menu
+  cars), 3 s32 vertex indices, 3 pairs of s32 u, v in 8.8 texels, and
+  a s32 whose high word is the texture page.
+- `.TEX`: 64 bytes, then 256 x 256 pages of 8 bit texels, loaded at a
+  64 KB boundary.
+
 ### Other files
 
 File types: `.PIC` pictures, `.COL` palettes, `.TAB` colour tables,

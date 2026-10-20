@@ -40,6 +40,7 @@ u8 *g_cone_table;               /* 0x553080 */
 s32 g_startup_cleared[10];      /* 0x54f920 */
 
 static u8 s_identity_table[0x10000];   /* in 0x619330, 64 KB aligned */
+static u8 s_black_palette[0x300];       /* 0x553470 */
 
 /* Where the four position icons are cut from N_SYSGFX.PIC: x, y, width,
  * height (0x497bb8). Icon i is i heights further down. */
@@ -183,9 +184,8 @@ static struct sprite *cut_sprite(const u8 *pic, int x, int y, int w, int h)
 }
 
 /* 0x417ea0
- * The original also clears 0x300 bytes at 0x553470 and passes that
- * static buffer to operator delete, and at the end deletes SYS.COL's
- * buffer 8 bytes in; neither is done here. */
+ * IDA names the two palette calls operator delete; they go through the
+ * video table (0x456c40). */
 int game_video_init(void)
 {
     int i, row, col;
@@ -210,6 +210,8 @@ int game_video_init(void)
         g_fatal_error = 1;
         exit(0);
     }
+    memset(s_black_palette, 0, sizeof(s_black_palette));
+    video_set_palette(s_black_palette);
     g_screen_width = 320;
     g_screen_height = 200;
     set_target(g_back_buffer, 320, 320, 200, 8);
@@ -236,5 +238,6 @@ int game_video_init(void)
     joystick_init();
     cd_open();
     cd_set_volume(0xff);
+    video_set_palette(g_sys_palette + 8);
     return 1;
 }

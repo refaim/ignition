@@ -6,21 +6,8 @@
 #include "game.h"
 #include "stubs.h"
 
-int input_init(void)
-{
-    STUB(0x455ac0, "input_init");
-    return 1;
-}
 
-void input_shutdown(void)
-{
-    STUB(0x455e20, "input_shutdown");
-}
 
-void input_reset(void)
-{
-    STUB(0x455ab0, "input_reset");
-}
 
 
 
@@ -58,19 +45,53 @@ int cd_set_volume(int volume)
     return 1;
 }
 
-int game_cd_init(void)
+
+
+s32 g_cd_present;           /* 0x50ef4c */
+s32 g_cd_tracks[4];         /* 0x50f2cc */
+
+int cd_read_status(void)
 {
-    STUB(0x4184c0, "game_cd_init");
+    STUB(0x457b50, "cd_read_status");
     return 1;
 }
 
-/* Until the game loop exists, ask for shut down after the first frame. */
-int game_frame(void)
+int cd_read_tracks(void)
 {
-    STUB(0x4172b0, "game_frame");
-    g_app_state = APP_STATE_SHUTDOWN;
+    STUB(0x457da0, "cd_read_tracks");
     return 1;
 }
+
+int cd_stop(void)
+{
+    STUB(0x459e10, "cd_stop");
+    return 1;
+}
+
+int menu_init(void)
+{
+    STUB(0x4029a0, "menu_init");
+    return 1;
+}
+
+/* Stays in the front end until it is ported. */
+int menu_frame(void)
+{
+    STUB(0x402c00, "menu_frame");
+    return 1;
+}
+
+int menu_exit(void)
+{
+    STUB(0x4038f0, "menu_exit");
+    return 1;
+}
+
+STUB_VOID(0x418b70, race_load_1)
+STUB_VOID(0x418be0, race_load_2)
+STUB_VOID(0x418c40, race_load_world)
+STUB_VOID(0x4173fb, race_frame)
+STUB_VOID(0x420870, race_end)
 
 void game_exit(void)
 {

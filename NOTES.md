@@ -38,9 +38,12 @@ IDA Free 9.1 has only the cloud decompiler, and `decompile` fails with
   runtime library listed in `tools/library_funcs.txt` (IDA's signature
   matches, less the two false matches below).
 
-IDA's signatures misname two Lisa routines as `__cfltcvt_init` and
-`__cfltcvt_init_0`. They fill the video driver tables; see "Video
-drivers". They are renamed in the database.
+IDA's signatures misname Lisa routines: `__cfltcvt_init` and
+`__cfltcvt_init_0` fill the video driver tables, and the twelve
+`operator delete` matches at `0x456bb0`..`0x456e50` are one line
+wrappers that call through those tables (`video_set_palette`,
+`video_flip` and others). All are renamed in the database and left out
+of `tools/library_funcs.txt`.
 
 ## Start up and frame loop
 
@@ -57,9 +60,46 @@ While the app is active the loop peeks for messages and runs `app_tick`
 when none is waiting. While inactive it blocks in `GetMessageA`, so the
 game freezes and the clock stops.
 
-`game_init` (`0x417270`) sets `g_game_mode` (`0x639394`) to 2, clears six
-unidentified globals, then runs `game_video_init` (`0x417ea0`) and
-`game_cd_init` (`0x4184c0`, which sets `g_game_mode` to 1).
+`game_init` (`0x417270`) sets `g_game_mode` (`0x639394`) to 2 (check
+the CD), clears the dispatcher's state words, then runs
+`game_video_init` (`0x417ea0`) and `game_cd_init` (`0x4184c0`).
+`game_cd_init` reads the disc's track list and then sets the CD ready
+and `g_game_mode` to 1 whatever it found, so the CD prompt
+(`game_check_cd`, `0x4182d0`) does not show at start up.
+
+`game_frame` (`0x4172b0`) dispatches on those words, in this order:
+
+| Word | Address | Runs |
+|---|---|---|
+| `g_game_mode` 2 | `0x639394` | `game_check_cd`: CD prompt, Return retries, Escape quits |
+| `g_game_mode` 1 | | `cd_stop` (`0x459e10`), `menu_init` (`0x4029a0`) |
+| `g_menu_active` | `0x563c3c` | `menu_frame` (`0x402c00`); a result above 1 leaves the menu |
+| `g_menu_leaving` | `0x563d9c` | `menu_exit` (`0x4038f0`) until done; then result 2 starts a race, 3 quits |
+| `g_race_load_stage` 3, 2, 1 | `0x553290` | `0x418c40`, `0x418be0`, `0x418b70`: one load step a frame, 1 first |
+| `g_race_running` | `0x525e5c` | the race, inline from `0x4173fb` |
+| `g_race_ending` | `0x563bf4` | `race_end` (`0x420870`); then the race again (`0x527f70`) or the menu |
+
+On frames where the menu is not running but `menu_exit` is, the
+original reads the menu's result from an uninitialised local. The port
+keeps the last result.
+
+The text language is the word at `0x639933` (not aligned): 0 English,
+1 German, 2 Italian, 3 and 4 English text. Localised strings are kept
+100 bytes apart per language.
+
+### Input
+
+`input_poll` (`0x455ef0`) reads DirectInput's buffered keyboard events
+into four tables by scan code: down (`0x50de60`), trigger with repeat
+(`0x50df68`), pressed until cleared (`0x50e068`, which the menus read
+through `0x4c50e0`) and held (`0x50e168`). It also keeps the last 32
+typed characters at `0x50de18`.
+
+`app_init_devices` and the Alt+Enter path call `input_init`
+(`0x455ac0`) without its two arguments (repeat delay and period), so
+the delay is the return address `0x41217a` and the period is the
+address of `LoadIconA` left in `ebp`. Key repeat never fires in
+practice.
 
 `game_video_init` (`0x417ea0`):
 

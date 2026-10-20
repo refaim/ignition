@@ -1,5 +1,7 @@
 # Runtime library and import thunks IDA named from signatures in IGN_WIN.EXE.
-# One address per line; tools/progress.py leaves these out.
+# One address per line; tools/progress.py leaves these out. The signature
+# matches at 0x456bb0..0x456e50 (operator delete) and 0x456e60, 0x45b690
+# (__cfltcvt_init) are Lisa video routines and are not listed.
 0x402250 nullsub_3
 0x403b00 nullsub_1
 0x4160a0 nullsub_4
@@ -26,18 +28,6 @@
 0x4466c4 timeEndPeriod
 0x4466ca timeGetTime
 0x456160 fptc
-0x456bb0 ??3@YAXPAX@Z
-0x456c30 ??3@YAXPAX@Z_0
-0x456c40 ??3@YAXPAX@Z_1
-0x456c90 ??3@YAXPAX@Z_2
-0x456cb0 ??3@YAXPAX@Z_3
-0x456d10 ??3@YAXPAX@Z_4
-0x456d80 ??3@YAXPAX@Z_5
-0x456db0 ??3@YAXPAX@Z_6
-0x456e00 ??3@YAXPAX@Z_7
-0x456e30 ??3@YAXPAX@Z_8
-0x456e40 ??3@YAXPAX@Z_9
-0x456e50 ??3@YAXPAX@Z_10
 0x4572b0 nullsub_2
 0x45a3c0 DialogFunc
 0x45b352 ?underflow@?$basic_streambuf@DU?$char_traits@D@@@@MAEHXZ

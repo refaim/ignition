@@ -37,6 +37,17 @@ int video_set_mode(void);
 /* Shows the screen surface with the current palette. */
 void video_present(void);
 
+/* 0x456b70: copies `w` x `h` pixels at (x, y) of `src` to (dx, dy) of
+ * the screen surface. The original also names the DirectDraw surface;
+ * there is one here. */
+int video_blit(const u8 *src, int pitch, int x, int y, int w, int h, int dx, int dy);
+
+/* 0x456c90: shows the screen surface. */
+int video_flip(void);
+
+/* 0x456c40: 256 RGB entries, 8 bits a channel. */
+int video_set_palette(const u8 *rgb);
+
 /* The aspect the surface is shown at. 320 x 200 was shown on a 4:3
  * monitor, so it keeps 4:3; other modes have square pixels. */
 float video_aspect(void);

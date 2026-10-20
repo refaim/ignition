@@ -11,6 +11,9 @@
 
 #include <stdio.h>
 
+#include "input.h"
+#include "types.h"
+
 #define STUB(addr, name) do { \
         static int s_seen; \
         if (!s_seen) { \
@@ -18,11 +21,6 @@
             fprintf(stderr, "stub: %s (0x%x)\n", name, (unsigned)(addr)); \
         } \
     } while (0)
-
-/* input: DirectInput */
-int input_init(void);               /* 0x455ac0 */
-void input_shutdown(void);          /* 0x455e20 */
-void input_reset(void);             /* 0x455ab0 */
 
 /* Lisa renderer set up, run by render_init (0x45e610) */
 void render_init_45f490(void);      /* 0x45f490 */
@@ -42,9 +40,22 @@ int joystick_init(void);            /* 0x4596a0 */
 int cd_open(void);                  /* 0x458040 */
 int cd_set_volume(int volume);      /* 0x457cf0 */
 
+/* CD audio state, filled by cd_read_status and cd_read_tracks */
+extern s32 g_cd_present;            /* 0x50ef4c */
+extern s32 g_cd_tracks[4];          /* 0x50f2cc */
+int cd_read_status(void);           /* 0x457b50 */
+int cd_read_tracks(void);           /* 0x457da0 */
+
 /* game */
-int game_cd_init(void);             /* 0x4184c0 */
-int game_frame(void);               /* 0x4172b0 */
+int cd_stop(void);                  /* 0x459e10 */
+int menu_init(void);                /* 0x4029a0 */
+int menu_frame(void);               /* 0x402c00 */
+int menu_exit(void);                /* 0x4038f0 */
+void race_load_1(void);             /* 0x418b70 */
+void race_load_2(void);             /* 0x418be0 */
+void race_load_world(void);         /* 0x418c40 */
+void race_frame(void);              /* 0x4173fb, inside game_frame */
+void race_end(void);                /* 0x420870 */
 void game_exit(void);               /* 0x420b70 */
 
 #endif /* IGN_STUBS_H */

@@ -4,6 +4,7 @@
 
 #include "app.h"
 #include "game.h"
+#include "input.h"
 #include "lisa/lisa.h"
 #include "platform.h"
 #include "stubs.h"
@@ -21,6 +22,14 @@ static int s_switching_mode;    /* 0x49372c */
 static u32 s_time_last;         /* 0x4937b8 */
 static u32 s_time_game;         /* 0x4937ac */
 
+/* The original calls input_init (0x455ac0) without its two arguments,
+ * so the repeat delay is the return address on the stack, 0x41217a ms
+ * (71 minutes), and the period is whatever ebp held, LoadIconA's
+ * address. Key repeat never fires in a session; the menus read the
+ * pressed table instead. */
+#define INPUT_REPEAT_DELAY 0x41217a
+#define INPUT_REPEAT_PERIOD 0
+
 /* WinMain 0x4120a0, from RegisterClassA to the message loop: the high
  * resolution counter (timeBeginPeriod(1) without one; the platform
  * clock covers both), then the library and the devices. */
@@ -37,7 +46,7 @@ int app_init_devices(void)
     if (!video_create_window()) {
         return 0;
     }
-    if (!input_init()) {
+    if (!input_init(INPUT_REPEAT_DELAY, INPUT_REPEAT_PERIOD)) {
         return 0;
     }
     g_app_ready = 1;
@@ -97,7 +106,7 @@ void app_toggle_fullscreen(void)
     plat_destroy_window();
     g_app_fullscreen = !g_app_fullscreen;
     video_create_window();
-    input_init();
+    input_init(INPUT_REPEAT_DELAY, INPUT_REPEAT_PERIOD);
     s_switching_mode = 0;
 }
 

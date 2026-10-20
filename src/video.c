@@ -96,6 +96,38 @@ float video_aspect(void)
     return (float)s_screen_w / (float)s_screen_h;
 }
 
+/* 0x456b70, through 0x50eb80 (ddraw_blit, 0x45c1d0) */
+int video_blit(const u8 *src, int pitch, int x, int y, int w, int h, int dx, int dy)
+{
+    int row;
+
+    if (g_video_screen == NULL) {
+        return 0;
+    }
+    if (dx < 0 || dy < 0 || dx + w > s_screen_w || dy + h > s_screen_h) {
+        return 0;
+    }
+    for (row = 0; row < h; row++) {
+        memcpy(g_video_screen + (dy + row) * s_screen_w + dx,
+               src + (y + row) * pitch + x, (size_t)w);
+    }
+    return 1;
+}
+
+/* 0x456c90, through 0x50eb88 (ddraw_flip, 0x45c4b0) */
+int video_flip(void)
+{
+    video_present();
+    return 1;
+}
+
+/* 0x456c40, through 0x50eb98 (ddraw_set_palette, 0x45c6d0) */
+int video_set_palette(const u8 *rgb)
+{
+    memcpy(g_video_palette, rgb, sizeof(g_video_palette));
+    return 1;
+}
+
 void video_present(void)
 {
     int w, h;

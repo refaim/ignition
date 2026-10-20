@@ -21,6 +21,11 @@
 
 u8 g_plat_keys[256];
 
+enum { KEY_QUEUE = 64 };
+
+static struct { u8 key, down; } s_key_queue[KEY_QUEUE];
+static unsigned s_key_head, s_key_tail;
+
 static NSWindow *s_window;
 static NSOpenGLContext *s_context;
 static NSView *s_view;
@@ -117,9 +122,35 @@ static int map_keycode(unsigned short kc)
     return kc < 128 ? map[kc] : 0;
 }
 
+/* A full queue drops the event, as DirectInput's buffer overflows. */
+static void key_event(int dik, int down)
+{
+    if (s_key_head - s_key_tail < KEY_QUEUE) {
+        s_key_queue[s_key_head % KEY_QUEUE].key = (u8)dik;
+        s_key_queue[s_key_head % KEY_QUEUE].down = (u8)down;
+        s_key_head++;
+    }
+    g_plat_keys[dik] = down ? 0x80 : 0;
+}
+
+int plat_next_key_event(int *key, int *down)
+{
+    if (s_key_tail == s_key_head) {
+        return 0;
+    }
+    *key = s_key_queue[s_key_tail % KEY_QUEUE].key;
+    *down = s_key_queue[s_key_tail % KEY_QUEUE].down;
+    s_key_tail++;
+    return 1;
+}
+
 static void set_modifier(NSEventModifierFlags flags, NSEventModifierFlags bit, int dik)
 {
-    g_plat_keys[dik] = (flags & bit) ? 0x80 : 0;
+    int down = (flags & bit) != 0;
+
+    if (down != (g_plat_keys[dik] != 0)) {
+        key_event(dik, down);
+    }
 }
 
 static void handle_event(NSEvent *ev)
@@ -134,8 +165,8 @@ static void handle_event(NSEvent *ev)
             app_toggle_fullscreen();
             break;
         }
-        if (dik != 0) {
-            g_plat_keys[dik] = 0x80;
+        if (dik != 0 && ![ev isARepeat]) {
+            key_event(dik, 1);
         }
         break;
     }
@@ -143,7 +174,7 @@ static void handle_event(NSEvent *ev)
         int dik = map_keycode([ev keyCode]);
 
         if (dik != 0) {
-            g_plat_keys[dik] = 0;
+            key_event(dik, 0);
         }
         break;
     }

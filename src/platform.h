@@ -34,6 +34,11 @@ void plat_present(void);
  * key is down, the layout of IDirectInputDevice::GetDeviceState. */
 extern u8 g_plat_keys[256];
 
+/* Takes the oldest key event since the last call, as DirectInput's
+ * buffered data gives it: scan code, and 1 for a press, 0 for a
+ * release. Returns 0 when there is none. */
+int plat_next_key_event(int *key, int *down);
+
 /* Runs the message loop until the game quits: while the app is active,
  * app_tick runs whenever no message is waiting; while inactive the loop
  * waits for messages. Returns the exit code. */

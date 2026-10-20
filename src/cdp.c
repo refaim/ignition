@@ -37,13 +37,6 @@ static u16 rd16(const u8 *p)
     return (u16)(p[0] | p[1] << 8);
 }
 
-/* 0x499abc
- * Draws one frame over the last: bytes up to 245 are pixels; 246 takes
- * the next byte as a pixel; 247 to 250 skip 2 to 5 pixels, 251 skips a
- * byte's count and 252 a word's; 253 is a run (count, colour; a count
- * of 0 is 256); 254 a run with a word's count; 255 ends the
- * frame. Returns 0 after the last frame of an animation that does not
- * loop, 1 otherwise. */
 static void put(struct cdp_anim *a, u32 *at, u8 c)
 {
     if (*at < (u32)a->width * a->height) {
@@ -52,6 +45,13 @@ static void put(struct cdp_anim *a, u32 *at, u8 c)
     (*at)++;
 }
 
+/* 0x499abc
+ * Draws one frame over the last: bytes up to 245 are pixels; 246 takes
+ * the next byte as a pixel; 247 to 250 skip 2 to 5 pixels, 251 skips a
+ * byte's count and 252 a word's; 253 is a run (count, colour; a count
+ * of 0 is 256); 254 a run with a word's count; 255 ends the
+ * frame. Returns 0 after the last frame of an animation that does not
+ * loop, 1 otherwise. */
 static int decode(struct cdp_anim *a)
 {
     const u8 *in = a->cursor;

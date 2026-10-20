@@ -94,6 +94,7 @@ void input_poll(void)
 {
     int key, down;
 
+    plat_pump_events();
     for (key = 0; key < 256; key++) {
         if (g_key_down[key] == 1) {
             s_repeat_timer[key] += (s32)(g_frame_time - s_last_poll);

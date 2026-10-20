@@ -2,6 +2,8 @@
  * stubs.c - original routines not reimplemented yet.
  */
 
+#include <stdlib.h>
+
 #include "app.h"
 #include "game.h"
 #include "stubs.h"
@@ -68,11 +70,6 @@ int cd_stop(void)
     return 1;
 }
 
-int menu_init(void)
-{
-    STUB(0x4029a0, "menu_init");
-    return 1;
-}
 
 /* Stays in the front end until it is ported. */
 int menu_frame(void)
@@ -88,6 +85,55 @@ int menu_exit(void)
 }
 
 STUB_VOID(0x457890, sound_tick)
+
+/* No audio yet: the menu runs with sound off. */
+int sound_open(s32 *params)
+{
+    (void)params;
+    STUB(0x4577a0, "sound_open");
+    return 0;
+}
+
+int sound_load_bank(const char *dir, int flags)
+{
+    (void)dir;
+    (void)flags;
+    STUB(0x459140, "sound_load_bank");
+    return 1;
+}
+
+int sound_set_volume(int volume)
+{
+    (void)volume;
+    STUB(0x457ae0, "sound_set_volume");
+    return 1;
+}
+
+/* The camera record the menu writes to; the scene's object lists and
+ * the rasteriser's tables are not made. */
+void *scene_create(void)
+{
+    STUB(0x4468d0, "scene_create");
+    return calloc(1, 0xa8);
+}
+
+int raster_set_grid(int w, int h, int count)
+{
+    (void)w;
+    (void)h;
+    (void)count;
+    STUB(0x446ca0, "raster_set_grid");
+    return 0;
+}
+
+int raster_set_screen(int w, int h, int flags)
+{
+    (void)w;
+    (void)h;
+    (void)flags;
+    STUB(0x402be0, "raster_set_screen");
+    return 1;
+}
 
 int menu_page_handler_a(void)
 {

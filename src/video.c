@@ -114,6 +114,22 @@ int video_blit(const u8 *src, int pitch, int x, int y, int w, int h, int dx, int
     return 1;
 }
 
+/* 0x456c50, through 0x50eb9c (ddraw_restore, 0x45c730) */
+int video_restore(void)
+{
+    return 1;
+}
+
+/* 0x456bb0, through 0x50eb84 (0x45c3d0) */
+int video_clear(void)
+{
+    if (g_video_screen == NULL) {
+        return 0;
+    }
+    memset(g_video_screen, 0, (size_t)s_screen_w * (size_t)s_screen_h);
+    return 1;
+}
+
 /* 0x456c90, through 0x50eb88 (ddraw_flip, 0x45c4b0) */
 int video_flip(void)
 {

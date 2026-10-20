@@ -11,7 +11,7 @@ CORE_SRC := $(SRCDIR)/app.c $(SRCDIR)/game.c $(SRCDIR)/stubs.c \
             $(SRCDIR)/lisa/lisa.c $(SRCDIR)/lisa/log.c $(SRCDIR)/lisa/mem.c $(SRCDIR)/lisa/file.c \
             $(SRCDIR)/lisa/exit.c $(SRCDIR)/lisa/gfx.c $(SRCDIR)/lisa/texture.c $(SRCDIR)/lisa/sprite.c \
             $(SRCDIR)/lisa/font.c $(SRCDIR)/startup.c $(SRCDIR)/input.c \
-            $(SRCDIR)/menu_engine.c $(SRCDIR)/menu_data.c $(SRCDIR)/settings.c \
+            $(SRCDIR)/menu_engine.c $(SRCDIR)/menu_data.c $(SRCDIR)/settings.c $(SRCDIR)/frontend.c $(SRCDIR)/frontend_state.c \
             $(SRCDIR)/video.c $(SRCDIR)/gfx_gl.c $(SRCDIR)/vfs.c $(SRCDIR)/main.c \
             $(SRCDIR)/cdimage.c
 MAC_SRC  := $(SRCDIR)/platform_macos.m

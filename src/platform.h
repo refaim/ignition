@@ -39,6 +39,10 @@ extern u8 g_plat_keys[256];
  * release. Returns 0 when there is none. */
 int plat_next_key_event(int *key, int *down);
 
+/* Handles waiting window events without running a frame, so a loop
+ * that polls input sees the keyboard, as DirectInput did. */
+void plat_pump_events(void);
+
 /* Runs the message loop until the game quits: while the app is active,
  * app_tick runs whenever no message is waiting; while inactive the loop
  * waits for messages. Returns the exit code. */

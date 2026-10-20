@@ -91,6 +91,24 @@ extern const s8 g_menu_keymap_default[256];     /* 0x4931c8 */
 extern const u8 g_menu_text_chars[0x54];        /* 0x4932c8, 0xff for none */
 extern const u8 g_menu_bindable[256];           /* 0x47de70 */
 
+/* String pointer runs the front end indexes by address (0x47dfe8 and
+ * 0x47e560); ui_text takes the original address of an entry. */
+extern const char *const g_ui_text[0x13d];
+extern const char *const g_ui_names[11];
+
+static inline const char *ui_text(u32 addr)
+{
+    return g_ui_text[(addr - 0x47dfe8) / 4];
+}
+
+static inline const char *ui_name(u32 addr)
+{
+    return g_ui_names[(addr - 0x47e560) / 4];
+}
+
+/* Copied over the settings from offset 0x1bf at start up (0x47e590). */
+extern const u8 g_settings_block_1bf[0x348];
+
 /* What a key does on a page, from the key map. */
 enum menu_key_action {
     MENU_KEY_BACK = -6,

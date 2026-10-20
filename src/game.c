@@ -7,6 +7,7 @@
 
 #include "app.h"
 #include "dik.h"
+#include "frontend.h"
 #include "game.h"
 #include "input.h"
 #include "lisa/font.h"

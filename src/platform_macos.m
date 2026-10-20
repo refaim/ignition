@@ -281,6 +281,20 @@ void plat_request_quit(void)
     s_quit = 1;
 }
 
+void plat_pump_events(void)
+{
+    @autoreleasepool {
+        NSEvent *ev;
+
+        while ((ev = [NSApp nextEventMatchingMask:NSEventMaskAny
+                                         untilDate:[NSDate distantPast]
+                                            inMode:NSDefaultRunLoopMode
+                                           dequeue:YES]) != nil) {
+            handle_event(ev);
+        }
+    }
+}
+
 static int run(int (*frame)(void *), void *user, int only_active)
 {
     while (!s_quit) {

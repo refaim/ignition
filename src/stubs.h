@@ -61,10 +61,17 @@ int menu_cb_404790(int arg0, int arg1);         /* 0x404790 */
 
 /* sound */
 void sound_tick(void);              /* 0x457890 */
+int sound_open(s32 *params);        /* 0x4577a0: 0 off, 1 on, 2 no card */
+int sound_load_bank(const char *dir, int flags);   /* 0x459140 */
+int sound_set_volume(int volume);   /* 0x457ae0 */
+
+/* 3D scene; the renderer's buffers are replaced by OpenGL */
+void *scene_create(void);           /* 0x4468d0: returns the camera */
+int raster_set_grid(int w, int h, int count);      /* 0x446ca0 */
+int raster_set_screen(int w, int h, int flags);    /* 0x402be0 */
 
 /* game */
 int cd_stop(void);                  /* 0x459e10 */
-int menu_init(void);                /* 0x4029a0 */
 int menu_frame(void);               /* 0x402c00 */
 int menu_exit(void);                /* 0x4038f0 */
 void race_load_1(void);             /* 0x418b70 */

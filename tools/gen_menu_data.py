@@ -42,6 +42,10 @@ PAGE_STYLE = 0x47dd70        # the key map every page uses
 DEFAULT_KEYMAP = 0x4931c8    # for a page without one
 TEXT_CHARS = 0x4932c8        # scan code to character, codes 0..0x53
 BINDABLE = 0x47de70          # 1 for keys a binding may take
+# Runs of string pointers the front end indexes by address arithmetic.
+TEXT_RUNS = [("g_ui_text", 0x47dfe8, 0x47e4dc), ("g_ui_names", 0x47e560, 0x47e58c)]
+SETTINGS_BLOCK = 0x47e590    # 0x348 bytes copied to settings offset 0x1bf
+SETTINGS_BLOCK_SIZE = 0x348
 FUNCS = {0x409fb0: "menu_page_handler_a", 0x409610: "menu_page_handler_b",
          0x4045b0: "menu_cb_4045b0", 0x4045e0: "menu_cb_4045e0",
          0x404610: "menu_cb_404610", 0x404740: "menu_cb_404740",
@@ -191,6 +195,17 @@ def main():
     w("const u8 g_menu_text_chars[0x54] = {\n")
     for k in range(0, 0x54, 12):
         w("    %s,\n" % ", ".join("0x%02x" % img[TEXT_CHARS + j - BASE] for j in range(k, min(k + 12, 0x54))))
+    w("};\n\n")
+    for name, lo, hi in TEXT_RUNS:
+        w("const char *const %s[%d] = {    /* 0x%x */\n" % (name, (hi - lo) // 4, lo))
+        for a in range(lo, hi, 4):
+            p = u32(a)
+            w("    %s,\n" % (cstring(p) if p else "NULL"))
+        w("};\n\n")
+    w("const u8 g_settings_block_1bf[0x%x] = {\n" % SETTINGS_BLOCK_SIZE)
+    for k in range(0, SETTINGS_BLOCK_SIZE, 16):
+        w("    %s,\n" % ", ".join("0x%02x" % img[SETTINGS_BLOCK + j - BASE]
+                                   for j in range(k, min(k + 16, SETTINGS_BLOCK_SIZE))))
     w("};\n\n")
     w("const u8 g_menu_bindable[256] = {\n")
     for k in range(0, 256, 16):

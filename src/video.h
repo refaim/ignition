@@ -42,6 +42,13 @@ void video_present(void);
  * there is one here. */
 int video_blit(const u8 *src, int pitch, int x, int y, int w, int h, int dx, int dy);
 
+/* 0x456c50: restores DirectDraw surfaces lost to another program. The
+ * OpenGL surface is never lost. */
+int video_restore(void);
+
+/* 0x456bb0: clears the screen surface to colour 0. */
+int video_clear(void);
+
 /* 0x456c90: shows the screen surface. */
 int video_flip(void);
 

@@ -22,6 +22,7 @@
 #include "menu_pages.h"
 #include "pic.h"
 #include "settings.h"
+#include "sound.h"
 #include "startup.h"
 #include "stubs.h"
 #include "video.h"
@@ -122,6 +123,24 @@ void frontend_intro_start(void *file, u8 *screen)
     s_intro_anim.file = file;
     s_intro_anim.screen = screen;
     cdp_open(&s_intro_anim);
+}
+
+/* 0x403d40: plays sample `index` of group `group` of the menu's bank
+ * at `volume` and `rate`, when the menu has sound. Returns the handle,
+ * or -1. */
+s32 sound_load(int group, int index, s32 volume, s32 rate)
+{
+    struct sound_request req;
+
+    if (!g_menu_sound) {
+        return -1;
+    }
+    memset(&req, 0, sizeof(req));
+    req.group = group;
+    req.index = index;
+    req.volume = volume;
+    req.rate = rate;
+    return sound_start(&req);
 }
 
 /* 0x403df0
@@ -590,13 +609,13 @@ static void intro_step(void)
     if (fe_4be850 >= 1335.6) {
         fe_4be850 = 0.0;
         video_set_palette(g_menu_palette);
-        fe_4be584 = sound_play(fe_4be8b0);
+        fe_4be584 = sound_voice_of(fe_4be8b0);
         if (fe_4be584 != NULL) {
-            ((s32 *)fe_4be584)[4] = 0;
+            fe_4be584->rate = 0;
         }
-        fe_4be584 = sound_play(fe_4be8b4);
+        fe_4be584 = sound_voice_of(fe_4be8b4);
         if (fe_4be584 != NULL) {
-            ((s32 *)fe_4be584)[4] = 0;
+            fe_4be584->rate = 0;
         }
         sound_stop_all();
         sound_music(0, 0, 3);
@@ -886,7 +905,7 @@ int menu_exit(void)
     cd_stop_play();
     video_set_palette(startup_black_palette());
     menu_engine_free();
-    sound_free_bank();
+    sound_close();
     g_menu_sound = 0;
     menucar_free();
     scene_free();

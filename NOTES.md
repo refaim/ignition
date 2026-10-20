@@ -141,8 +141,8 @@ at row 190, column 153.
 | sprites | `0x45c7f0`..`0x45c8fe`, `0x456d20`..`0x457416`, `0x465bb5` | 2000 records at `0x514bd8`; `src/lisa/sprite.c` |
 | video | `0x45b740`, `0x45bd70` | `DirectDrawCreate`, window, back buffers; function table at `0x50eb6c` |
 | input | `0x455ac0`..`0x455e20` | `DirectInputCreateA`, keyboard device; key names `DIK 00`.. at `0x4931bc` |
-| CD audio | `0x457b10`..`0x4580a0` | MCI strings: `open cdaudio`, `play cdaudio from .. to ..` |
-| sound | `0x4582b0`..`0x459140` | loads `.WAV`, `.PAT` (GF1PATCH110) and `.RW8` from a folder |
+| CD audio | `0x457b10`..`0x4581b0` | MCI: track starts and lengths in frames of 1/75 s, track 1 (data) skipped, volume only on or off; `src/cd.c` plays from the disc image |
+| sound | `0x4577a0`..`0x459580` | banks of numbered group folders of numbered samples (`.WAV`, `.PAT` GF1PATCH110, `.RW8`, raw); voices of 0x24 bytes at `0x63caa4`, handles slot << 16 + sequence; the loudest five play (`0x467240`); `src/sound.c` |
 | renderer | `0x45e610`.. | init copies a 16 byte default state to seven render slots |
 | fonts | `0x456180`..`0x456a31` | 30 fonts of 0x640 bytes at `0x63f2e0`; `.LFT`, see "Data"; `src/lisa/font.c` |
 | 3D file import | `0x461a90`, `0x461ea0` | reads `geo`, `tmp` and `3ds` text formats (tool code) |

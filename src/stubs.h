@@ -13,6 +13,7 @@
 
 #include "cd.h"
 #include "input.h"
+#include "sound.h"
 #include "types.h"
 
 #define STUB(addr, name) do { \
@@ -42,15 +43,8 @@ int joystick_init(void);            /* 0x4596a0 */
 
 
 /* sound */
-void sound_tick(void);              /* 0x457890 */
-int sound_open(s32 *params);        /* 0x4577a0: 0 off, 1 on, 2 no card */
-int sound_load_bank(const char *dir, int flags);   /* 0x459140 */
-int sound_set_volume(int volume);   /* 0x457ae0 */
 
-void sound_stop_all(void);          /* 0x457910 */
-void *sound_play(s32 sample);       /* 0x457aa0, returns the voice */
 int sound_music(int a, int b, int c);   /* 0x458d80 */
-s32 sound_load(int a, int b, s32 rate, s32 size);  /* 0x403d40 */
 int joystick_read(void);            /* 0x459a20 */
 
 /* the intro animations (.CDP) */
@@ -66,7 +60,6 @@ int car3d_draw(s32 car, int spin, double scale, int x, int y);   /* 0x40c5a0 */
 int menucar_load(void);             /* 0x40ca60 */
 int menucar_free(void);             /* 0x410920 */
 int scene_free(void);               /* 0x446c30 */
-int sound_free_bank(void);          /* 0x4578d0 */
 int menu_apply_settings(void);      /* 0x404800 */
 int net_send_settings(void *state, void *settings);    /* 0x40d200 */
 int net_connect(void);              /* 0x459d40, the DirectPlay dialogs */

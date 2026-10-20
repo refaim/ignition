@@ -51,6 +51,7 @@ int frontend_load_language(void);
 void frontend_intro_start(void *file, u8 *screen);
 int menu_frame(void);
 int menu_exit(void);
+s32 sound_load(int group, int index, s32 volume, s32 rate);
 void palette_lerp(const u8 *from, const u8 *to, u8 *out, int t);
 void menu_message(const char *text, double time);
 

@@ -21,4 +21,14 @@ void audio_cd_stop(void);
 int audio_cd_playing(void);
 void audio_cd_mute(int mute);
 
+struct sound_voice;
+
+/* The sound voices the mixer plays from: at most `channels` at once,
+ * the loudest. */
+void audio_voices_set(struct sound_voice *voices, int count, int channels);
+void audio_voice_start(struct sound_voice *v);
+void audio_voices_volume(s32 volume);
+/* Puts voices that stopped, and are not kept, on the free list. */
+void audio_voices_collect(struct sound_voice **free_list, int *free_count);
+
 #endif /* IGN_AUDIO_H */

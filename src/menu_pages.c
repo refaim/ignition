@@ -28,6 +28,7 @@
 #include "menu_pages.h"
 #include "menu_panels.h"
 #include "settings.h"
+#include "sound.h"
 #include "startup.h"
 #include "stubs.h"
 #include "video.h"
@@ -809,13 +810,13 @@ int menu_page_handler_b(int key, int action)
     if (0.0 < fe_4be850 && fe_4be850 < 1278.0) {
         fe_4be850 = 1278.0;
         video_set_palette(g_menu_white);
-        fe_4be584 = sound_play(fe_4be8b0);
+        fe_4be584 = sound_voice_of(fe_4be8b0);
         if (fe_4be584 != NULL) {
-            ((s32 *)fe_4be584)[4] = 0;
+            fe_4be584->rate = 0;
         }
-        fe_4be584 = sound_play(fe_4be8b4);
+        fe_4be584 = sound_voice_of(fe_4be8b4);
         if (fe_4be584 != NULL) {
-            ((s32 *)fe_4be584)[4] = 0;
+            fe_4be584->rate = 0;
         }
         sound_stop_all();
         return MENU_KEY_TAKEN;

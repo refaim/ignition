@@ -11,6 +11,7 @@
 #include <string.h>
 
 #include "audio.h"
+#include "sound.h"
 #include "platform.h"
 
 struct cd_stream {
@@ -26,6 +27,14 @@ static atomic_int s_cd_playing;
 static atomic_int s_cd_mute;
 static int s_open;
 
+enum { MAX_VOICES = 64 };
+
+static struct sound_voice *s_voices;
+static int s_voice_count;
+static int s_channels;
+static atomic_int s_active[MAX_VOICES];
+static atomic_int s_master = 0x10000;
+
 static void stream_free(struct cd_stream *s)
 {
     if (s != NULL) {
@@ -37,6 +46,78 @@ static void stream_free(struct cd_stream *s)
 static void collect(void)
 {
     stream_free(atomic_exchange(&s_cd_done, NULL));
+}
+
+/* How loud a voice is now, as 0x467240 ranks them. */
+static s32 loudness(const struct sound_voice *v)
+{
+    const struct sound_sample *s = v->sample;
+    int at = s->length > 0 ? v->pos * 64 / s->length : 0;
+
+    if (at > 63) {
+        at = 63;
+    }
+    return ((s32)s->envelope[at] * v->rate >> s->shift) * (v->volume >> 10) / 256 * (v->pan + 128);
+}
+
+static float sample_at(const struct sound_sample *s, s32 pos)
+{
+    return s->bits == 8 ? ((const s8 *)s->data)[pos] * (1.0f / 128.0f)
+                        : ((const s16 *)s->data)[pos] * (1.0f / 32768.0f);
+}
+
+/* Adds the loudest voices into `out`, stepping each at its rate and
+ * looping as many times as asked (0x467180). */
+static void mix_voices(float *out, s32 frames)
+{
+    int chosen[MAX_VOICES], n = 0, i, k;
+    float master = atomic_load(&s_master) * (1.0f / 65536.0f);
+
+    for (i = 0; i < s_voice_count; i++) {
+        const struct sound_voice *v = &s_voices[i];
+
+        if (atomic_load(&s_active[i]) && v->rate > 0 && v->sample != NULL) {
+            chosen[n++] = i;
+        }
+    }
+    while (n > s_channels) {
+        int quiet = 0;
+
+        for (k = 1; k < n; k++) {
+            if (loudness(&s_voices[chosen[k]]) < loudness(&s_voices[chosen[quiet]])) {
+                quiet = k;
+            }
+        }
+        chosen[quiet] = chosen[--n];
+    }
+    for (k = 0; k < n; k++) {
+        struct sound_voice *v = &s_voices[chosen[k]];
+        const struct sound_sample *s = v->sample;
+        float gain = v->volume * (1.0f / 65536.0f) * master;
+        float left = gain * (v->pan > 0 ? (128 - v->pan) / 128.0f : 1.0f);
+        float right = gain * (v->pan < 0 ? (128 + v->pan) / 128.0f : 1.0f);
+        u32 step = (u32)(((u64)(u32)v->rate << 16) / AUDIO_RATE);
+
+        for (i = 0; i < frames && v->rate > 0; i++) {
+            float x;
+            u32 frac;
+
+            if (v->loops != 0 && v->pos >= s->loop_start + s->loop_length) {
+                v->pos -= s->loop_length;
+                v->loops--;
+            }
+            if (v->pos >= s->length) {
+                v->rate = 0;
+                break;
+            }
+            x = sample_at(s, v->pos);
+            out[2 * i] += x * left;
+            out[2 * i + 1] += x * right;
+            frac = v->frac + step;
+            v->pos += (s32)(frac >> 16);
+            v->frac = frac & 0xffff;
+        }
+    }
 }
 
 static void mix(float *out, s32 frames, void *user)
@@ -71,6 +152,45 @@ static void mix(float *out, s32 frames, void *user)
         }
         out[2 * i] = l;
         out[2 * i + 1] = r;
+    }
+    if (s_voices != NULL) {
+        mix_voices(out, frames);
+    }
+}
+
+void audio_voices_set(struct sound_voice *voices, int count, int channels)
+{
+    int i;
+
+    for (i = 0; i < MAX_VOICES; i++) {
+        atomic_store(&s_active[i], 0);
+    }
+    s_voice_count = count < MAX_VOICES ? count : MAX_VOICES;
+    s_channels = channels;
+    s_voices = voices;
+}
+
+void audio_voice_start(struct sound_voice *v)
+{
+    atomic_store(&s_active[v - s_voices], 1);
+}
+
+void audio_voices_volume(s32 volume)
+{
+    atomic_store(&s_master, volume);
+}
+
+void audio_voices_collect(struct sound_voice **free_list, int *free_count)
+{
+    int i;
+
+    for (i = 0; i < s_voice_count; i++) {
+        struct sound_voice *v = &s_voices[i];
+
+        if (atomic_load(&s_active[i]) && v->rate == 0 && v->keep != 1) {
+            atomic_store(&s_active[i], 0);
+            free_list[(*free_count)++] = v;
+        }
     }
 }
 

@@ -50,16 +50,8 @@ int net_stop(void)
 
 
 
-STUB_VOID(0x457890, sound_tick)
 
-STUB_VOID(0x457910, sound_stop_all)
 
-void *sound_play(s32 sample)
-{
-    (void)sample;
-    STUB(0x457aa0, "sound_play");
-    return NULL;
-}
 
 int sound_music(int a, int b, int c)
 {
@@ -70,15 +62,6 @@ int sound_music(int a, int b, int c)
     return 0;
 }
 
-s32 sound_load(int a, int b, s32 rate, s32 size)
-{
-    (void)a;
-    (void)b;
-    (void)rate;
-    (void)size;
-    STUB(0x403d40, "sound_load");
-    return -1;
-}
 
 
 
@@ -169,11 +152,6 @@ int scene_free(void)
 }
 
 
-int sound_free_bank(void)
-{
-    STUB(0x4578d0, "sound_free_bank");
-    return 1;
-}
 
 int menucar_load(void)
 {
@@ -198,27 +176,8 @@ int net_send_settings(void *state, void *settings)
 }
 
 /* No audio yet: the menu runs with sound off. */
-int sound_open(s32 *params)
-{
-    (void)params;
-    STUB(0x4577a0, "sound_open");
-    return 0;
-}
 
-int sound_load_bank(const char *dir, int flags)
-{
-    (void)dir;
-    (void)flags;
-    STUB(0x459140, "sound_load_bank");
-    return 1;
-}
 
-int sound_set_volume(int volume)
-{
-    (void)volume;
-    STUB(0x457ae0, "sound_set_volume");
-    return 1;
-}
 
 /* The camera record the menu writes to; the scene's object lists and
  * the rasteriser's tables are not made. */

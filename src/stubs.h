@@ -46,16 +46,6 @@ extern s32 g_cd_tracks[4];          /* 0x50f2cc */
 int cd_read_status(void);           /* 0x457b50 */
 int cd_read_tracks(void);           /* 0x457da0 */
 
-/* front end page handlers and tree callbacks; declared in menu.h:
- * menu_page_handler_a 0x409fb0, menu_page_handler_b 0x409610,
- * menu_cb_4045b0 0x4045b0, menu_cb_4045e0 0x4045e0,
- * menu_cb_404610 0x404610, menu_cb_404740 0x404740,
- * menu_cb_404790 0x404790 */
-int menu_cb_4045b0(int arg0, int arg1);         /* 0x4045b0 */
-int menu_cb_4045e0(int arg0, int arg1);         /* 0x4045e0 */
-int menu_cb_404610(int arg0, int arg1);         /* 0x404610 */
-int menu_cb_404740(int arg0, int arg1);         /* 0x404740 */
-int menu_cb_404790(int arg0, int arg1);         /* 0x404790 */
 
 /* sound */
 void sound_tick(void);              /* 0x457890 */
@@ -83,8 +73,15 @@ int menu_network_page(void);        /* 0x40af54, inside menu_page_handler_a */
 int menu_background_render(void);   /* 0x40c740 */
 int car3d_draw(s32 car, int spin, double scale, int x, int y);   /* 0x40c5a0 */
 int menucar_load(void);             /* 0x40ca60 */
+int menucar_free(void);             /* 0x410920 */
+int scene_free(void);               /* 0x446c30 */
+int cd_stop_play(void);             /* 0x457fc0 */
+int sound_free_bank(void);          /* 0x4578d0 */
 int menu_apply_settings(void);      /* 0x404800 */
 int net_send_settings(void *state, void *settings);    /* 0x40d200 */
+int net_connect(void);              /* 0x459d40, the DirectPlay dialogs */
+int net_start(void);                /* 0x459e80 */
+int net_reset(void *state);         /* 0x40ce90 */
 extern s32 g_net_players;           /* 0x50f7a8 */
 
 /* 3D scene; the renderer's buffers are replaced by OpenGL */
@@ -94,7 +91,6 @@ int raster_set_screen(int w, int h, int flags);    /* 0x402be0 */
 
 /* game */
 int cd_stop(void);                  /* 0x459e10 */
-int menu_exit(void);                /* 0x4038f0 */
 void race_load_1(void);             /* 0x418b70 */
 void race_load_2(void);             /* 0x418be0 */
 void race_load_world(void);         /* 0x418c40 */

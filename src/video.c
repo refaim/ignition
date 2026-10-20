@@ -144,6 +144,43 @@ int video_set_palette(const u8 *rgb)
     return 1;
 }
 
+static u32 s_shot_ms;
+static char s_shot_path[1024];
+
+void video_schedule_shot(u32 ms, const char *path)
+{
+    s_shot_ms = ms;
+    snprintf(s_shot_path, sizeof(s_shot_path), "%s", path);
+}
+
+static void write_shot(void)
+{
+    FILE *fp = fopen(s_shot_path, "wb");
+    u8 header[18] = { 0, 0, 2 };
+    int x, y;
+
+    if (fp == NULL) {
+        perror(s_shot_path);
+        return;
+    }
+    header[12] = (u8)s_screen_w;
+    header[13] = (u8)(s_screen_w >> 8);
+    header[14] = (u8)s_screen_h;
+    header[15] = (u8)(s_screen_h >> 8);
+    header[16] = 24;
+    header[17] = 0x20;      /* top to bottom */
+    fwrite(header, 1, sizeof(header), fp);
+    for (y = 0; y < s_screen_h; y++) {
+        for (x = 0; x < s_screen_w; x++) {
+            const u8 *c = &g_video_palette[3 * g_video_screen[y * s_screen_w + x]];
+            u8 bgr[3] = { c[2], c[1], c[0] };
+
+            fwrite(bgr, 1, 3, fp);
+        }
+    }
+    fclose(fp);
+}
+
 void video_present(void)
 {
     int w, h;
@@ -156,4 +193,8 @@ void video_present(void)
     gfx_draw_screen(g_video_screen, s_screen_w, s_screen_h, s_screen_w,
                     g_video_palette, video_aspect());
     plat_present();
+    if (s_shot_path[0] != '\0' && plat_time_ms() >= s_shot_ms) {
+        write_shot();
+        s_shot_path[0] = '\0';
+    }
 }

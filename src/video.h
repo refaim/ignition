@@ -55,6 +55,10 @@ int video_flip(void);
 /* 0x456c40: 256 RGB entries, 8 bits a channel. */
 int video_set_palette(const u8 *rgb);
 
+/* Writes the screen surface, through its palette, to `path` as an
+ * uncompressed 24 bit TGA when `ms` has passed, for scripted runs. */
+void video_schedule_shot(u32 ms, const char *path);
+
 /* The aspect the surface is shown at. 320 x 200 was shown on a 4:3
  * monitor, so it keeps 4:3; other modes have square pixels. */
 float video_aspect(void);

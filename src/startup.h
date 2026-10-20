@@ -32,6 +32,9 @@ extern s32 g_cheats[10];
 
 int game_video_init(void);
 
+/* The black palette game_video_init sets (0x553470). */
+const u8 *startup_black_palette(void);
+
 /* Sets the menu's video mode from g_screen_size. */
 int game_set_menu_mode(void);
 

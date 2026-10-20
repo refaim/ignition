@@ -72,11 +72,6 @@ int cd_stop(void)
 
 
 
-int menu_exit(void)
-{
-    STUB(0x4038f0, "menu_exit");
-    return 1;
-}
 
 STUB_VOID(0x457890, sound_tick)
 
@@ -177,6 +172,49 @@ int car3d_draw(s32 car, int spin, double scale, int x, int y)
     return 0;
 }
 
+int net_connect(void)
+{
+    STUB(0x459d40, "net_connect");
+    return 0;
+}
+
+int net_start(void)
+{
+    STUB(0x459e80, "net_start");
+    return 0;
+}
+
+int net_reset(void *state)
+{
+    (void)state;
+    STUB(0x40ce90, "net_reset");
+    return 0;
+}
+
+int menucar_free(void)
+{
+    STUB(0x410920, "menucar_free");
+    return 1;
+}
+
+int scene_free(void)
+{
+    STUB(0x446c30, "scene_free");
+    return 1;
+}
+
+int cd_stop_play(void)
+{
+    STUB(0x457fc0, "cd_stop_play");
+    return 1;
+}
+
+int sound_free_bank(void)
+{
+    STUB(0x4578d0, "sound_free_bank");
+    return 1;
+}
+
 int menucar_load(void)
 {
     STUB(0x40ca60, "menucar_load");
@@ -250,14 +288,6 @@ int raster_set_screen(int w, int h, int flags)
 
 
 
-#define STUB_CB(addr, name) \
-    int name(int arg0, int arg1) { (void)arg0; (void)arg1; STUB(addr, #name); return 0; }
-
-STUB_CB(0x4045b0, menu_cb_4045b0)
-STUB_CB(0x4045e0, menu_cb_4045e0)
-STUB_CB(0x404610, menu_cb_404610)
-STUB_CB(0x404740, menu_cb_404740)
-STUB_CB(0x404790, menu_cb_404790)
 STUB_VOID(0x418b70, race_load_1)
 STUB_VOID(0x418be0, race_load_2)
 STUB_VOID(0x418c40, race_load_world)

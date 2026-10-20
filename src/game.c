@@ -30,7 +30,7 @@ s32 g_back_from_race;           /* 0x54f9c8 */
 s32 g_race_5285c8;              /* 0x5285c8 */
 s32 g_race_4949b8;              /* 0x4949b8 */
 s32 g_cd_last_track;            /* 0x4949e0 */
-s32 g_cd_50f9e4;                /* 0x50f9e4 */
+s32 g_net_state;                /* 0x50f9e4: 3 hosting, 4 joining */
 
 /* The language, 0 to 4: English, German, Italian, then two that use
  * the English text here. The original keeps it at 0x639933, not word
@@ -144,7 +144,7 @@ int game_frame(void)
     }
     if (g_game_mode == GAME_MODE_MENU) {
         cd_stop();
-        g_cd_50f9e4 = 0;
+        g_net_state = 0;
         if (!menu_init()) {
             g_app_state = APP_STATE_SHUTDOWN;
             return 0;

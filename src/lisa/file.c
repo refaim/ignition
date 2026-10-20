@@ -122,3 +122,14 @@ int file_exists(const char *name)
     fclose(fp);
     return 1;
 }
+
+/* 0x457660 */
+int file_delete(const char *name)
+{
+    char path[1024];
+
+    if (!vfs_resolve(name, path, sizeof(path)) || remove(path) != 0) {
+        return FILE_ERR_DELETE;
+    }
+    return 1;
+}

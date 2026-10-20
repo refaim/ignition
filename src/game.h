@@ -15,5 +15,6 @@ void present_back_buffer(void);
 
 extern int g_game_mode;
 extern int g_language;
+extern s32 g_net_state;
 
 #endif /* IGN_GAME_H */

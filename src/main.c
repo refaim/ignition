@@ -2,7 +2,7 @@
  * main.c - entry point. WinMain 0x4120a0.
  *
  *   ignition [--data DIR] [--view FILE.PIC] [--text TEXT] [--press MS:KEY]...
- *            [--background]
+ *            [--background] [--shot MS:FILE.TGA]
  *
  * --data is the folder with the game files, the disc root as extracted
  * by `make extract`. --view shows one picture through the renderer, with
@@ -11,7 +11,8 @@
  * x 160 at y 94 of the cleared 320 x 200 buffer, with menu.col. Both
  * exit on Escape. --press presses a key (DirectInput scan code, hex) MS
  * milliseconds after start up, for scripted runs; --background keeps the
- * game running while its window is not active.
+ * game running while its window is not active; --shot writes the screen
+ * to a TGA file at a time.
  */
 
 #include <stdio.h>
@@ -114,6 +115,13 @@ int main(int argc, char **argv)
             data = argv[++i];
         } else if (strcmp(argv[i], "--view") == 0 && i + 1 < argc) {
             view_name = argv[++i];
+        } else if (strcmp(argv[i], "--shot") == 0 && i + 1 < argc) {
+            unsigned ms;
+            char path[1024];
+
+            if (sscanf(argv[++i], "%u:%1023s", &ms, path) == 2) {
+                video_schedule_shot(ms, path);
+            }
         } else if (strcmp(argv[i], "--background") == 0) {
             g_plat_run_inactive = 1;
         } else if (strcmp(argv[i], "--press") == 0 && i + 1 < argc) {

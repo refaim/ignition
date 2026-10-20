@@ -19,7 +19,8 @@ enum {
     FILE_ERR_MISSING = 0x7ee,      /* file_load */
     FILE_ERR_NOT_FOUND = 0x7ef,    /* file_exists */
     FILE_ERR_EMPTY = 0x7f8,
-    FILE_ERR_NO_MEMORY = 0x802
+    FILE_ERR_NO_MEMORY = 0x802,
+    FILE_ERR_DELETE = 0x80c
 };
 
 extern int g_file_error;    /* 0x4bab34 */
@@ -37,6 +38,9 @@ long file_stream_size(FILE *fp);
 
 /* Size of a file. 0 when it cannot be opened. */
 long file_size(const char *name);
+
+/* Deletes a file: 1, or FILE_ERR_DELETE. */
+int file_delete(const char *name);
 
 /* 1, or FILE_ERR_NOT_FOUND. */
 int file_exists(const char *name);

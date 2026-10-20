@@ -25,7 +25,7 @@ OUT = os.path.join(ROOT, "src", "menu_data.c")
 BASE = 0x479000
 
 LANG_LISTS = [0x481880, 0x4847e8, 0x487750, 0x48a6b8, 0x48d620, 0x490588]
-LIST_SLOTS = 30
+LIST_SLOTS = 119             # codes 0..118 in the tree
 # Each language's 25 pages (0x490788, 6 x 25 pointers). 0x404a60 copies
 # them to 0x4be8c8; choosing a language copies its row to 0x4be768.
 PAGE_TABLES = 0x490788

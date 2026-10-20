@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include "app.h"
+#include "game.h"
 #include "frontend.h"
 #include "frontend_state.h"
 #include "lisa/texture.h"
@@ -18,6 +19,7 @@
 #include "lisa/sprite.h"
 #include "menu.h"
 #include "menu_engine.h"
+#include "menu_pages.h"
 #include "pic.h"
 #include "settings.h"
 #include "startup.h"
@@ -856,4 +858,156 @@ int menu_frame(void)
     menu_present();
     fe_4be72c++;
     return fe_4be5a0;
+}
+
+static void free_sprite(struct sprite **s)
+{
+    if (*s != NULL) {
+        sprite_create(NULL, *s);
+        *s = NULL;
+    }
+}
+
+static void free_block(void *p)
+{
+    free(*(void **)p);
+    *(void **)p = NULL;
+}
+
+/* 0x4038f0
+ * Leaves the front end: sound and CD off, a black palette, and every
+ * sprite and buffer of the menu freed. The colour table pointed at
+ * MENU.TAB, freed here; it goes back to the identity table. */
+int menu_exit(void)
+{
+    int i;
+
+    sound_stop_all();
+    cd_stop_play();
+    video_set_palette(startup_black_palette());
+    menu_engine_free();
+    sound_free_bank();
+    g_menu_sound = 0;
+    menucar_free();
+    scene_free();
+    free_sprite(&g_sprite_car);
+    free_sprite(&g_sprite_track);
+    free_sprite(&g_sprite_logo);
+    free_sprite(&g_sprite_panel);
+    free_sprite(&g_sprite_panel2);
+    free_sprite(&g_sprite_car_select);
+    for (i = 0; i < 5; i++) {
+        free_sprite(&g_sprite_flags[i]);
+    }
+    for (i = 0; i < 12; i++) {
+        free_sprite(&g_sprite_badges[i]);
+    }
+    free_block(&g_menu_black);
+    free_block(&g_menu_white);
+    free_block(&g_menu_palette_work);
+    free_block(&g_menu_screen);
+    free_block(&g_menu_buffer1);
+    free_block(&g_menu_buffer2);
+    free_block(&g_menu_palette);
+    free_block(&fe_4be5f8);
+    free_block(&fe_4be630);
+    free_block(&fe_4be898);
+    free_block(&fe_4be804);
+    free_block(&fe_4be604);
+    free_block(&fe_4be5f4);
+    free_block(&fe_4be658);
+    free_block(&g_pic_cars);
+    free_block(&g_pic_tracks);
+    free_block(&g_pic_logo);
+    free_block(&g_pic_car_select);
+    free_block(&g_pic_flags);
+    free_block(&g_menu_table);
+    g_gfx_color_table = g_identity_table;
+    return 1;
+}
+
+/* 0x4045b0: Yes on QUIT?. The iris closes, then the game quits. */
+int menu_cb_4045b0(int arg0, int action)
+{
+    (void)arg0;
+    if ((s8)action == MENU_KEY_ACTIVATE) {
+        menu_set_delay(800);
+        fe_4be8c0 = 0.01;
+    }
+    return 0;
+}
+
+/* 0x4045e0: the start of a race. The iris closes, then the race loads. */
+int menu_cb_4045e0(int arg0, int action)
+{
+    (void)arg0;
+    if ((s8)action == MENU_KEY_ACTIVATE) {
+        menu_set_delay(800);
+        fe_4be8a0 = 0.01;
+    }
+    return 0;
+}
+
+/* 0x404610: NETWORK GAME. The original drops out of full screen and
+ * back, twice, around the DirectPlay dialogs; the OpenGL window needs
+ * neither. Without a session it goes back a page. */
+int menu_cb_404610(int arg0, int action)
+{
+    (void)arg0;
+    cd_stop();
+    if ((s8)action != MENU_KEY_ACTIVATE) {
+        return 0;
+    }
+    net_connect();
+    if (g_net_state == 3 || g_net_state == 4) {
+        net_start();
+        fe_4be634 = g_net_state == 3 ? 1 : 2;
+        fe_4be718 = 0;
+    } else {
+        g_menu.key_pressed[0x01] = 1;
+    }
+    s_mode_pending = 1;
+    menu_set_mode();
+    video_set_palette(g_menu_palette);
+    net_reset(&fe_4be710);
+    return 0;
+}
+
+/* 0x404740: Yes on RESTORE SETTINGS?. The defaults, keeping how far the
+ * player got (0x587), 0x58b and the language. */
+int menu_cb_404740(int arg0, int action)
+{
+    (void)arg0;
+    if ((s8)action == MENU_KEY_ACTIVATE) {
+        s32 reached = settings_get(0x587);
+        s32 flag = settings_get(0x58b);
+        s32 lang = settings_get(SET_LANGUAGE);
+
+        settings_defaults();
+        settings_set(0x587, reached);
+        settings_set(0x58b, flag);
+        settings_set(SET_LANGUAGE, lang);
+        g_menu.key_pressed[0x01] = 1;
+    }
+    return 0;
+}
+
+/* 0x404790: Yes on RESET GHOST CAR?. Deletes every track's ghost lap. */
+int menu_cb_404790(int arg0, int action)
+{
+    static const char *const ghosts[7] = {
+        "GHOSTS\\CAPETHOR.GST", "GHOSTS\\MOOSEJAW.GST", "GHOSTS\\GOLDRUSH.GST",
+        "GHOSTS\\SNAKEISL.GST", "GHOSTS\\YODELPEA.GST", "GHOSTS\\TOKYOBUL.GST",
+        "GHOSTS\\LOSTRUIN.GST"
+    };
+    int i;
+
+    (void)arg0;
+    if ((s8)action == MENU_KEY_ACTIVATE) {
+        for (i = 0; i < 7; i++) {
+            file_delete(ghosts[i]);
+        }
+        g_menu.key_pressed[0x01] = 1;
+    }
+    return 0;
 }

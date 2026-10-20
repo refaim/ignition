@@ -21,6 +21,8 @@ extern s32 fe_4be600, fe_4be568;
 extern s32 fe_4be710, fe_4be718, fe_47dc48;
 extern void *fe_4be584;
 extern void *fe_4be880[6];
+/* The menu car's data, made by menucar_load (0x40ca60). */
+extern void *fe_4be5f8, *fe_4be630, *fe_4be898, *fe_4be804, *fe_4be604, *fe_4be5f4, *fe_4be658;
 
 void frontend_reset_state(void);
 void frontend_reset_after_setup(void);

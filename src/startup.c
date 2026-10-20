@@ -42,6 +42,11 @@ s32 g_cheats[10];               /* 0x54f920, one flag a cheat code */
 static u8 s_identity_table[0x10000];   /* in 0x619330, 64 KB aligned */
 static u8 s_black_palette[0x300];       /* 0x553470 */
 
+const u8 *startup_black_palette(void)
+{
+    return s_black_palette;
+}
+
 /* Where the four position icons are cut from N_SYSGFX.PIC: x, y, width,
  * height (0x497bb8). Icon i is i heights further down. */
 const s32 g_position_icon_rect[4] = { 0xec, 0, 0x14, 0x14 };

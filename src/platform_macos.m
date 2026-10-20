@@ -11,6 +11,7 @@
 
 #import <Cocoa/Cocoa.h>
 #import <OpenGL/OpenGL.h>
+#import <AudioUnit/AudioUnit.h>
 
 #include <mach/mach_time.h>
 #include <string.h>
@@ -72,6 +73,76 @@ static IgnWindowDelegate *s_delegate;
     (void)event;
 }
 @end
+
+static AudioUnit s_audio_unit;
+static plat_audio_fn s_audio_cb;
+static void *s_audio_user;
+
+static OSStatus audio_render(void *ref, AudioUnitRenderActionFlags *flags,
+                             const AudioTimeStamp *ts, UInt32 bus, UInt32 frames,
+                             AudioBufferList *io)
+{
+    float *out = (float *)io->mBuffers[0].mData;
+
+    (void)ref;
+    (void)flags;
+    (void)ts;
+    (void)bus;
+    if (s_audio_cb != NULL) {
+        s_audio_cb(out, (s32)frames, s_audio_user);
+    } else {
+        memset(out, 0, frames * 2 * sizeof(float));
+    }
+    return noErr;
+}
+
+/* The default output unit, 32 bit float stereo interleaved. */
+int plat_audio_open(s32 rate, plat_audio_fn cb, void *user)
+{
+    AudioComponentDescription desc = { kAudioUnitType_Output, kAudioUnitSubType_DefaultOutput,
+                                       kAudioUnitManufacturer_Apple, 0, 0 };
+    AudioComponent comp = AudioComponentFindNext(NULL, &desc);
+    AudioStreamBasicDescription fmt;
+    AURenderCallbackStruct render;
+
+    if (comp == NULL || AudioComponentInstanceNew(comp, &s_audio_unit) != noErr) {
+        return 0;
+    }
+    memset(&fmt, 0, sizeof(fmt));
+    fmt.mSampleRate = rate;
+    fmt.mFormatID = kAudioFormatLinearPCM;
+    fmt.mFormatFlags = kAudioFormatFlagIsFloat | kAudioFormatFlagIsPacked;
+    fmt.mChannelsPerFrame = 2;
+    fmt.mBitsPerChannel = 32;
+    fmt.mFramesPerPacket = 1;
+    fmt.mBytesPerFrame = 8;
+    fmt.mBytesPerPacket = 8;
+    render.inputProc = audio_render;
+    render.inputProcRefCon = NULL;
+    s_audio_cb = cb;
+    s_audio_user = user;
+    if (AudioUnitSetProperty(s_audio_unit, kAudioUnitProperty_StreamFormat,
+                             kAudioUnitScope_Input, 0, &fmt, sizeof(fmt)) != noErr
+        || AudioUnitSetProperty(s_audio_unit, kAudioUnitProperty_SetRenderCallback,
+                                kAudioUnitScope_Input, 0, &render, sizeof(render)) != noErr
+        || AudioUnitInitialize(s_audio_unit) != noErr
+        || AudioOutputUnitStart(s_audio_unit) != noErr) {
+        AudioComponentInstanceDispose(s_audio_unit);
+        s_audio_unit = NULL;
+        return 0;
+    }
+    return 1;
+}
+
+void plat_audio_close(void)
+{
+    if (s_audio_unit != NULL) {
+        AudioOutputUnitStop(s_audio_unit);
+        AudioUnitUninitialize(s_audio_unit);
+        AudioComponentInstanceDispose(s_audio_unit);
+        s_audio_unit = NULL;
+    }
+}
 
 u32 plat_time_ms(void)
 {

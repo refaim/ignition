@@ -573,3 +573,44 @@ int cdimage_track_is_audio(int track)
     }
     return 0;
 }
+
+/* A file's sectors come after all the earlier files' sectors. */
+static long file_base(int file)
+{
+    long base = 0;
+    int f;
+
+    for (f = 0; f < file; f++) {
+        int i;
+        int size = SECTOR_RAW;
+
+        for (i = 0; i < s_track_count; i++) {
+            if (s_tracks[i].file == f) {
+                size = s_tracks[i].sector_size;
+                break;
+            }
+        }
+        base += s_files[f].size / size;
+    }
+    return base;
+}
+
+s32 cdimage_track_start(int track)
+{
+    int i;
+
+    for (i = 0; s_open && i < s_track_count; i++) {
+        if (s_tracks[i].number == track) {
+            return (s32)(file_base(s_tracks[i].file) + s_tracks[i].start);
+        }
+    }
+    return 0;
+}
+
+s32 cdimage_disc_frames(void)
+{
+    if (!s_open || s_track_count == 0) {
+        return 0;
+    }
+    return (s32)file_base(s_file_count);
+}

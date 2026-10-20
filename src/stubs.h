@@ -11,6 +11,7 @@
 
 #include <stdio.h>
 
+#include "cd.h"
 #include "input.h"
 #include "types.h"
 
@@ -37,14 +38,7 @@ void gfx_init_spans(void);          /* 0x45c9f0 */
 
 /* joystick and CD audio */
 int joystick_init(void);            /* 0x4596a0 */
-int cd_open(void);                  /* 0x458040 */
-int cd_set_volume(int volume);      /* 0x457cf0 */
 
-/* CD audio state, filled by cd_read_status and cd_read_tracks */
-extern s32 g_cd_present;            /* 0x50ef4c */
-extern s32 g_cd_tracks[4];          /* 0x50f2cc */
-int cd_read_status(void);           /* 0x457b50 */
-int cd_read_tracks(void);           /* 0x457da0 */
 
 
 /* sound */
@@ -57,9 +51,6 @@ void sound_stop_all(void);          /* 0x457910 */
 void *sound_play(s32 sample);       /* 0x457aa0, returns the voice */
 int sound_music(int a, int b, int c);   /* 0x458d80 */
 s32 sound_load(int a, int b, s32 rate, s32 size);  /* 0x403d40 */
-int cd_is_playing(void);            /* 0x457b10 */
-int cd_play_track(int track);       /* 0x457ed0 */
-extern s32 g_cd_track_count;        /* 0x50f070 */
 int joystick_read(void);            /* 0x459a20 */
 
 /* the intro animations (.CDP) */
@@ -75,7 +66,6 @@ int car3d_draw(s32 car, int spin, double scale, int x, int y);   /* 0x40c5a0 */
 int menucar_load(void);             /* 0x40ca60 */
 int menucar_free(void);             /* 0x410920 */
 int scene_free(void);               /* 0x446c30 */
-int cd_stop_play(void);             /* 0x457fc0 */
 int sound_free_bank(void);          /* 0x4578d0 */
 int menu_apply_settings(void);      /* 0x404800 */
 int net_send_settings(void *state, void *settings);    /* 0x40d200 */
@@ -90,7 +80,7 @@ int raster_set_grid(int w, int h, int count);      /* 0x446ca0 */
 int raster_set_screen(int w, int h, int flags);    /* 0x402be0 */
 
 /* game */
-int cd_stop(void);                  /* 0x459e10 */
+int net_stop(void);                 /* 0x459e10, ends a network session */
 void race_load_1(void);             /* 0x418b70 */
 void race_load_2(void);             /* 0x418be0 */
 void race_load_world(void);         /* 0x418c40 */

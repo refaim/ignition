@@ -2,7 +2,7 @@
  * main.c - entry point. WinMain 0x4120a0.
  *
  *   ignition [--data DIR] [--view FILE.PIC] [--text TEXT] [--press MS:KEY]...
- *            [--background] [--shot MS:FILE.TGA]
+ *            [--background] [--shot MS:FILE.TGA] [--cue IMAGE.CUE]
  *
  * --data is the folder with the game files, the disc root as extracted
  * by `make extract`. --view shows one picture through the renderer, with
@@ -12,13 +12,15 @@
  * exit on Escape. --press presses a key (DirectInput scan code, hex) MS
  * milliseconds after start up, for scripted runs; --background keeps the
  * game running while its window is not active; --shot writes the screen
- * to a TGA file at a time.
+ * to a TGA file at a time. --cue names the disc image for CD music;
+ * without it the .cue next to the data folder plays.
  */
 
 #include <stdio.h>
 #include <string.h>
 
 #include "app.h"
+#include "cd.h"
 #include "dik.h"
 #include "lisa/file.h"
 #include "lisa/font.h"
@@ -122,6 +124,8 @@ int main(int argc, char **argv)
             if (sscanf(argv[++i], "%u:%1023s", &ms, path) == 2) {
                 video_schedule_shot(ms, path);
             }
+        } else if (strcmp(argv[i], "--cue") == 0 && i + 1 < argc) {
+            cd_set_image(argv[++i]);
         } else if (strcmp(argv[i], "--background") == 0) {
             g_plat_run_inactive = 1;
         } else if (strcmp(argv[i], "--press") == 0 && i + 1 < argc) {

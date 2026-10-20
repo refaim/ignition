@@ -12,10 +12,7 @@
 
 #include <stddef.h>
 
-#include <stdint.h>
-
-typedef uint8_t u8;
-typedef uint32_t u32;
+#include "types.h"
 
 /* Opens a CUE sheet and indexes the file system of its first data track.
  * Returns 1 on success. Files found in the image are copied on first use
@@ -40,6 +37,11 @@ int cdimage_extract_all(void);
 int cdimage_track_count(void);
 int cdimage_track_number(int i);
 int cdimage_track_is_audio(int track);
+
+/* Where track `track` (1 based) starts on the disc, and the disc's
+ * length, in frames of 1/75 s from the first track. */
+s32 cdimage_track_start(int track);
+s32 cdimage_disc_frames(void);
 
 /* Audio track `track` (1 based, as on the disc) as 16 bit stereo samples
  * at 44.1 kHz. Returns a malloc'd buffer the caller frees, or NULL when

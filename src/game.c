@@ -143,7 +143,7 @@ int game_frame(void)
         game_check_cd();
     }
     if (g_game_mode == GAME_MODE_MENU) {
-        cd_stop();
+        net_stop();
         g_net_state = 0;
         if (!menu_init()) {
             g_app_state = APP_STATE_SHUTDOWN;

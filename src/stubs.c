@@ -34,39 +34,16 @@ int joystick_init(void)
     return 1;
 }
 
-int cd_open(void)
+
+
+
+
+
+
+
+int net_stop(void)
 {
-    STUB(0x458040, "cd_open");
-    return 1;
-}
-
-int cd_set_volume(int volume)
-{
-    (void)volume;
-    STUB(0x457cf0, "cd_set_volume");
-    return 1;
-}
-
-
-
-s32 g_cd_present;           /* 0x50ef4c */
-s32 g_cd_tracks[4];         /* 0x50f2cc */
-
-int cd_read_status(void)
-{
-    STUB(0x457b50, "cd_read_status");
-    return 1;
-}
-
-int cd_read_tracks(void)
-{
-    STUB(0x457da0, "cd_read_tracks");
-    return 1;
-}
-
-int cd_stop(void)
-{
-    STUB(0x459e10, "cd_stop");
+    STUB(0x459e10, "net_stop");
     return 1;
 }
 
@@ -103,20 +80,8 @@ s32 sound_load(int a, int b, s32 rate, s32 size)
     return -1;
 }
 
-int cd_is_playing(void)
-{
-    STUB(0x457b10, "cd_is_playing");
-    return 0;
-}
 
-int cd_play_track(int track)
-{
-    (void)track;
-    STUB(0x457ed0, "cd_play_track");
-    return 0;
-}
 
-s32 g_cd_track_count;       /* 0x50f070 */
 
 int joystick_read(void)
 {
@@ -203,11 +168,6 @@ int scene_free(void)
     return 1;
 }
 
-int cd_stop_play(void)
-{
-    STUB(0x457fc0, "cd_stop_play");
-    return 1;
-}
 
 int sound_free_bank(void)
 {

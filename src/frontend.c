@@ -954,7 +954,7 @@ int menu_cb_4045e0(int arg0, int action)
 int menu_cb_404610(int arg0, int action)
 {
     (void)arg0;
-    cd_stop();
+    net_stop();
     if ((s8)action != MENU_KEY_ACTIVATE) {
         return 0;
     }

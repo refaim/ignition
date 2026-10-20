@@ -51,6 +51,12 @@ void plat_schedule_key(u32 ms, int key);
  * stops. For scripted runs. */
 extern int g_plat_run_inactive;
 
+/* Audio output, pulled: `cb` writes `frames` interleaved stereo floats
+ * on the audio thread. Returns 0 when there is no output. */
+typedef void (*plat_audio_fn)(float *out, s32 frames, void *user);
+int plat_audio_open(s32 rate, plat_audio_fn cb, void *user);
+void plat_audio_close(void);
+
 /* Runs the message loop until the game quits: while the app is active,
  * app_tick runs whenever no message is waiting; while inactive the loop
  * waits for messages. Returns the exit code. */

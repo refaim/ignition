@@ -8,6 +8,7 @@
 #include "input.h"
 #include "platform.h"
 
+struct joystick g_joysticks[2];    /* 0x4ba9f0 */
 u8 g_key_down[256];         /* 0x50de60 */
 u8 g_key_trigger[256];      /* 0x50df68 */
 u8 g_key_pressed[256];      /* 0x50e068 */

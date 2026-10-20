@@ -14,6 +14,11 @@ s32 fe_4be56c, fe_4be608, fe_4be62c, fe_4be8bc, fe_4be8b0, fe_4be8b4;
 s32 fe_4bf564, fe_4bf554, fe_4bf55c, fe_4be728, fe_4be724, fe_4bf550;
 s32 fe_4be618[5], fe_4be6d8, fe_4be87c, fe_4be5fc, fe_4be58c;
 s32 fe_4be5e0[4], fe_4be594, fe_4be588, fe_4be830[4];
+s32 fe_4be600, fe_4be5c8_dummy;
+s32 fe_4be710, fe_4be718;
+s32 fe_47dc48 = 1;
+void *fe_4be584;
+void *fe_4be880[6];
 
 /* 0x403e80, before the buffers */
 void frontend_reset_state(void)

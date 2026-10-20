@@ -3,12 +3,14 @@
  * (0x4029a0..0x404a60).
  */
 
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "app.h"
 #include "frontend.h"
 #include "frontend_state.h"
+#include "lisa/texture.h"
 #include "input.h"
 #include "lisa/file.h"
 #include "lisa/font.h"
@@ -65,6 +67,7 @@ struct sprite *g_sprite_car_select;     /* 0x4be800 */
 struct sprite *g_sprite_car;            /* 0x4be848 */
 
 s32 g_menu_sound_on;                    /* 0x4be5f0 */
+static double s_dt;                     /* 0x4beb40 */
 s32 g_menu_volume;                      /* 0x4be590 */
 static int s_mode_pending;              /* 0x4be65c */
 static int s_load_language = 1;         /* 0x47dc68 */
@@ -302,6 +305,98 @@ int menu_load_assets(void)
     return 1;
 }
 
+/* 0x4464f0: out = from + (to - from) * t / 256 for each of the 768
+ * palette bytes; t of 256 and up gives `to`. */
+void palette_lerp(const u8 *from, const u8 *to, u8 *out, int t)
+{
+    int i;
+
+    if (t >= 256) {
+        memcpy(out, to, 0x300);
+        return;
+    }
+    for (i = 0; i < 0x300; i++) {
+        int d = (to[i] - from[i]) * t;
+
+        out[i] = (u8)(from[i] + (d / 256));
+    }
+}
+
+/* Ten timed lines of debug text (0x47e8d8, 0x4beb50). */
+static double s_message_time[10];
+static char s_message[10][256];
+
+/* 0x404310: shows `text` for `time` ticks in the first free line. */
+void menu_message(const char *text, double time)
+{
+    int i;
+
+    for (i = 0; i < 10; i++) {
+        if (s_message_time[i] == 0.0 || i == 9) {
+            break;
+        }
+    }
+    if (i == 10) {
+        return;
+    }
+    s_message_time[i] = time;
+    strncpy(s_message[i], text, sizeof(s_message[i]) - 1);
+}
+
+/* 0x404380 */
+static void menu_messages_draw(void)
+{
+    int i;
+
+    for (i = 0; i < 10; i++) {
+        if (s_message_time[i] > 0.0) {
+            s_message_time[i] -= s_dt;
+            if (s_message_time[i] < 0.0) {
+                s_message_time[i] = 0.0;
+            }
+            text_draw(s_message[i], g_fonts_menu[0], 0, 16 * i);
+        }
+    }
+}
+
+/* 0x4043f0
+ * The iris: rows within `t` x 4 (at 320 wide) of the middle keep a
+ * circle of the picture, darkened at its rim through the cone table and
+ * MENU.TAB; the rest goes dark. */
+static void menu_iris(double t)
+{
+    const s32 *mode = g_menu_modes[g_menu_mode_index];
+    int w = mode[0], h = mode[1];
+    int scale = w / 320;
+    double radius = t * scale * 4.0;
+    int row = (int)(-100.0 * scale);
+    double end = 300.0 * scale;
+
+    menu_sound_tick();
+    for (; row < end; row++) {
+        double half = h / 2;
+        int x = 0, col;
+
+        if (row > half - radius && half + radius > row) {
+            double a = asin(((row - (half - radius)) / (radius * 2.0) - 0.5) * 2.0);
+
+            x = (int)(cos(a) * w / h * radius * 0.75);
+        }
+        if (x < 0) {
+            x = 0;
+        }
+        if (w / 2 + 4 < x || row < 0 || h <= row) {
+            continue;
+        }
+        for (col = 0; col < w; col++) {
+            u8 *p = &g_menu_screen[row * w + col];
+            u8 level = g_cone_table[x * 800 + 400 + col - w / 2];
+
+            *p = g_menu_table[level << 8 | *p];
+        }
+    }
+}
+
 /* 0x4029a0 */
 int menu_init(void)
 {
@@ -353,4 +448,397 @@ int menu_init(void)
     menu_sound_init();
     input_poll();
     return menu_load_assets();
+}
+
+/* The animation the intro plays (0x4be5b8; 0x4be5c8 its palette,
+ * +0x14 its kind). */
+static struct {
+    void *file;
+    s32 f04[3];
+    u8 *palette;
+    s16 f14;
+    s16 f16;
+} s_intro_anim;
+
+static double s_intro_t;            /* 0x4be850, 0 when not running */
+static double s_intro_frame;        /* 0x4be560 */
+static s32 s_intro_index;           /* 0x4be56c */
+static s32 s_menu_done;             /* 0x4be828 */
+static s32 s_menu_result = 1;       /* 0x4be5a0 */
+static int s_frames;                /* 0x4be72c */
+static s32 s_cd_wait;               /* 0x4be608 */
+static s32 s_cd_volume_was = -99;   /* 0x4be8bc */
+static s32 s_cd_track_was = -99;    /* 0x4be62c */
+static s32 s_step;                  /* 0x4be878 */
+static double s_step_part;          /* 0x4be578 */
+static s32 s_joy_return[2];         /* 0x4be830 */
+static s32 s_joy_escape[2];         /* 0x4be838 */
+static s32 s_joy_x[2];              /* 0x4be5e0 */
+static s32 s_joy_y[2];              /* 0x4be5e8 */
+
+/* A random track of the disc's, or the one chosen; 0 means 7. */
+static void cd_play_chosen(void)
+{
+    s32 t = settings_get(SET_CD_TRACK);
+
+    if (t == -1) {
+        s32 r = rand() * g_cd_track_count;
+
+        t = (r + (r < 0 ? 0x7fff : 0)) >> 15;
+        t++;
+    } else if (t == 0) {
+        t = 7;
+    }
+    cd_play_track(t);
+}
+
+/* Joystick moves and buttons become arrow, Return and Escape presses
+ * (0x402c7f). Player 1's stick is off on page 5, player 2's on page 4,
+ * where each is calibrated. */
+static void joysticks_to_keys(void)
+{
+    int j;
+
+    for (j = 0; j < 2; j++) {
+        struct joystick *js = &g_joysticks[j];
+        u8 *pressed = g_menu.key_pressed;
+
+        if ((j == 0 && g_menu_view.page == g_frontend_pages[5])
+            || (j == 1 && g_menu_view.page == g_frontend_pages[4])) {
+            continue;
+        }
+        if (!js->present || !js->enabled) {
+            continue;
+        }
+        if (js->buttons[0]) {
+            if (!s_joy_return[j]) {
+                pressed[0x1c] = 1;
+                s_joy_return[j] = 1;
+            }
+        } else {
+            s_joy_return[j] = 0;
+        }
+        if (js->buttons[1]) {
+            if (!s_joy_escape[j]) {
+                pressed[0x01] = 1;
+                s_joy_escape[j] = 1;
+            }
+        } else {
+            s_joy_escape[j] = 0;
+        }
+        if (abs(js->x) > 25) {
+            if (!s_joy_x[j]) {
+                pressed[js->x < 0 ? 0xcb : 0xcd] = 1;
+                s_joy_x[j] = 1;
+            }
+        } else {
+            s_joy_x[j] = 0;
+        }
+        if (abs(js->y) > 25) {
+            if (!s_joy_y[j]) {
+                pressed[js->y < 0 ? 0xc8 : 0xd0] = 1;
+                s_joy_y[j] = 1;
+            }
+        } else {
+            s_joy_y[j] = 0;
+        }
+    }
+}
+
+/* The intro's animations, one frame every 2.39 ticks, from 28.8 ticks
+ * to 1278 (0x402dce). */
+static void intro_step(void)
+{
+    s_intro_t += s_step_part;
+    if (s_intro_t > 28.8 && s_intro_t < 1278.0) {
+        s_intro_frame += s_step_part;
+        if (s_intro_frame >= 2.393103448275862) {
+            while (s_intro_frame >= 2.393103448275862) {
+                s_intro_frame -= 2.393103448275862;
+            }
+            menu_sound_tick();
+            if (!cdp_next_frame(&s_intro_anim)) {
+                if (++s_intro_index == 6) {
+                    s_intro_t = 1278.0;
+                } else {
+                    s_intro_anim.file = fe_4be880[s_intro_index];
+                    cdp_open(&s_intro_anim);
+                }
+            }
+            if (s_intro_anim.f14 == 2) {
+                cdp_draw(&s_intro_anim);
+            }
+        }
+    }
+    if (s_intro_t > 1312.56) {
+        menu_set_delay(0);
+    }
+    if (s_intro_t >= 1335.6) {
+        s_intro_t = 0.0;
+        video_set_palette(g_menu_palette);
+        fe_4be584 = sound_play(fe_4be8b0);
+        if (fe_4be584 != NULL) {
+            ((s32 *)fe_4be584)[4] = 0;
+        }
+        fe_4be584 = sound_play(fe_4be8b4);
+        if (fe_4be584 != NULL) {
+            ((s32 *)fe_4be584)[4] = 0;
+        }
+        sound_stop_all();
+        sound_music(0, 0, 3);
+        fe_4be598 = 1079.9;
+    }
+}
+
+/* Counters that run at 27 a tick and the timers of the screens that
+ * use them. */
+static void step_timers(void)
+{
+    struct menu_page *cur = g_menu_view.page;
+
+    if (s_intro_t == 0.0 && cur != g_frontend_pages[21] && cur != g_frontend_pages[8]) {
+        fe_4be598 += s_step_part;
+        if (fe_4be598 >= 3780.0) {
+            fe_4be598 = 1080.0;
+        }
+        if (fe_4be598 >= 1080.0) {
+            int n = (int)(fe_4be598 - 1080.0);
+
+            if (n % 168 == 0 && n / 168 < 16) {
+                fe_4be58c = 1;
+            }
+        }
+    }
+    if (fe_4be5a8 != 0.0) {
+        fe_4be5a8 += s_step_part;
+        if (fe_4be5a8 >= 28.8) {
+            fe_4be5a8 = 0.0;
+        }
+    }
+    /* Quit, after the iris closes. */
+    if (fe_4be8c0 != 0.0) {
+        fe_4be8c0 += s_step_part;
+        if (fe_4be8c0 >= 28.8) {
+            menu_apply_settings();
+            file_write(SETTINGS_FILE, g_settings, SETTINGS_SIZE);
+            s_menu_done = 1;
+            s_menu_result = 3;
+        }
+    }
+    /* Start the race, after the iris closes. */
+    if (fe_4be8a0 != 0.0) {
+        fe_4be8a0 += s_step_part;
+        if (fe_4be8a0 >= 28.8) {
+            if (fe_4be710 == 2) {
+                menu_apply_settings();
+            }
+            if (fe_4be710 != 2 && fe_4be718 < 1) {
+                fe_4be718 = 1;
+            }
+            if (fe_4be718 == 1) {
+                net_send_settings(&fe_4be710, g_settings);
+            }
+            file_write(SETTINGS_FILE, g_settings, SETTINGS_SIZE);
+            s_load_language = 0;
+            s_menu_done = 1;
+            s_menu_result = 2;
+        }
+    }
+    if (fe_4be87c > 0) {
+        fe_4be87c += 27;
+    }
+    if (cur == g_frontend_pages[4] || cur == g_frontend_pages[5]) {
+        if (fe_4be87c >= 160 && fe_4be87c < 187) {
+            fe_4bf554 = 1;
+        } else if (fe_4be87c >= 400) {
+            fe_4be87c = 0;
+            fe_4be5fc = 0;
+        }
+    } else {
+        fe_4be87c = 0;
+        fe_4be5fc = 0;
+    }
+    if (fe_4be594 > 0) {
+        fe_4be594 += 27;
+    }
+    if (fe_4be594 >= 600) {
+        fe_4be594 = 0;
+    }
+    if (fe_4be588 > 0) {
+        fe_4be588 += 27;
+    }
+    if (fe_4be588 >= 600) {
+        fe_4be588 = 0;
+    }
+    if (fe_4be724 > 0) {
+        fe_4be724 += 27;
+    }
+    if (cur == g_frontend_pages[6]) {
+        if (fe_4be724 >= 200 && fe_4be724 < 227) {
+            fe_4be728 = 1;
+        } else if (fe_4be724 >= 400) {
+            fe_4be724 = 0;
+        }
+    } else {
+        fe_4be724 = 0;
+    }
+    /* CD music: a new track when the last one ended. */
+    if (settings_get(SET_CD_MUSIC) != 0
+        && (s_intro_t == 0.0 || s_intro_t >= 1278.0) && cur != g_frontend_pages[21]) {
+        s_cd_wait += 27;
+        if (s_cd_wait > 2000) {
+            s_cd_wait = 0;
+            if (!cd_is_playing()) {
+                sound_stop_all();
+                cd_read_status();
+                if (g_cd_present == 1) {
+                    cd_read_tracks();
+                    cd_play_chosen();
+                }
+            }
+        }
+    }
+    if (fe_4bf564 != 0) {
+        fe_4bf564 += 27;
+        if (fe_4bf564 > 1100) {
+            fe_4be58c = 1;
+            fe_4bf564 = 0;
+        }
+    }
+}
+
+/* The intro's palette fades, by its clock (0x4033d1). */
+static void intro_fades(void)
+{
+    if (s_intro_t >= 28.8 && s_intro_t < 57.6) {
+        palette_lerp(g_menu_white, s_intro_anim.palette, g_menu_palette_work,
+                     (int)((s_intro_t - 28.8) * 9.375));
+        video_set_palette(g_menu_palette_work);
+    } else if (s_intro_t >= 1249.2 && s_intro_t < 1278.0) {
+        palette_lerp(s_intro_anim.palette, g_menu_white, g_menu_palette_work,
+                     (int)((s_intro_t - 1249.2) * 9.375));
+        video_set_palette(g_menu_palette_work);
+    }
+    if (s_intro_t < 28.8) {
+        palette_lerp(g_menu_black, g_menu_white, g_menu_palette_work,
+                     (int)(s_intro_t * 9.375));
+        video_set_palette(g_menu_palette_work);
+    } else if (s_intro_t >= 1306.8) {
+        palette_lerp(g_menu_white, g_menu_palette, g_menu_palette_work,
+                     (int)((s_intro_t - 1306.8) * 9.375));
+        video_set_palette(g_menu_palette_work);
+    } else if (fe_47dc48) {
+        fe_47dc48 = 0;
+        memset(g_menu_buffer2, 0, 64000);
+        memset(g_menu_screen, 0, 64000);
+        fe_4be8b0 = sound_load(0, 3, 0xfde8, 0x5622);
+        fe_4be8b4 = sound_load(0, 3, 0xfde8, 0x5622);
+    }
+}
+
+static double iris_amount(double t)
+{
+    double v = t * 1.7361111111111112 - 10.0;
+
+    return v < 0.0 ? 0.0 : v;
+}
+
+/* 0x402c00
+ * Returns 1 while the menu runs, 2 to start a race, 3 to quit. */
+int menu_frame(void)
+{
+    struct menu_page *cur;
+    s32 volume;
+
+    if (fe_4be600) {
+        return s_menu_result;
+    }
+    video_restore();
+    s_dt = menu_ticks();
+    joystick_read();
+    for (s_step = 0; (s32)s_dt >= s_step; s_step++) {
+        s_step_part = (s32)s_dt == s_step ? s_dt - s_step : 1.0;
+        joysticks_to_keys();
+        input_poll();
+        if (s_intro_t != 0.0) {
+            intro_step();
+        }
+        step_timers();
+        if (s_menu_done || fe_4be600) {
+            return s_menu_result;
+        }
+    }
+    cur = g_menu_view.page;
+    if (s_intro_t != 0.0) {
+        intro_fades();
+    }
+    if (settings_get(SET_CD_MUSIC) != s_cd_volume_was) {
+        s_cd_volume_was = settings_get(SET_CD_MUSIC);
+        cd_set_volume((int)(s_cd_volume_was * 25.5));
+    }
+    if (settings_get(SET_CD_MUSIC) != 0
+        && (s_intro_t == 0.0 || s_intro_t > 1278.0) && cur != g_frontend_pages[21]
+        && settings_get(SET_CD_TRACK) != s_cd_track_was) {
+        s_cd_track_was = settings_get(SET_CD_TRACK);
+        sound_stop_all();
+        cd_read_status();
+        if (g_cd_present == 1) {
+            cd_read_tracks();
+            cd_play_chosen();
+        }
+    }
+    volume = settings_get(SET_SFX_VOLUME) * 6553;
+    if (volume != g_menu_volume) {
+        g_menu_volume = volume;
+        if (volume == 0) {
+            g_menu_sound = 0;
+        } else if (g_menu_sound_on) {
+            g_menu_sound = 1;
+        }
+        if (g_menu_sound && g_menu_sound_on) {
+            sound_set_volume(volume);
+        }
+    }
+    /* With the language known, the language page passes by itself. */
+    if (cur == g_frontend_pages[21] && !s_load_language) {
+        g_menu.key_pressed[0x1c] = 1;
+    }
+    if (s_intro_t >= 1278.0 && fe_4bf550) {
+        int i;
+
+        fe_4bf550 = 0;
+        for (i = 0; i < 6; i++) {
+            free(fe_4be880[i]);
+            fe_4be880[i] = NULL;
+        }
+        menucar_load();
+    }
+    if (menu_engine_frame() == -1) {
+        menu_cb_4045b0(0, 6);
+        return s_menu_result;
+    }
+    cur = g_menu_view.page;
+    if (cur == g_frontend_pages[7]) {
+        if (fe_4be634) {
+            cur->selected = fe_4be634 - 1;
+            g_menu.key_pressed[0x1c] = 1;
+            menu_engine_frame();
+            fe_4be634 = 0;
+        } else {
+            g_menu.key_pressed[0x01] = 1;
+        }
+    }
+    if (fe_4be5a8 != 0.0) {
+        menu_iris(iris_amount(fe_4be5a8));
+    }
+    if (fe_4be8c0 != 0.0) {
+        menu_iris(iris_amount(28.8 - fe_4be8c0));
+    }
+    if (fe_4be8a0 != 0.0) {
+        menu_iris(iris_amount(28.8 - fe_4be8a0));
+    }
+    menu_messages_draw();
+    menu_present();
+    s_frames++;
+    return s_menu_result;
 }

@@ -17,6 +17,11 @@ extern s32 fe_4bf564, fe_4bf554, fe_4bf55c, fe_4be728, fe_4be724, fe_4bf550;
 extern s32 fe_4be618[5], fe_4be6d8, fe_4be87c, fe_4be5fc, fe_4be58c;
 extern s32 fe_4be5e0[4], fe_4be594, fe_4be588, fe_4be830[4];
 
+extern s32 fe_4be600, fe_4be5c8_dummy;
+extern s32 fe_4be710, fe_4be718, fe_47dc48;
+extern void *fe_4be584;
+extern void *fe_4be880[6];
+
 void frontend_reset_state(void);
 void frontend_reset_after_setup(void);
 void frontend_reset_after_sprites(void);

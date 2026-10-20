@@ -28,5 +28,8 @@ int menu_load_assets(void);
 void menu_present(void);
 double menu_ticks(void);
 int menu_init(void);
+int menu_frame(void);
+void palette_lerp(const u8 *from, const u8 *to, u8 *out, int t);
+void menu_message(const char *text, double time);
 
 #endif /* IGN_FRONTEND_H */

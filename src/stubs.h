@@ -65,6 +65,25 @@ int sound_open(s32 *params);        /* 0x4577a0: 0 off, 1 on, 2 no card */
 int sound_load_bank(const char *dir, int flags);   /* 0x459140 */
 int sound_set_volume(int volume);   /* 0x457ae0 */
 
+void sound_stop_all(void);          /* 0x457910 */
+void *sound_play(s32 sample);       /* 0x457aa0, returns the voice */
+int sound_music(int a, int b, int c);   /* 0x458d80 */
+s32 sound_load(int a, int b, s32 rate, s32 size);  /* 0x403d40 */
+int cd_is_playing(void);            /* 0x457b10 */
+int cd_play_track(int track);       /* 0x457ed0 */
+extern s32 g_cd_track_count;        /* 0x50f070 */
+int joystick_read(void);            /* 0x459a20 */
+
+/* the intro animations (.CDP) */
+int cdp_open(void *anim);           /* 0x412580 */
+int cdp_next_frame(void *anim);     /* 0x412610 */
+int cdp_draw(void *anim);           /* 0x412560 */
+
+/* front end pieces still to port */
+int menucar_load(void);             /* 0x40ca60 */
+int menu_apply_settings(void);      /* 0x404800 */
+int net_send_settings(void *state, void *settings);    /* 0x40d200 */
+
 /* 3D scene; the renderer's buffers are replaced by OpenGL */
 void *scene_create(void);           /* 0x4468d0: returns the camera */
 int raster_set_grid(int w, int h, int count);      /* 0x446ca0 */
@@ -72,7 +91,6 @@ int raster_set_screen(int w, int h, int flags);    /* 0x402be0 */
 
 /* game */
 int cd_stop(void);                  /* 0x459e10 */
-int menu_frame(void);               /* 0x402c00 */
 int menu_exit(void);                /* 0x4038f0 */
 void race_load_1(void);             /* 0x418b70 */
 void race_load_2(void);             /* 0x418be0 */

@@ -71,12 +71,6 @@ int cd_stop(void)
 }
 
 
-/* Stays in the front end until it is ported. */
-int menu_frame(void)
-{
-    STUB(0x402c00, "menu_frame");
-    return 1;
-}
 
 int menu_exit(void)
 {
@@ -85,6 +79,98 @@ int menu_exit(void)
 }
 
 STUB_VOID(0x457890, sound_tick)
+
+STUB_VOID(0x457910, sound_stop_all)
+
+void *sound_play(s32 sample)
+{
+    (void)sample;
+    STUB(0x457aa0, "sound_play");
+    return NULL;
+}
+
+int sound_music(int a, int b, int c)
+{
+    (void)a;
+    (void)b;
+    (void)c;
+    STUB(0x458d80, "sound_music");
+    return 0;
+}
+
+s32 sound_load(int a, int b, s32 rate, s32 size)
+{
+    (void)a;
+    (void)b;
+    (void)rate;
+    (void)size;
+    STUB(0x403d40, "sound_load");
+    return -1;
+}
+
+int cd_is_playing(void)
+{
+    STUB(0x457b10, "cd_is_playing");
+    return 0;
+}
+
+int cd_play_track(int track)
+{
+    (void)track;
+    STUB(0x457ed0, "cd_play_track");
+    return 0;
+}
+
+s32 g_cd_track_count;       /* 0x50f070 */
+
+int joystick_read(void)
+{
+    STUB(0x459a20, "joystick_read");
+    return 0;
+}
+
+/* Without the player, each animation ends at once and the intro runs
+ * through its fades. */
+int cdp_open(void *anim)
+{
+    (void)anim;
+    STUB(0x412580, "cdp_open");
+    return 0;
+}
+
+int cdp_next_frame(void *anim)
+{
+    (void)anim;
+    STUB(0x412610, "cdp_next_frame");
+    return 0;
+}
+
+int cdp_draw(void *anim)
+{
+    (void)anim;
+    STUB(0x412560, "cdp_draw");
+    return 0;
+}
+
+int menucar_load(void)
+{
+    STUB(0x40ca60, "menucar_load");
+    return 1;
+}
+
+int menu_apply_settings(void)
+{
+    STUB(0x404800, "menu_apply_settings");
+    return 1;
+}
+
+int net_send_settings(void *state, void *settings)
+{
+    (void)state;
+    (void)settings;
+    STUB(0x40d200, "net_send_settings");
+    return 0;
+}
 
 /* No audio yet: the menu runs with sound off. */
 int sound_open(s32 *params)

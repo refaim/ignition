@@ -16,6 +16,22 @@
 
 #include "types.h"
 
+/* A joystick as the game reads it (0x4ba9f0, two of 0x44 bytes),
+ * filled by joystick_read. */
+struct joystick {
+    s32 present;        /* +0x00 */
+    s32 enabled;        /* +0x04, the player chose a joystick */
+    s32 f08, f0c;
+    s16 x, y;           /* +0x10, about -100..100 */
+    u8 f14[12];
+    u8 buttons[2];      /* +0x20 */
+    u8 f22[0x22];
+};
+
+_Static_assert(sizeof(struct joystick) == 0x44, "joystick record");
+
+extern struct joystick g_joysticks[2];
+
 extern u8 g_key_down[256];      /* 0x50de60 */
 extern u8 g_key_trigger[256];   /* 0x50df68 */
 extern u8 g_key_pressed[256];   /* 0x50e068 */

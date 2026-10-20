@@ -18,8 +18,8 @@ static struct scene_obj **s_grid;           /* 0x63b5ec */
 static int s_grid_w;                        /* 0x63c5b8, in cells */
 static int s_world_w, s_world_h;            /* 0x63c608, 0x63c60c */
 static struct scene_obj *s_objs;            /* 0x63c5dc */
-static struct scene_obj **s_free;           /* 0x63c5c0, ended by -1 */
-static struct scene_obj **s_free_next;      /* 0x63c5e8 */
+static struct scene_obj **s_free_list;           /* 0x63c5c0, ended by -1 */
+static struct scene_obj **s_free_at;      /* 0x63c5e8 */
 
 #define FREE_END ((struct scene_obj *)(intptr_t)-1)
 
@@ -78,13 +78,13 @@ void scene_free(void)
     free(g_scene);
     free(s_sin);
     free(s_grid);
-    free(s_free);
+    free(s_free_list);
     free(s_objs);
     g_scene_visible = NULL;
     g_scene = NULL;
     s_sin = NULL;
     s_grid = NULL;
-    s_free = NULL;
+    s_free_list = NULL;
     s_objs = NULL;
 }
 
@@ -98,19 +98,19 @@ int raster_set_grid(int w, int h, int count)
     s_world_h = h;
     s_grid_w = (w + 0xff) / 256;
     free(s_grid);
-    free(s_free);
+    free(s_free_list);
     free(s_objs);
     s_grid = calloc((size_t)(s_grid_w * ((h + 0xff) / 256)), sizeof(*s_grid));
-    s_free = calloc((size_t)count + 5, sizeof(*s_free));
+    s_free_list = calloc((size_t)count + 5, sizeof(*s_free_list));
     s_objs = calloc((size_t)count, sizeof(*s_objs));
-    s_free_next = s_free;
-    if (s_grid == NULL || s_free == NULL || s_objs == NULL) {
+    s_free_at = s_free_list;
+    if (s_grid == NULL || s_free_list == NULL || s_objs == NULL) {
         return -1;
     }
     for (i = 0; i < count; i++) {
-        s_free[i] = &s_objs[i];
+        s_free_list[i] = &s_objs[i];
     }
-    s_free[count] = FREE_END;
+    s_free_list[count] = FREE_END;
     return 0;
 }
 
@@ -177,12 +177,12 @@ static void set_mesh(struct scene_obj *o, const s32 *mesh, int tex, int klass,
 int scene_obj_create(struct scene_desc *desc, const s32 *mesh, int tex, int klass,
                      int f20, int radius, int group)
 {
-    struct scene_obj *o = *s_free_next;
+    struct scene_obj *o = *s_free_at;
 
     if (o == FREE_END) {
         return -1;
     }
-    s_free_next++;
+    s_free_at++;
     o->self = o;
     o->x = desc->x;
     o->y = desc->y;

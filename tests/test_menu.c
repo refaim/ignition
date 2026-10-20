@@ -51,6 +51,23 @@ int main(void)
     g_menu.centre = 1;
     g_menu.keep_selection = 1;
 
+    /* The engine alone: no page handlers. */
+    {
+        int lang, k;
+
+        for (lang = 0; lang < MENU_LANGUAGES; lang++) {
+            for (k = 0; k < MENU_PAGE_SLOTS; k++) {
+                if (g_menu_pages[lang][k] != NULL) {
+                    g_menu_pages[lang][k]->handler_a = NULL;
+                    g_menu_pages[lang][k]->handler_b = NULL;
+                }
+            }
+            for (k = 0; k < MENU_PAGE_TABLE; k++) {
+                g_menu_page_table[lang][k]->handler_a = NULL;
+                g_menu_page_table[lang][k]->handler_b = NULL;
+            }
+        }
+    }
     CHECK(menu_engine_init() == 1);
     CHECK(g_menu_view.depth == 0 && g_menu_view.page == g_menu.root);
 

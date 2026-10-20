@@ -92,6 +92,12 @@ static void settings_load(void)
     }
 }
 
+/* The ticks since the last menu frame (0x4beb40). */
+double menu_dt(void)
+{
+    return s_dt;
+}
+
 /* 0x403df0
  * Ticks of 1 / 0.036 ms since the last call: 0.01 when no time passed,
  * at most 10.8. */
@@ -274,8 +280,8 @@ int menu_load_assets(void)
     g_menu_white = malloc(0x300);
     memset(g_menu_white, 0xff, 0x300);
     g_menu_palette_work = malloc(0x300);
-    g_menu_buffer1 = malloc(0xfb41);
-    g_menu_buffer2 = malloc(0xfb41);
+    g_menu_buffer1 = calloc(0xfb41, 1);    /* new, uncleared, in the original */
+    g_menu_buffer2 = calloc(0xfb41, 1);
     g_menu_palette = malloc(0x300);
     file_read_at("baltazar\\data\\menu.col", g_menu_palette, 0x300, 8);
     g_pic_cars = read_pixels("baltazar\\data\\bilar.pic", 0x1e786);
@@ -460,15 +466,6 @@ static struct {
     s16 f16;
 } s_intro_anim;
 
-static double s_intro_t;            /* 0x4be850, 0 when not running */
-static double s_intro_frame;        /* 0x4be560 */
-static s32 s_intro_index;           /* 0x4be56c */
-static s32 s_menu_done;             /* 0x4be828 */
-static s32 s_menu_result = 1;       /* 0x4be5a0 */
-static int s_frames;                /* 0x4be72c */
-static s32 s_cd_wait;               /* 0x4be608 */
-static s32 s_cd_volume_was = -99;   /* 0x4be8bc */
-static s32 s_cd_track_was = -99;    /* 0x4be62c */
 static s32 s_step;                  /* 0x4be878 */
 static double s_step_part;          /* 0x4be578 */
 static s32 s_joy_return[2];         /* 0x4be830 */
@@ -549,19 +546,19 @@ static void joysticks_to_keys(void)
  * to 1278 (0x402dce). */
 static void intro_step(void)
 {
-    s_intro_t += s_step_part;
-    if (s_intro_t > 28.8 && s_intro_t < 1278.0) {
-        s_intro_frame += s_step_part;
-        if (s_intro_frame >= 2.393103448275862) {
-            while (s_intro_frame >= 2.393103448275862) {
-                s_intro_frame -= 2.393103448275862;
+    fe_4be850 += s_step_part;
+    if (fe_4be850 > 28.8 && fe_4be850 < 1278.0) {
+        fe_4be560 += s_step_part;
+        if (fe_4be560 >= 2.393103448275862) {
+            while (fe_4be560 >= 2.393103448275862) {
+                fe_4be560 -= 2.393103448275862;
             }
             menu_sound_tick();
             if (!cdp_next_frame(&s_intro_anim)) {
-                if (++s_intro_index == 6) {
-                    s_intro_t = 1278.0;
+                if (++fe_4be56c == 6) {
+                    fe_4be850 = 1278.0;
                 } else {
-                    s_intro_anim.file = fe_4be880[s_intro_index];
+                    s_intro_anim.file = fe_4be880[fe_4be56c];
                     cdp_open(&s_intro_anim);
                 }
             }
@@ -570,11 +567,11 @@ static void intro_step(void)
             }
         }
     }
-    if (s_intro_t > 1312.56) {
+    if (fe_4be850 > 1312.56) {
         menu_set_delay(0);
     }
-    if (s_intro_t >= 1335.6) {
-        s_intro_t = 0.0;
+    if (fe_4be850 >= 1335.6) {
+        fe_4be850 = 0.0;
         video_set_palette(g_menu_palette);
         fe_4be584 = sound_play(fe_4be8b0);
         if (fe_4be584 != NULL) {
@@ -596,7 +593,7 @@ static void step_timers(void)
 {
     struct menu_page *cur = g_menu_view.page;
 
-    if (s_intro_t == 0.0 && cur != g_frontend_pages[21] && cur != g_frontend_pages[8]) {
+    if (fe_4be850 == 0.0 && cur != g_frontend_pages[21] && cur != g_frontend_pages[8]) {
         fe_4be598 += s_step_part;
         if (fe_4be598 >= 3780.0) {
             fe_4be598 = 1080.0;
@@ -621,8 +618,8 @@ static void step_timers(void)
         if (fe_4be8c0 >= 28.8) {
             menu_apply_settings();
             file_write(SETTINGS_FILE, g_settings, SETTINGS_SIZE);
-            s_menu_done = 1;
-            s_menu_result = 3;
+            fe_4be828 = 1;
+            fe_4be5a0 = 3;
         }
     }
     /* Start the race, after the iris closes. */
@@ -640,8 +637,8 @@ static void step_timers(void)
             }
             file_write(SETTINGS_FILE, g_settings, SETTINGS_SIZE);
             s_load_language = 0;
-            s_menu_done = 1;
-            s_menu_result = 2;
+            fe_4be828 = 1;
+            fe_4be5a0 = 2;
         }
     }
     if (fe_4be87c > 0) {
@@ -684,10 +681,10 @@ static void step_timers(void)
     }
     /* CD music: a new track when the last one ended. */
     if (settings_get(SET_CD_MUSIC) != 0
-        && (s_intro_t == 0.0 || s_intro_t >= 1278.0) && cur != g_frontend_pages[21]) {
-        s_cd_wait += 27;
-        if (s_cd_wait > 2000) {
-            s_cd_wait = 0;
+        && (fe_4be850 == 0.0 || fe_4be850 >= 1278.0) && cur != g_frontend_pages[21]) {
+        fe_4be608 += 27;
+        if (fe_4be608 > 2000) {
+            fe_4be608 = 0;
             if (!cd_is_playing()) {
                 sound_stop_all();
                 cd_read_status();
@@ -710,22 +707,25 @@ static void step_timers(void)
 /* The intro's palette fades, by its clock (0x4033d1). */
 static void intro_fades(void)
 {
-    if (s_intro_t >= 28.8 && s_intro_t < 57.6) {
+    if (s_intro_anim.palette == NULL) {
+        return;     /* no animation player yet */
+    }
+    if (fe_4be850 >= 28.8 && fe_4be850 < 57.6) {
         palette_lerp(g_menu_white, s_intro_anim.palette, g_menu_palette_work,
-                     (int)((s_intro_t - 28.8) * 9.375));
+                     (int)((fe_4be850 - 28.8) * 9.375));
         video_set_palette(g_menu_palette_work);
-    } else if (s_intro_t >= 1249.2 && s_intro_t < 1278.0) {
+    } else if (fe_4be850 >= 1249.2 && fe_4be850 < 1278.0) {
         palette_lerp(s_intro_anim.palette, g_menu_white, g_menu_palette_work,
-                     (int)((s_intro_t - 1249.2) * 9.375));
+                     (int)((fe_4be850 - 1249.2) * 9.375));
         video_set_palette(g_menu_palette_work);
     }
-    if (s_intro_t < 28.8) {
+    if (fe_4be850 < 28.8) {
         palette_lerp(g_menu_black, g_menu_white, g_menu_palette_work,
-                     (int)(s_intro_t * 9.375));
+                     (int)(fe_4be850 * 9.375));
         video_set_palette(g_menu_palette_work);
-    } else if (s_intro_t >= 1306.8) {
+    } else if (fe_4be850 >= 1306.8) {
         palette_lerp(g_menu_white, g_menu_palette, g_menu_palette_work,
-                     (int)((s_intro_t - 1306.8) * 9.375));
+                     (int)((fe_4be850 - 1306.8) * 9.375));
         video_set_palette(g_menu_palette_work);
     } else if (fe_47dc48) {
         fe_47dc48 = 0;
@@ -751,7 +751,7 @@ int menu_frame(void)
     s32 volume;
 
     if (fe_4be600) {
-        return s_menu_result;
+        return fe_4be5a0;
     }
     video_restore();
     s_dt = menu_ticks();
@@ -760,26 +760,26 @@ int menu_frame(void)
         s_step_part = (s32)s_dt == s_step ? s_dt - s_step : 1.0;
         joysticks_to_keys();
         input_poll();
-        if (s_intro_t != 0.0) {
+        if (fe_4be850 != 0.0) {
             intro_step();
         }
         step_timers();
-        if (s_menu_done || fe_4be600) {
-            return s_menu_result;
+        if (fe_4be828 || fe_4be600) {
+            return fe_4be5a0;
         }
     }
     cur = g_menu_view.page;
-    if (s_intro_t != 0.0) {
+    if (fe_4be850 != 0.0) {
         intro_fades();
     }
-    if (settings_get(SET_CD_MUSIC) != s_cd_volume_was) {
-        s_cd_volume_was = settings_get(SET_CD_MUSIC);
-        cd_set_volume((int)(s_cd_volume_was * 25.5));
+    if (settings_get(SET_CD_MUSIC) != fe_4be8bc) {
+        fe_4be8bc = settings_get(SET_CD_MUSIC);
+        cd_set_volume((int)(fe_4be8bc * 25.5));
     }
     if (settings_get(SET_CD_MUSIC) != 0
-        && (s_intro_t == 0.0 || s_intro_t > 1278.0) && cur != g_frontend_pages[21]
-        && settings_get(SET_CD_TRACK) != s_cd_track_was) {
-        s_cd_track_was = settings_get(SET_CD_TRACK);
+        && (fe_4be850 == 0.0 || fe_4be850 > 1278.0) && cur != g_frontend_pages[21]
+        && settings_get(SET_CD_TRACK) != fe_4be62c) {
+        fe_4be62c = settings_get(SET_CD_TRACK);
         sound_stop_all();
         cd_read_status();
         if (g_cd_present == 1) {
@@ -803,7 +803,7 @@ int menu_frame(void)
     if (cur == g_frontend_pages[21] && !s_load_language) {
         g_menu.key_pressed[0x1c] = 1;
     }
-    if (s_intro_t >= 1278.0 && fe_4bf550) {
+    if (fe_4be850 >= 1278.0 && fe_4bf550) {
         int i;
 
         fe_4bf550 = 0;
@@ -815,7 +815,7 @@ int menu_frame(void)
     }
     if (menu_engine_frame() == -1) {
         menu_cb_4045b0(0, 6);
-        return s_menu_result;
+        return fe_4be5a0;
     }
     cur = g_menu_view.page;
     if (cur == g_frontend_pages[7]) {
@@ -839,6 +839,6 @@ int menu_frame(void)
     }
     menu_messages_draw();
     menu_present();
-    s_frames++;
-    return s_menu_result;
+    fe_4be72c++;
+    return fe_4be5a0;
 }

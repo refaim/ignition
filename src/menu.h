@@ -106,6 +106,19 @@ static inline const char *ui_name(u32 addr)
     return g_ui_names[(addr - 0x47e560) / 4];
 }
 
+extern const s8 g_menu_keymap_orig[256];        /* 0x47dc70 */
+extern const s32 g_track_pic_offsets[8];        /* 0x47dfc8 */
+
+/* The panel shown at each step of the idle sequence: 4 s16 a step at
+ * 0x47e4e0 (-2 and -3 pick a panel). The front end indexes it from
+ * before its start too, so the raw words from 0x47e4a0 are kept. */
+extern const s16 g_idle_seq_raw[0x68];
+
+static inline s16 idle_seq(int step)
+{
+    return g_idle_seq_raw[(0x47e4e0 - 0x47e4a0) / 2 + 4 * step];
+}
+
 /* Copied over the settings from offset 0x1bf at start up (0x47e590). */
 extern const u8 g_settings_block_1bf[0x348];
 

@@ -21,6 +21,9 @@ extern u8 *g_sys_palette;
 extern int g_fonts_menu[8];
 extern struct sprite *g_position_icons[4];
 extern struct sprite *g_bolt_icon;
+
+/* x, y, width, height of the position icons in N_SYSGFX.PIC (0x497bb8). */
+extern const s32 g_position_icon_rect[4];
 extern s32 g_screen_size;
 extern u8 *g_menu_background;
 extern u8 g_menu_remap[256];

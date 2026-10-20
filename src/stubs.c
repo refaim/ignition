@@ -152,6 +152,41 @@ int cdp_draw(void *anim)
     return 0;
 }
 
+int menu_keys_page(void)
+{
+    STUB(0x40b820, "menu_keys_page");
+    return 0;
+}
+
+int menu_best_times(void)
+{
+    STUB(0x40c1e0, "menu_best_times");
+    return 0;
+}
+
+int menu_network_page(void)
+{
+    STUB(0x40af54, "menu_network_page");
+    return 0;
+}
+
+int menu_background_render(void)
+{
+    STUB(0x40c740, "menu_background_render");
+    return 0;
+}
+
+int car3d_draw(s32 car, int spin, double scale, int x, int y)
+{
+    (void)car;
+    (void)spin;
+    (void)scale;
+    (void)x;
+    (void)y;
+    STUB(0x40c5a0, "car3d_draw");
+    return 0;
+}
+
 int menucar_load(void)
 {
     STUB(0x40ca60, "menucar_load");
@@ -221,11 +256,6 @@ int raster_set_screen(int w, int h, int flags)
     return 1;
 }
 
-int menu_page_handler_a(void)
-{
-    STUB(0x409fb0, "menu_page_handler_a");
-    return 0;
-}
 
 int menu_page_handler_b(int key, int action)
 {

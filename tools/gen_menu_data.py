@@ -44,6 +44,9 @@ TEXT_CHARS = 0x4932c8        # scan code to character, codes 0..0x53
 BINDABLE = 0x47de70          # 1 for keys a binding may take
 # Runs of string pointers the front end indexes by address arithmetic.
 TEXT_RUNS = [("g_ui_text", 0x47dfe8, 0x47e4dc), ("g_ui_names", 0x47e560, 0x47e58c)]
+KEYMAP_ORIG = 0x47dc70       # a copy of the key map, to undo player keys
+TRACK_PIC_OFFSETS = 0x47dfc8  # 8 offsets into trk_spr.pic, by selection
+IDLE_SEQ, IDLE_SEQ_END = 0x47e4a0, 0x47e570  # idle panels, 4 s16 each; steps -8..17
 SETTINGS_BLOCK = 0x47e590    # 0x348 bytes copied to settings offset 0x1bf
 SETTINGS_BLOCK_SIZE = 0x348
 FUNCS = {0x409fb0: "menu_page_handler_a", 0x409610: "menu_page_handler_b",
@@ -208,6 +211,18 @@ def main():
             p = u32(a)
             w("    %s,\n" % (cstring(p) if p else "NULL"))
         w("};\n\n")
+    vals = [struct.unpack_from("<b", img, check(KEYMAP_ORIG + k, 1))[0] for k in range(256)]
+    w("const s8 g_menu_keymap_orig[256] = {\n")
+    for k in range(0, 256, 16):
+        w("    %s,\n" % ", ".join("%d" % v for v in vals[k:k + 16]))
+    w("};\n\n")
+    w("const s32 g_track_pic_offsets[8] = {\n    %s\n};\n\n" % ", ".join(
+        "0x%x" % u32(TRACK_PIC_OFFSETS + 4 * k) for k in range(8)))
+    n = (IDLE_SEQ_END - IDLE_SEQ) // 2
+    w("const s16 g_idle_seq_raw[%d] = {    /* 0x%x */\n" % (n, IDLE_SEQ))
+    for k in range(0, n, 16):
+        w("    %s,\n" % ", ".join("%d" % s16(IDLE_SEQ + 2 * j) for j in range(k, min(k + 16, n))))
+    w("};\n\n")
     w("const u8 g_settings_block_1bf[0x%x] = {\n" % SETTINGS_BLOCK_SIZE)
     for k in range(0, SETTINGS_BLOCK_SIZE, 16):
         w("    %s,\n" % ", ".join("0x%02x" % img[SETTINGS_BLOCK + j - BASE]

@@ -47,6 +47,10 @@ void plat_pump_events(void);
  * for scripted test runs. */
 void plat_schedule_key(u32 ms, int key);
 
+/* Keeps the game running while the window is not active; the original
+ * stops. For scripted runs. */
+extern int g_plat_run_inactive;
+
 /* Runs the message loop until the game quits: while the app is active,
  * app_tick runs whenever no message is waiting; while inactive the loop
  * waits for messages. Returns the exit code. */

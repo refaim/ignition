@@ -10,6 +10,7 @@
 
 #include <ctype.h>
 #include <math.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -283,6 +284,63 @@ int menu_redraw_page(void)
         if (cur == page(19) || cur == page(20)) {
             text_lines(0x47e088, 5);
         }
+    }
+    g_gfx_color_table = g_menu_table;
+    set_target(g_menu_screen, mode[0], mode[0], mode[1], 8);
+    return 0;
+}
+
+/* 0x40c520: seconds as mm:ss:hh, minutes capped at 99. The text is in
+ * a shared buffer. */
+const char *format_time(double t)
+{
+    static char text[16];
+    int minutes = (int)(t * 0.016666666666666666);
+    int whole;
+
+    if (minutes > 99) {
+        minutes = 99;
+    }
+    whole = (int)t;
+    sprintf(text, "%.2d:%.2d:%.2d", minutes, whole - 60 * minutes,
+            (int)((t - whole) * 100.0));
+    return text;
+}
+
+/* 0x40c1e0
+ * The best times page: five rows of place, initials and time for the
+ * chosen track, the race times or, with TIME set to TOTAL, the laps.
+ * The records are in the settings, 120 bytes a track from 0x1bf:
+ * five initials of 4 bytes, five doubles, then the same for laps. */
+int menu_best_times(void)
+{
+    static const char *const place[5] = { "1", "2", "3", "4", "5" };
+    const s32 *mode = g_menu_modes[g_menu_mode_index];
+    int font = g_fonts_menu[2];
+    int base = 0x1bf + 120 * settings_get(0x57f) + (settings_get(0x583) ? 60 : 0);
+    int i;
+
+    set_target(g_menu_buffer2, mode[0], mode[0], mode[1], 8);
+    g_gfx_color_table = g_identity_table;
+    panels_clear();
+    for (i = 0; i < 5; i++) {
+        int y = 0x4d + 19 * i;
+
+        panel_add(0x27, y / 19, 0x0f, y % 19 - 12, 1);
+        panel_add(0x51, y / 19, 0x2d, y % 19 - 12, 1);
+        panel_add(0x99, y / 19, 0x66, y % 19 - 12, 1);
+    }
+    panels_draw(g_menu_buffer2, mode[0]);
+    for (i = 0; i < 5; i++) {
+        int y = 0x4d + 19 * i;
+        double t;
+
+        memcpy(&t, g_settings + base + 20 + 8 * i, sizeof(t));
+        g_fonts[font].align = FONT_ALIGN_CENTER;
+        text_draw(place[i], font, 0x3b, y);
+        text_draw((const char *)g_settings + base + 4 * i, font, 0x74, y);
+        text_draw(format_time(t), font, 0xd9, y);
+        g_fonts[font].align = FONT_ALIGN_LEFT;
     }
     g_gfx_color_table = g_menu_table;
     set_target(g_menu_screen, mode[0], mode[0], mode[1], 8);

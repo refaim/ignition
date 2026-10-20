@@ -328,8 +328,13 @@ void plat_pump_events(void)
     }
 }
 
+int g_plat_run_inactive;
+
 static int run(int (*frame)(void *), void *user, int only_active)
 {
+    if (g_plat_run_inactive) {
+        only_active = 0;
+    }
     while (!s_quit) {
         @autoreleasepool {
             NSEvent *ev;

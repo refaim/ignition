@@ -153,11 +153,6 @@ int cdp_draw(void *anim)
 }
 
 
-int menu_best_times(void)
-{
-    STUB(0x40c1e0, "menu_best_times");
-    return 0;
-}
 
 int menu_network_page(void)
 {

@@ -66,12 +66,6 @@ int menu_network_page(void)
     return 0;
 }
 
-int menu_background_render(void)
-{
-    STUB(0x40c740, "menu_background_render");
-    return 0;
-}
-
 int net_connect(void)
 {
     STUB(0x459d40, "net_connect");

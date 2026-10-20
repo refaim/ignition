@@ -49,7 +49,6 @@ int joystick_read(void);            /* 0x459a20 */
 /* front end pieces still to port */
 int menu_network_page(void);        /* 0x40af54, inside menu_page_handler_a */
 /* 3D, for the OpenGL renderer */
-int menu_background_render(void);   /* 0x40c740 */
 int net_send_settings(void *state, void *settings);    /* 0x40d200 */
 int net_connect(void);              /* 0x459d40, the DirectPlay dialogs */
 int net_start(void);                /* 0x459e80 */
@@ -65,6 +64,7 @@ void race_frame(void);              /* 0x4173fb, inside game_frame */
 void race_end(void);                /* 0x420870 */
 
 #include "net.h"
+#include "menubg.h"
 #include "menucar.h"
 #include "scene.h"
 

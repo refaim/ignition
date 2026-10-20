@@ -154,7 +154,7 @@ double menu_ticks(void)
 }
 
 /* 0x403e70 */
-static void menu_sound_tick(void)
+void menu_sound_tick(void)
 {
     if (g_menu_sound) {
         sound_tick();

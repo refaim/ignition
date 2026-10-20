@@ -13,6 +13,7 @@
 #include "frontend_state.h"
 #include "gl3d.h"
 #include "lisa/file.h"
+#include "menubg.h"
 #include "menucar.h"
 #include "menu_pages.h"
 #include "scene.h"
@@ -21,7 +22,7 @@
 enum { MENU_CARS = 11 };
 
 static struct scene_desc s_cars[MENU_CARS];     /* 0x4be570 */
-static long s_psq_size;                         /* 0x4be5ac */
+long fe_4be630_size;                            /* ElementCount */
 
 static void *load_whole(const char *name, long *size_out)
 {
@@ -45,20 +46,21 @@ static void *load_whole(const char *name, long *size_out)
 int menucar_load(void)
 {
     struct scene *sc = g_scene;
-    long tex_size = 0;
+    long tex_size = 0, pfm_size = 0;
     const s32 *plc;
     int i;
 
     fe_4be898 = malloc(0x1dffff);
     fe_4be804 = malloc(0x2ffff);
-    fe_4be630 = load_whole("baltazar\\data\\default.psq", &s_psq_size);
+    fe_4be630 = load_whole("baltazar\\data\\default.psq", &fe_4be630_size);
     fe_4be5dc = 0;
     fe_4be75c = 0;
-    fe_4be5f8 = load_whole("baltazar\\data\\test.pfm", NULL);
-    /* The background's pages, shade tables and frames. */
-    STUB(0x40cd60, "menubg_load_pages");
-    STUB(0x40ce00, "menubg_load_shades");
-    STUB(0x40ffe0, "menubg_parse");
+    fe_4be5f8 = load_whole("baltazar\\data\\test.pfm", &pfm_size);
+    menubg_load_pages(fe_4be898);
+    menubg_load_shades(fe_4be804);
+    if (fe_4be5f8 != NULL) {
+        menubg_parse(fe_4be5f8, pfm_size);
+    }
     g_menu_background_t = 0;
     fe_4be604 = load_whole("baltazar\\data\\menucar.plc", NULL);
     fe_4be5f4 = load_whole("baltazar\\data\\menucar.msh", NULL);
@@ -94,6 +96,7 @@ int menucar_load(void)
 /* 0x410920: frees the background's pool. */
 int menucar_free(void)
 {
+    menubg_free();
     gl3d_flush();
     g_scene_textures[0] = NULL;
     return 0;

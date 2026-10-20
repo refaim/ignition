@@ -60,6 +60,25 @@ static struct texture_entry s_textures[MAX_TEXTURES];
 static int s_texture_count;
 static u8 *s_readback;
 
+/* The raster path. */
+enum { MAX_TABLES = 16, RASTER_FLOATS = 8 };     /* x, y, u, v, page, colour, mode, - */
+
+struct table_entry {
+    const u8 *table;
+    GLuint tex;
+};
+
+static int s_raster_ready;
+static GLuint s_raster_program, s_raster_vao, s_raster_vbo;
+static GLint s_ru_size, s_ru_pages, s_ru_table, s_ru_dst;
+static GLuint s_raster_fbo, s_raster_color, s_raster_dst;
+static int s_raster_w, s_raster_h;
+static GLuint s_raster_pages;
+static struct table_entry s_tables[MAX_TABLES];
+static int s_table_count;
+static float *s_raster_verts;
+static int s_raster_cap;
+
 static const char *s_vs =
     "#version 150\n"
     "uniform mat4 u_matrix;\n"
@@ -294,6 +313,14 @@ void gl3d_flush(void)
         glDeleteTextures(1, &s_textures[i].tex);
     }
     s_texture_count = 0;
+    for (i = 0; i < s_table_count; i++) {
+        glDeleteTextures(1, &s_tables[i].tex);
+    }
+    s_table_count = 0;
+    if (s_raster_pages != 0) {
+        glDeleteTextures(1, &s_raster_pages);
+        s_raster_pages = 0;
+    }
     s_mesh_count = 0;
     s_vbo_used = 0;
 }
@@ -431,4 +458,229 @@ void gl3d_end(u8 *screen, int pitch)
             }
         }
     }
+}
+
+/* Raster commands: pixels in, the index out. Modes: 0 the texel, 1 the
+ * colour, 2 the texel and 3 the colour through the table with the
+ * pixel under them. Vertices go half a pixel left and up, as the
+ * original fills a pixel whose bottom right corner is inside. */
+static const char *s_raster_vs =
+    "#version 150\n"
+    "uniform vec2 u_size;\n"
+    "in vec2 a_pos;\n"
+    "in vec2 a_uv;\n"
+    "in vec3 a_info;\n"
+    "out vec2 v_uv;\n"
+    "flat out vec3 v_info;\n"
+    "void main() {\n"
+    "    v_uv = a_uv;\n"
+    "    v_info = a_info;\n"
+    "    gl_Position = vec4((a_pos - 0.5) / u_size * 2.0 - 1.0, 0.0, 1.0);\n"
+    "}\n";
+
+static const char *s_raster_fs =
+    "#version 150\n"
+    "uniform sampler2DArray u_pages;\n"
+    "uniform sampler2D u_table;\n"
+    "uniform sampler2D u_dst;\n"
+    "in vec2 v_uv;\n"
+    "flat in vec3 v_info;\n"
+    "out float o_index;\n"
+    "void main() {\n"
+    "    float mode = v_info.z;\n"
+    "    float a = v_info.y;\n"
+    "    if (mode < 0.5 || (mode > 1.5 && mode < 2.5)) {\n"
+    "        ivec2 t = ivec2(floor(v_uv)) & 255;\n"
+    "        a = texelFetch(u_pages, ivec3(t, int(v_info.x)), 0).r * 255.0;\n"
+    "    }\n"
+    "    if (mode > 1.5) {\n"
+    "        float d = texelFetch(u_dst, ivec2(gl_FragCoord.xy), 0).r * 255.0;\n"
+    "        a = texelFetch(u_table, ivec2(int(d + 0.5), int(a + 0.5)), 0).r * 255.0;\n"
+    "    }\n"
+    "    o_index = a / 255.0;\n"
+    "}\n";
+
+static void raster_init(void)
+{
+    GLuint vs = compile(GL_VERTEX_SHADER, s_raster_vs);
+    GLuint fs = compile(GL_FRAGMENT_SHADER, s_raster_fs);
+
+    s_raster_program = glCreateProgram();
+    glAttachShader(s_raster_program, vs);
+    glAttachShader(s_raster_program, fs);
+    glBindAttribLocation(s_raster_program, 0, "a_pos");
+    glBindAttribLocation(s_raster_program, 1, "a_uv");
+    glBindAttribLocation(s_raster_program, 2, "a_info");
+    glBindFragDataLocation(s_raster_program, 0, "o_index");
+    glLinkProgram(s_raster_program);
+    glDeleteShader(vs);
+    glDeleteShader(fs);
+    s_ru_size = glGetUniformLocation(s_raster_program, "u_size");
+    s_ru_pages = glGetUniformLocation(s_raster_program, "u_pages");
+    s_ru_table = glGetUniformLocation(s_raster_program, "u_table");
+    s_ru_dst = glGetUniformLocation(s_raster_program, "u_dst");
+    glGenVertexArrays(1, &s_raster_vao);
+    glBindVertexArray(s_raster_vao);
+    glGenBuffers(1, &s_raster_vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, s_raster_vbo);
+    glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(1);
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, RASTER_FLOATS * sizeof(float), (void *)0);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, RASTER_FLOATS * sizeof(float),
+                          (void *)(2 * sizeof(float)));
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, RASTER_FLOATS * sizeof(float),
+                          (void *)(4 * sizeof(float)));
+    glGenFramebuffers(1, &s_raster_fbo);
+    s_raster_ready = 1;
+}
+
+static GLuint r8_texture(int w, int h)
+{
+    GLuint t;
+
+    glGenTextures(1, &t);
+    glBindTexture(GL_TEXTURE_2D, t);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, w, h, 0, GL_RED, GL_UNSIGNED_BYTE, NULL);
+    return t;
+}
+
+static GLuint table_get(const u8 *table)
+{
+    struct table_entry *e;
+    int i;
+
+    for (i = 0; i < s_table_count; i++) {
+        if (s_tables[i].table == table) {
+            return s_tables[i].tex;
+        }
+    }
+    if (s_table_count == MAX_TABLES) {
+        return s_tables[0].tex;
+    }
+    e = &s_tables[s_table_count++];
+    e->table = table;
+    e->tex = r8_texture(256, 256);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 256, 256, GL_RED, GL_UNSIGNED_BYTE, table);
+    return e->tex;
+}
+
+void gl3d_raster_pages(const u8 *pixels, int count)
+{
+    if (!s_raster_ready) {
+        raster_init();
+    }
+    if (s_raster_pages != 0) {
+        glDeleteTextures(1, &s_raster_pages);
+    }
+    glGenTextures(1, &s_raster_pages);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, s_raster_pages);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_R8, 256, 256, count, 0, GL_RED, GL_UNSIGNED_BYTE,
+                 pixels);
+}
+
+static int cmd_mode(int type)
+{
+    switch (type) {
+    case RASTER_TEXTURE: return 0;
+    case RASTER_FLAT: return 1;
+    case RASTER_TEXTURE_TABLE: return 2;
+    default: return 3;
+    }
+}
+
+void gl3d_raster(u8 *target, int w, int h, int pitch, const struct raster_cmd *cmds, int count)
+{
+    int i, k, run;
+
+    if (!s_raster_ready) {
+        raster_init();
+    }
+    if (w != s_raster_w || h != s_raster_h) {
+        if (s_raster_color != 0) {
+            glDeleteTextures(1, &s_raster_color);
+            glDeleteTextures(1, &s_raster_dst);
+        }
+        s_raster_color = r8_texture(w, h);
+        s_raster_dst = r8_texture(w, h);
+        glBindFramebuffer(GL_FRAMEBUFFER, s_raster_fbo);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                               s_raster_color, 0);
+        s_raster_w = w;
+        s_raster_h = h;
+    }
+    if (count * 3 > s_raster_cap) {
+        s_raster_cap = count * 3;
+        free(s_raster_verts);
+        s_raster_verts = malloc((size_t)s_raster_cap * RASTER_FLOATS * sizeof(float));
+        glBindBuffer(GL_ARRAY_BUFFER, s_raster_vbo);
+        glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)s_raster_cap * RASTER_FLOATS * sizeof(float),
+                     NULL, GL_STREAM_DRAW);
+    }
+    for (i = 0; i < count; i++) {
+        float *o = s_raster_verts + i * 3 * RASTER_FLOATS;
+
+        for (k = 0; k < 3; k++, o += RASTER_FLOATS) {
+            o[0] = cmds[i].x[k];
+            o[1] = cmds[i].y[k];
+            o[2] = cmds[i].u[k];
+            o[3] = cmds[i].v[k];
+            o[4] = (float)cmds[i].page;
+            o[5] = cmds[i].colour;
+            o[6] = (float)cmd_mode(cmds[i].type);
+            o[7] = 0;
+        }
+    }
+
+    glBindFramebuffer(GL_FRAMEBUFFER, s_raster_fbo);
+    glViewport(0, 0, w, h);
+    glBindTexture(GL_TEXTURE_2D, s_raster_color);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, w, h, GL_RED, GL_UNSIGNED_BYTE, target);
+    glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+    glUseProgram(s_raster_program);
+    glBindVertexArray(s_raster_vao);
+    glBindBuffer(GL_ARRAY_BUFFER, s_raster_vbo);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, (GLsizeiptr)count * 3 * RASTER_FLOATS * sizeof(float),
+                    s_raster_verts);
+    glUniform2f(s_ru_size, (float)w, (float)h);
+    glUniform1i(s_ru_pages, 0);
+    glUniform1i(s_ru_table, 1);
+    glUniform1i(s_ru_dst, 2);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, s_raster_pages);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_CULL_FACE);
+
+    /* Opaque commands go in runs; each translucent one reads what is
+     * under it, so the frame is copied before it. */
+    for (i = 0; i < count; i += run) {
+        if (cmds[i].type == RASTER_TEXTURE || cmds[i].type == RASTER_FLAT) {
+            for (run = 1; i + run < count && (cmds[i + run].type == RASTER_TEXTURE
+                                              || cmds[i + run].type == RASTER_FLAT); run++) {
+            }
+        } else {
+            run = 1;
+            glActiveTexture(GL_TEXTURE2);
+            glBindTexture(GL_TEXTURE_2D, s_raster_dst);
+            glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, w, h);
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, table_get(cmds[i].table));
+            glActiveTexture(GL_TEXTURE0);
+        }
+        glDrawArrays(GL_TRIANGLES, i * 3, run * 3);
+    }
+
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    glPixelStorei(GL_PACK_ROW_LENGTH, pitch);
+    glReadPixels(0, 0, w, h, GL_RED, GL_UNSIGNED_BYTE, target);
+    glPixelStorei(GL_PACK_ROW_LENGTH, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }

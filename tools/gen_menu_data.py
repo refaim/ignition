@@ -26,9 +26,10 @@ BASE = 0x47a000
 
 LANG_LISTS = [0x481880, 0x4847e8, 0x487750, 0x48a6b8, 0x48d620, 0x490588]
 LIST_SLOTS = 30
-# 0x404a60 stores language 0's pages here. Each language keeps its pages
-# in the same order; slot 1 of its page list is its copy of 0x481850,
-# which gives the offset.
+# Each language's 25 pages (0x490788, 6 x 25 pointers). 0x404a60 copies
+# them to 0x4be8c8; choosing a language copies its row to 0x4be768.
+PAGE_TABLES = 0x490788
+# Language 0's row, as 0x404a60 also stores it at 0x4be768.
 PAGE_TABLE = [0x481850, 0x481838, 0x481808, 0x4817d8, 0x4817c0, 0x4817a8,
               0x481790, 0x4817f0, 0x481778, 0x481718, 0x481730, 0x481748,
               0x481760, 0x4816d0, 0x4816e8, 0x481700, 0x481820, 0x481670,
@@ -102,10 +103,17 @@ def main():
             p = u32(lst + 4 * i)
             if p:
                 pages[p] = True
+    table = [[u32(PAGE_TABLES + 4 * (25 * lang + k)) for k in range(25)]
+             for lang in range(len(LANG_LISTS))]
+    if table[0] != PAGE_TABLE:
+        sys.exit("0x%x does not start with 0x4be768's pages" % PAGE_TABLES)
     offsets = [u32(lst + 4) - PAGE_TABLE[0] for lst in LANG_LISTS]
     for lang in range(len(LANG_LISTS)):
-        for p in PAGE_TABLE:
-            q = page_copy(p, lang, offsets)
+        for k, p in enumerate(PAGE_TABLE):
+            if table[lang][k] != page_copy(p, lang, offsets):
+                print("note: language %d page %d is 0x%x, not 0x%x" % (
+                    lang, k, table[lang][k], page_copy(p, lang, offsets)))
+        for q in table[lang]:
             if u32(q) not in FUNCS or u32(q + 4) not in FUNCS:
                 sys.exit("no page at 0x%x" % q)
             pages[q] = True
@@ -176,7 +184,7 @@ def main():
         w("};\n\n")
     for name, a in (("g_menu_keymap", PAGE_STYLE), ("g_menu_keymap_default", DEFAULT_KEYMAP)):
         vals = [struct.unpack_from("<b", img, a + k - BASE)[0] for k in range(256)]
-        w("const s8 %s[256] = {\n" % name)
+        w("%s %s[256] = {\n" % ("s8" if a == PAGE_STYLE else "const s8", name))
         for k in range(0, 256, 16):
             w("    %s,\n" % ", ".join("%d" % v for v in vals[k:k + 16]))
         w("};\n\n")
@@ -205,7 +213,7 @@ def main():
     w("};\n\n")
     w("struct menu_page *const g_menu_page_table[MENU_LANGUAGES][MENU_PAGE_TABLE] = {\n")
     for lang in range(len(LANG_LISTS)):
-        refs = ["&s_page_%x" % page_copy(p, lang, offsets) for p in PAGE_TABLE]
+        refs = ["&s_page_%x" % q for q in table[lang]]
         w("    {\n")
         for i in range(0, len(refs), 4):
             w("        %s,\n" % ", ".join(refs[i:i + 4]))

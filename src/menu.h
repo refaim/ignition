@@ -85,7 +85,8 @@ extern struct menu_page *const g_menu_pages[MENU_LANGUAGES][MENU_PAGE_SLOTS];
 extern struct menu_page *const g_menu_page_table[MENU_LANGUAGES][MENU_PAGE_TABLE];
 extern const s16 g_menu_tree[MENU_TREE_ENTRIES][32];
 extern menu_callback const g_menu_callbacks[MENU_CALLBACKS];
-extern const s8 g_menu_keymap[256];             /* 0x47dd70 */
+/* Writable: the front end binds player keys into it. */
+extern s8 g_menu_keymap[256];                   /* 0x47dd70 */
 extern const s8 g_menu_keymap_default[256];     /* 0x4931c8 */
 extern const u8 g_menu_text_chars[0x54];        /* 0x4932c8, 0xff for none */
 extern const u8 g_menu_bindable[256];           /* 0x47de70 */

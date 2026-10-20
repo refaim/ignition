@@ -2,7 +2,8 @@
  * sound.h - Lisa 2 sound effects: sample banks and voices.
  *
  * A bank is a folder of group folders ("0_GRP0") of samples ("0_SEL.WAV"),
- * numbered by the digits their names start with. A sample is played on
+ * numbered by the digits their names start with. Samples are .WAV,
+ * Gravis .PAT, FastTracker .XI or raw .RW8. A sample is played on
  * a voice; the game keeps the voice's handle and may change the voice's
  * record (setting its rate to 0 stops it).
  */
@@ -60,6 +61,8 @@ struct sound_request {
 int sound_open(s32 *params);
 int sound_close(void);
 int sound_load_bank(const char *dir, int bank);
+int sound_load_group(const char *dir, int bank, int group);
+struct sound_sample *sound_sample_of(int bank, int group, int index);
 s32 sound_start(const struct sound_request *req);
 struct sound_voice *sound_voice_of(s32 handle);
 int sound_set_volume(int volume);

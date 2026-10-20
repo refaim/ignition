@@ -53,6 +53,15 @@ int sound_open(s32 *params)
     return 1;
 }
 
+/* 0x459360: a sample record with room for `size` bytes of data. */
+static struct sound_sample *sample_alloc(u32 size)
+{
+    struct sound_sample *s = calloc(1, sizeof(*s));
+
+    s->data = malloc(size != 0 ? size : 1);
+    return s;
+}
+
 static void sample_free(struct sound_sample *s)
 {
     if (s != NULL) {
@@ -181,11 +190,10 @@ static struct sound_sample *load_wav(const char *path)
         free(file);
         return NULL;
     }
-    s = calloc(1, sizeof(*s));
+    s = sample_alloc(data_size);
     s->rate = (s32)rd32(fmt + 4);
     s->bits = (fmt[14] + 7) & 0xf8;
     s->length = (s32)(data_size * 8 / (u32)s->bits);
-    s->data = malloc(data_size);
     memcpy(s->data, data, data_size);
     if (smpl != NULL && rd32(smpl + 28) != 0) {
         s->loop_start = (s32)rd32(smpl + 44);
@@ -201,11 +209,145 @@ static struct sound_sample *load_wav(const char *path)
             ((u8 *)s->data)[i] ^= 0x80;
         }
     }
-    make_envelope(s);
-    if (s->loop_length == 0) {
-        s->loop_length = s->length - s->loop_start;
-    }
     free(file);
+    return s;
+}
+
+/* Reads `size` bytes at `offset` of a file, or returns 0. */
+static int read_at(const char *path, long offset, void *buf, size_t size)
+{
+    FILE *fp = vfs_fopen(path, "rb");
+    int ok;
+
+    if (fp == NULL) {
+        return 0;
+    }
+    ok = fseek(fp, offset, SEEK_SET) == 0 && fread(buf, 1, size, fp) == size;
+    fclose(fp);
+    return ok;
+}
+
+/* 0x459530: unsigned samples to signed. */
+static void make_signed(struct sound_sample *s)
+{
+    int i;
+
+    for (i = 0; i < s->length; i++) {
+        if (s->bits == 8) {
+            ((u8 *)s->data)[i] ^= 0x80;
+        } else {
+            ((u16 *)s->data)[i] ^= 0x8000;
+        }
+    }
+}
+
+/* Halves the counts of a 16 bit sample, from bytes to samples. */
+static void to_samples(struct sound_sample *s)
+{
+    if (s->bits == 16) {
+        s->length /= 2;
+        s->loop_start /= 2;
+        s->loop_length /= 2;
+    }
+}
+
+/* 0x4582b0: a Gravis GF1 patch, its first wave. */
+static struct sound_sample *load_pat(const char *path)
+{
+    u8 head[0x14f];
+    struct sound_sample *s;
+    u32 size;
+    u8 modes;
+
+    if (!read_at(path, 0, head, sizeof(head)) || memcmp(head, "GF1PATCH110", 12) != 0) {
+        return NULL;
+    }
+    size = rd32(head + 0xf7);
+    s = sample_alloc(size);
+    if (!read_at(path, sizeof(head), s->data, size)) {
+        sample_free(s);
+        return NULL;
+    }
+    modes = head[0x126];
+    s->length = (s32)size;
+    s->loop_start = (s32)rd32(head + 0xfb);
+    s->loop_length = (s32)(rd32(head + 0xff) - rd32(head + 0xfb));
+    s->bits = (modes & 1) * 8 + 8;
+    s->rate = head[0x103] | head[0x104] << 8;
+    to_samples(s);
+    if (modes & 2) {
+        make_signed(s);
+    }
+    return s;
+}
+
+/* 0x4584d0: a FastTracker 2 instrument, its first sample, delta coded,
+ * at 22050 Hz. */
+static struct sound_sample *load_xi(const char *path)
+{
+    u8 head[0x28];
+    struct sound_sample *s;
+    u32 size;
+    int i;
+
+    if (!read_at(path, 0x12a, head, sizeof(head))) {
+        return NULL;
+    }
+    size = rd32(head);
+    s = sample_alloc(size);
+    if (!read_at(path, 0x12a + sizeof(head), s->data, size)) {
+        sample_free(s);
+        return NULL;
+    }
+    s->length = (s32)size;
+    s->loop_start = (s32)rd32(head + 4);
+    s->loop_length = (s32)rd32(head + 8);
+    s->bits = (head[0xe] & 0x10) / 2 + 8;
+    s->rate = 22050;
+    to_samples(s);
+    if (s->bits == 8) {
+        u8 v = 0;
+
+        for (i = 0; i < s->length; i++) {
+            v += ((u8 *)s->data)[i];
+            ((u8 *)s->data)[i] = v;
+        }
+    } else {
+        u16 v = 0;
+
+        for (i = 0; i < s->length; i++) {
+            v += ((u16 *)s->data)[i];
+            ((u16 *)s->data)[i] = v;
+        }
+    }
+    return s;
+}
+
+/* 0x4586a0: signed 8 bit at 22050 Hz, the whole file. */
+static struct sound_sample *load_rw8(const char *path)
+{
+    FILE *fp = vfs_fopen(path, "rb");
+    struct sound_sample *s;
+    long size;
+
+    if (fp == NULL) {
+        return NULL;
+    }
+    fseek(fp, 0, SEEK_END);
+    size = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+    s = sample_alloc((u32)size);
+    if (fread(s->data, 1, (size_t)size, fp) != (size_t)size) {
+        fclose(fp);
+        sample_free(s);
+        return NULL;
+    }
+    fclose(fp);
+    s->length = (s32)size;
+    s->loop_start = 0;
+    s->loop_length = (s32)size;
+    s->bits = 8;
+    s->rate = 22050;
     return s;
 }
 
@@ -231,7 +373,7 @@ static int has_ext(const char *name, const char *ext)
 }
 
 /* 0x458e00: the samples of one group folder. */
-static int load_group(const char *dir, int bank, int group)
+int sound_load_group(const char *dir, int bank, int group)
 {
     char host[1024];
     DIR *d;
@@ -255,16 +397,25 @@ static int load_group(const char *dir, int bank, int group)
         if (has_ext(e->d_name, ".WAV")) {
             s = load_wav(path);
         } else if (has_ext(e->d_name, ".PAT")) {
-            STUB(0x4582b0, "sound_load_pat");
+            s = load_pat(path);
         } else if (has_ext(e->d_name, ".RW8")) {
-            STUB(0x4586a0, "sound_load_rw8");
+            s = load_rw8(path);
+        } else if (has_ext(e->d_name, ".XI")) {
+            s = load_xi(path);
         } else {
-            STUB(0x4584d0, "sound_load_raw");
+            continue;
         }
-        if (s != NULL) {
-            sample_free(s_banks[bank][group][index]);
-            s_banks[bank][group][index] = s;
+        if (s == NULL) {
+            /* As the original, the first file that fails ends the group. */
+            closedir(d);
+            return 0;
         }
+        make_envelope(s);
+        if (s->loop_length == 0) {
+            s->loop_length = s->length - s->loop_start;
+        }
+        sample_free(s_banks[bank][group][index]);
+        s_banks[bank][group][index] = s;
     }
     closedir(d);
     return 1;
@@ -298,14 +449,14 @@ int sound_load_bank(const char *dir, int bank)
             snprintf(path + n, sizeof(path) - n, "\\");
         }
         snprintf(path + strlen(path), sizeof(path) - strlen(path), "%s", e->d_name);
-        load_group(path, bank, group);
+        sound_load_group(path, bank, group);
     }
     closedir(d);
     return 1;
 }
 
 /* 0x459330 */
-static struct sound_sample *sample_of(int bank, int group, int index)
+struct sound_sample *sound_sample_of(int bank, int group, int index)
 {
     if (s_banks[bank][group] == NULL) {
         return NULL;
@@ -324,7 +475,7 @@ s32 sound_start(const struct sound_request *req)
     if (s_is_open == -1) {
         return 0;
     }
-    s = sample_of(req->bank, req->group, req->index);
+    s = sound_sample_of(req->bank, req->group, req->index);
     if (s == NULL || s_free_count == 0) {
         return 0;
     }

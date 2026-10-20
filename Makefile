@@ -55,10 +55,14 @@ test_menu: tests/test_menu.c $(TEST_OBJ)
 test_settings: tests/test_settings.c $(TEST_OBJ)
 	$(CC) $(CFLAGS) -Itests $^ $(LDFLAGS) -o $@
 
-test: test_lisa test_menu test_settings
+test_sound: tests/test_sound.c $(TEST_OBJ)
+	$(CC) $(CFLAGS) $^ $(LDFLAGS) -o $@
+
+test: test_lisa test_menu test_settings test_sound
 	./test_lisa $(BUILD)
 	./test_menu
 	./test_settings
+	./test_sound
 
 # Extracts each disc image in data/ into data/<image name>/disc/.
 extract: cd_extract
@@ -70,4 +74,4 @@ run: $(TARGET)
 	./$(TARGET)
 
 clean:
-	rm -rf $(BUILD) $(TARGET) cd_extract test_lisa test_menu test_settings *.dSYM
+	rm -rf $(BUILD) $(TARGET) cd_extract test_lisa test_menu test_settings test_sound *.dSYM

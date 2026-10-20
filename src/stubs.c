@@ -41,12 +41,6 @@ int joystick_init(void)
 
 
 
-int net_stop(void)
-{
-    STUB(0x459e10, "net_stop");
-    return 1;
-}
-
 
 
 
@@ -98,13 +92,6 @@ int net_connect(void)
 int net_start(void)
 {
     STUB(0x459e80, "net_start");
-    return 0;
-}
-
-int net_reset(void *state)
-{
-    (void)state;
-    STUB(0x40ce90, "net_reset");
     return 0;
 }
 
@@ -176,7 +163,3 @@ STUB_VOID(0x418c40, race_load_world)
 STUB_VOID(0x4173fb, race_frame)
 STUB_VOID(0x420870, race_end)
 
-void game_exit(void)
-{
-    STUB(0x420b70, "game_exit");
-}

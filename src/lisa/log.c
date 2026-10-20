@@ -66,8 +66,10 @@ int log_printf(const char *fmt, ...)
     return 1;
 }
 
+/* 0x45b590 */
 void log_close(void)
 {
+    g_log_enabled = 0;
     if (s_log_file != NULL) {
         fclose(s_log_file);
         s_log_file = NULL;

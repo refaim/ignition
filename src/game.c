@@ -3,15 +3,20 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "app.h"
+#include "cd.h"
 #include "dik.h"
 #include "frontend.h"
 #include "game.h"
 #include "input.h"
 #include "lisa/font.h"
 #include "lisa/gfx.h"
+#include "lisa/log.h"
+#include "lisa/mem.h"
+#include "lisa/sprite.h"
 #include "startup.h"
 #include "stubs.h"
 #include "types.h"
@@ -214,6 +219,30 @@ int game_frame(void)
         g_game_mode = GAME_MODE_MENU;
     }
     return 0;
+}
+
+s32 g_fps_sum;                  /* 0x494988, the race's frame rates added up */
+s32 g_fps_count;                /* 0x49498c */
+
+/* 0x420b70 */
+static void game_exit(void)
+{
+    int i;
+
+    cd_stop_play();
+    cd_close();
+    free(g_menu_background);
+    for (i = 0; i < 4; i++) {
+        sprite_create(NULL, g_position_icons[i]);
+    }
+    sprite_create(NULL, g_bolt_icon);
+    if (g_fps_count == 0) {
+        g_fps_count = 1;
+    }
+    log_printf("Ignition has been shutdown normaly. Average framerate:%d\n",
+               g_fps_sum / g_fps_count);
+    log_close();
+    mem_pool_destroy(g_game_pool);
 }
 
 /* 0x417e90 */

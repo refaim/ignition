@@ -5,6 +5,8 @@
 #ifndef IGN_GAME_H
 #define IGN_GAME_H
 
+#include "types.h"
+
 int game_init(void);
 int game_frame(void);
 int game_shutdown(void);

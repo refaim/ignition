@@ -57,7 +57,6 @@ int scene_free(void);               /* 0x446c30 */
 int net_send_settings(void *state, void *settings);    /* 0x40d200 */
 int net_connect(void);              /* 0x459d40, the DirectPlay dialogs */
 int net_start(void);                /* 0x459e80 */
-int net_reset(void *state);         /* 0x40ce90 */
 extern s32 g_net_players;           /* 0x50f7a8 */
 
 /* 3D scene; the renderer's buffers are replaced by OpenGL */
@@ -66,12 +65,12 @@ int raster_set_grid(int w, int h, int count);      /* 0x446ca0 */
 int raster_set_screen(int w, int h, int flags);    /* 0x402be0 */
 
 /* game */
-int net_stop(void);                 /* 0x459e10, ends a network session */
 void race_load_1(void);             /* 0x418b70 */
 void race_load_2(void);             /* 0x418be0 */
 void race_load_world(void);         /* 0x418c40 */
 void race_frame(void);              /* 0x4173fb, inside game_frame */
 void race_end(void);                /* 0x420870 */
-void game_exit(void);               /* 0x420b70 */
+
+#include "net.h"
 
 #endif /* IGN_STUBS_H */

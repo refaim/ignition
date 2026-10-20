@@ -234,6 +234,46 @@ objects with OpenGL:
 | screenshot | `0x446040` | `IGN%d.TGA` |
 | debug overlay | `0x43e9c0`, `0x43ec70` | FPS, speed, position |
 
+## Front end
+
+The menus are data driven. `0x404a60` builds the tables (C++ static
+initialisers, guarded by bits of `0x4bfb18`..`0x4bfb2c`; run by
+`tools/x86_stores.py`), loads the settings, fills the menu context at
+`0x4c50d0` and starts the engine (`0x410930`). The engine runs from
+`0x4109d0` (frame), `0x410d80` (navigation), `0x411640` (enter or leave
+a page), `0x411960` (draw a visual), `0x411b40` (make an item's sprite).
+
+There are six copies of the tables, one per language, 0x2f68 bytes
+apart from `0x480990`. `0x4beb20`..`0x4beb34` point at each language's
+page list (30 slots, unused ones 0). The table at `0x4be768` holds 25
+pages of language 0, for copying each page's selection into the
+settings.
+
+| Record | Size | Fields |
+|---|---|---|
+| page | 0x18 | handler A (`0x409fb0` for all), handler B (`0x409610`), page data (`0x47dd70` for all), item count, items, selected item |
+| item | 0x1c, packed | value pointer (into the settings), min, max, visuals, +0x10, +0x14 (s16), choice (+0x16, pointer), kind (+0x1a, s16; 1 everywhere) |
+| visual | 0x18, packed | pixels, x, y, width, height, stride (s16 each), text, text x, text y, font index (s16 each) |
+| choice | 0x18 | key bindings: +4 points at a key code byte in the settings, +0x14 the kind (2 a text field, 3 a key) |
+
+An item has 2 + 2 x (max - min) visuals; `0x411b40` picks one by the
+value and whether the item is selected, with a second set at +0x30.
+Visual pixels are NULL in the data; the menu loader (`0x403e80`) points
+them into `BILAR.PIC` and the other menu pictures. Positions are
+relative to the screen centre: the engine adds half the screen width
+(`0x4c50fc` is 1). With `0x4c5100` set, positions are in a 3200 x 2400
+space scaled to the screen.
+
+The navigation tree (`0x4909e0`, 25 entries of 0x40 bytes) is a list
+of paths: (item index, code) pairs by depth, ended by -1. A code of 0
+or more is a page index into the language's page list; a negative code
+c calls `callbacks[-c - 1]` from `0x47df70` (`0x4045b0`, `0x4045e0`,
+`0x404610`, `0x404740`, `0x404790`). The page stack is at `0x4c5144`,
+the selection stack at `0x4c4e88`, the depth at `0x4c529c`.
+
+The settings, saved as `ign_win.btz`, are 0x597 bytes at `0x4bf580`;
+the file is read only when its first word is 0x1e.
+
 ## Data
 
 `data/<image>/disc/` holds the files extracted from each image by

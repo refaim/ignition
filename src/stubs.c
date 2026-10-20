@@ -72,28 +72,6 @@ int joystick_read(void)
     return 0;
 }
 
-/* Without the player, each animation ends at once and the intro runs
- * through its fades. */
-int cdp_open(void *anim)
-{
-    (void)anim;
-    STUB(0x412580, "cdp_open");
-    return 0;
-}
-
-int cdp_next_frame(void *anim)
-{
-    (void)anim;
-    STUB(0x412610, "cdp_next_frame");
-    return 0;
-}
-
-int cdp_draw(void *anim)
-{
-    (void)anim;
-    STUB(0x412560, "cdp_draw");
-    return 0;
-}
 
 
 

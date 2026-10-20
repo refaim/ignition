@@ -762,6 +762,7 @@ static void choose_language(void)
             long size = file_size(s_intro_files[i]);
 
             fe_4be880[i] = malloc((size_t)size);
+            g_intro_sizes[i] = (u32)size;
             file_read_at(s_intro_files[i], fe_4be880[i], (u32)size, 0);
         }
         memset(g_menu_screen, 0, 64000);

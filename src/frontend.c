@@ -9,6 +9,7 @@
 
 #include "app.h"
 #include "game.h"
+#include "cdp.h"
 #include "frontend.h"
 #include "frontend_state.h"
 #include "lisa/texture.h"
@@ -101,16 +102,9 @@ double menu_dt(void)
     return s_dt;
 }
 
-/* The animation the intro plays (0x4be5b8; 0x4be5c8 its palette,
- * +0x14 its kind). */
-static struct {
-    void *file;
-    u8 *screen;         /* +0x04 */
-    s32 f04[2];
-    u8 *palette;
-    s16 f14;
-    s16 f16;
-} s_intro_anim;
+/* The animation the intro plays (0x4be5b8). */
+static struct cdp_anim s_intro_anim;
+u32 g_intro_sizes[6];       /* the sizes of fe_4be880's files */
 
 int frontend_load_language(void)
 {
@@ -120,6 +114,7 @@ int frontend_load_language(void)
 /* Starts the intro's first animation into `screen` (0x409b4f). */
 void frontend_intro_start(void *file, u8 *screen)
 {
+    s_intro_anim.size = g_intro_sizes[0];
     s_intro_anim.file = file;
     s_intro_anim.screen = screen;
     cdp_open(&s_intro_anim);
@@ -595,10 +590,11 @@ static void intro_step(void)
                     fe_4be850 = 1278.0;
                 } else {
                     s_intro_anim.file = fe_4be880[fe_4be56c];
+                    s_intro_anim.size = g_intro_sizes[fe_4be56c];
                     cdp_open(&s_intro_anim);
                 }
             }
-            if (s_intro_anim.f14 == 2) {
+            if (s_intro_anim.frame == 2) {
                 cdp_draw(&s_intro_anim);
             }
         }
@@ -744,7 +740,7 @@ static void step_timers(void)
 static void intro_fades(void)
 {
     if (s_intro_anim.palette == NULL) {
-        return;     /* no animation player yet */
+        return;
     }
     if (fe_4be850 >= 28.8 && fe_4be850 < 57.6) {
         palette_lerp(g_menu_white, s_intro_anim.palette, g_menu_palette_work,

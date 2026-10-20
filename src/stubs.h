@@ -47,11 +47,6 @@ int joystick_init(void);            /* 0x4596a0 */
 int sound_music(int a, int b, int c);   /* 0x458d80 */
 int joystick_read(void);            /* 0x459a20 */
 
-/* the intro animations (.CDP) */
-int cdp_open(void *anim);           /* 0x412580 */
-int cdp_next_frame(void *anim);     /* 0x412610 */
-int cdp_draw(void *anim);           /* 0x412560 */
-
 /* front end pieces still to port */
 int menu_network_page(void);        /* 0x40af54, inside menu_page_handler_a */
 /* 3D, for the OpenGL renderer */

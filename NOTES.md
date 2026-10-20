@@ -234,6 +234,43 @@ objects with OpenGL:
 | screenshot | `0x446040` | `IGN%d.TGA` |
 | debug overlay | `0x43e9c0`, `0x43ec70` | FPS, speed, position |
 
+## 3D engine
+
+`0x4466d0`..`0x4516f0`. `src/scene.c` holds the scene, objects and
+grid; `src/gl3d.c` draws them with OpenGL instead of the pipeline
+stages and the rasteriser.
+
+- **Scene record** (`0x63c5f0`, 0xa8 bytes, `struct scene`): camera
+  position and angles as doubles, zoom (scales X only), stage switches
+  at 0x38..0x54, target at 0x70, focal lengths 253 and 207 at 0x80,
+  the eye's distance behind the screen (44) at 0x88, the centre at 0x9c.
+  `0x4471e0` scales the focal lengths for another screen size.
+- **Objects** (0x2a bytes) come from a pool made by `raster_set_grid`
+  (`0x446ca0`) and are kept in lists per 256 unit cell of the ground.
+  `0x446d90` creates, `0x446eb0` links, `0x446f30` moves, `0x447150`
+  unlinks, `0x447070` changes the mesh.
+- **Frame** (`0x4466d0`): look at the target (`0x448990`), gather the
+  objects in the cells around the camera and cull them by sphere
+  (`0x448e70`), transform and project (`0x449e70`), emit the faces as
+  rasteriser commands into 6000 depth buckets (`0x44c1f0`), collect them
+  back to front. There is no lighting and no near clip.
+- **Projection**: `sx = cx - focal_x * zoom * Xc / (Zc + near)`,
+  `sy = cy - focal_y * Yc / (Zc + near)`. The camera's rotation is
+  Rz(-roll) Rx(-pitch) Ry(-yaw); an object's is Ry(-ay) Rx(ax) Rz(-az)
+  with the mesh's Y flipped.
+- **Faces**: the low byte of a face's flags picks its handler
+  (`0x49c8e0`); the high word is a material id. 17 and 21 are textured,
+  18 and 22 textured with colour 0 left out, 19 and 23 textured through
+  the level's .SHD, 15 and 16 flat, 20 flat through the .SHD, 7 and 8
+  sprites, 1 and 2 points, 11 to 13 lines. A handler keeps going while
+  the next face has its type.
+- **Rasteriser** (`0x44f0e9`): takes a list of commands, all triangles
+  but sprites (split into two triangles of type 18). Screen x, y are
+  24.8; u, v are 8.8 texels in a 256 x 256 page, u the column. 17, 18
+  and 22 are affine, 20 and 21 perspective correct; 15 and 16 look up
+  `TAB[colour << 8 | shade]`; 18, 19 and 21 look up `T[a << 8 | dst]`
+  with the pixel under them. No z buffer.
+
 ## Front end
 
 The menus are data driven. `0x404a60` builds the tables (C++ static
@@ -361,6 +398,41 @@ sample, delta coded, at 22050 Hz) and `.RW8` (signed 8 bit at
   a s32 whose high word is the texture page.
 - `.TEX`: 64 bytes, then 256 x 256 pages of 8 bit texels, loaded at a
   64 KB boundary.
+
+### Menu background files
+
+- `DEFAULT.PSQ`: 12 byte entries `{ s32 first frame, s32 frames, 0 }`,
+  played in turn.
+- `TEST.PFM`: chunks `{ u32 tag, s32 size, data }`. `li01` a frame's
+  vertices (s16 x, y, 12.4 pixels), then `li00` its script (`{ u8 type,
+  u8 count, commands }` to a type of 0xff); one `li02` of textured face
+  records (6 u16 8.8 u, v and s32 page) and one `li03` of sprites (s16
+  hot spot, 4 u16 texel rectangle, u16 page, u16 table); `lixx` ends.
+  Commands: 7 sprite, 11 line, 13 skipped, 15 flat, 17 textured, 18
+  textured through a table, 19 flat through a table.
+- The pages are `TEXTURES\*.TEX` read one after another; table 0 is
+  `levels\canada\canada.SHD`, table 1 leaves colour 0 out.
+
+### Track files
+
+`LEVELS\<t>\<t>.*`, read by `0x418dd0` and `0x419a90`..`0x419d10`:
+
+- `.COL` palette; `.PAN` the HUD's blend table; `.SHD` the
+  translucency table; `.TAB` colour x shade (columns 64 up give the
+  colour back); `.PIC` the loading picture.
+- `.PLC`: s32 count, then `{ s32 mesh offset in dwords, u32 type, x, y,
+  z }`, x and z placed at +0x6400. Types below 100 are scenery,
+  150..199 collision objects, 300..349 moving, 350..359 lens flares.
+- `.MSH`: as the menu car's; one mesh per placement.
+- `.POS`: s32 per placement (-1 for none, else a dword offset from the
+  entry) to `{ s32 frames, s32 current, frames x { x, y, z, rx, ry, rz } }`.
+- `.TRI`: s32, then 500 bytes per placement: the AI's road sections.
+- `.SRF`: the collision grid: a 0x24 byte header (extents, cell size
+  512, 101 x 101 cells), cells `{ u32 offset, u32 offset, u16 count,
+  u16 count }`, 24 byte spans `{ s32 x, z, s32 slopes x2 (16.16), s16
+  dz, s16 face, u32 object }` and two lists of span offsets.
+- Texture slots: 0 the track, 1 `CARS`, 2..7 `DIVSPR`, `LIGHT`,
+  `SMOKE`, `DARKSMOK`, `BOOM`, `EXSMOKE`, 8 a blank page.
 
 ### Other files
 

@@ -324,7 +324,7 @@ static void init_car(int i, const s32 rear[CAR_MODELS], const s32 front[CAR_MODE
     c->f148 = 0.4;
     c->f270 = 0;
     c->f130 = 0.01;
-    c->f344 = c->f348 = c->f34c = 0;
+    c->steer = c->f348 = c->f34c = 0;
     c->gear = 1;
     c->f290 = 0;
     c->f280 = c->gear * 5 - 5;

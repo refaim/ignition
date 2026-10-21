@@ -91,11 +91,6 @@ void race_f_420eb0(void)
     STUB(0x420eb0, "race_f_420eb0");
 }
 
-/* 0x420e60 */
-void race_f_420e60(void)
-{
-    STUB(0x420e60, "race_f_420e60");
-}
 
 /* 0x442ec0 */
 void race_f_442ec0(void)
@@ -151,4 +146,18 @@ void race_f_438880(void)
 void sound_tick_race(void)
 {
     sound_tick();
+}
+
+/* 0x442030 */
+void race_f_442030(int accel, int brake, int steer, int action)
+{
+    (void)accel; (void)brake; (void)steer; (void)action;
+    STUB(0x442030, "race_f_442030");
+}
+
+/* 0x444e20 */
+void race_f_444e20(int car)
+{
+    (void)car;
+    STUB(0x444e20, "race_f_444e20");
 }

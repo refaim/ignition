@@ -50,6 +50,7 @@ extern s32 r_552f18;                    /* 4 racing; 2, 3 waiting for the networ
 extern s32 r_54f97c, r_5532c8, r_553070, r_553280, r_5530b8, r_563da0, r_5daff0;
 extern s32 r_5532b0, r_601674;
 extern double r_552e48;
+extern s32 r_5285c0;                    /* the car being updated */
 
 void race_pos_deltas(void);
 int race_srf_load(const char *name);

@@ -22,6 +22,8 @@ void race_f_445940(void);
 void race_f_435350(void);
 void race_f_420eb0(void);
 void race_f_420e60(void);
+void race_f_442030(int accel, int brake, int steer, int action);
+void race_f_444e20(int car);
 void race_f_442ec0(void);
 void race_f_444450(void);
 void race_f_434190(void);

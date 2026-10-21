@@ -39,12 +39,13 @@ struct car 0x484c 0x5daffc
 0x2fc double corner_x[4]        the body's corners, 1.1 times
 0x31c double corner_z[4]
 0x340 s32 f340
-0x344 s32 f344
+0x344 s32 steer                 -100 left .. 100 right
 0x348 s32 f348
 0x34c s32 f34c
 0x350 s32 f350
 0x354 s32 f354
 0x358 s32 f358
+0x35c s32 f35c
 0x364 s32 f364
 0x368 s32 f368
 0x36c s32 f36c
@@ -62,6 +63,8 @@ struct car 0x484c 0x5daffc
 0x520 s32 f520
 0x524 s32 ai_skill              0x499880, by car and difficulty
 0x528 s32 f528
+0x52c s32 action                1 the action key, 2 its stronger form
+0x530 s32 last_action
 0x534 double f534               100.0
 0x53c s32 f53c
 0x540 s32 f540
@@ -78,6 +81,7 @@ struct car 0x484c 0x5daffc
 0x58c double f58c
 0x594 double f594               1.0
 0x59c double f59c
+0x5a4 s32 look_back             the look back key is held
 0x5ac s32 front_axle            the front wheels' distance
 0x5b0 s32 rear_axle
 0x5b4 s32 max_x                 the body's extent
@@ -94,5 +98,7 @@ struct car 0x484c 0x5daffc
 0x634 float f634                10.0
 0x638 float f638                4000.0
 0x431c s32 f431c
+0x9a4 s32 steer_pull            50 left, -50 right, easing to 0
+0x9a8 double steer_heading     the road's heading at the car, less pi / 2
 0x4834 double f4834
 0x483c double f483c

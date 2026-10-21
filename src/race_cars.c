@@ -357,25 +357,25 @@ static void init_car(int i, const s32 rear[CAR_MODELS], const s32 front[CAR_MODE
     c->f60c = c->clock = c->f61c = c->f624 = c->f62c = 0;
 
     ph->mass = g_car_4923b8[d->car];
-    ph->f008 = 8000.0;
+    ph->inertia = 8000.0;
     ph->f010 = 0.6;
-    ph->f018 = fabs(g_wheel_dx[4 * d->car] * 0.04596) * 1.5;
-    ph->f020 = fabs(g_wheel_dx[4 * d->car + 2] * 0.04596) * 2.0;
+    ph->rear_len = fabs(g_wheel_dx[4 * d->car] * 0.04596) * 1.5;
+    ph->front_len = fabs(g_wheel_dx[4 * d->car + 2] * 0.04596) * 2.0;
     ph->heading = c->heading;
-    ph->f030 = 0;
+    ph->yaw_rate = 0;
     for (k = 0; k < 3; k++) {
         ph->f038[k] = c->x * 0.04596;
         ph->f050[k] = c->z * 0.04596;
     }
-    ph->f068 = c->x * 0.04596;
-    ph->f070 = c->z * 0.04596;
-    ph->f078 = ph->f080 = ph->f088 = ph->f090 = ph->f098 = 0;
-    ph->f0b4 = ph->f0b8 = ph->f0bc = ph->f0c0 = 0;
-    ph->f0c4 = 4.2;
-    ph->f0cc = 4.2;
-    ph->f0d4 = 0;
-    ph->f0ac = 0;
-    ph->f0d8 = 0;
+    ph->x = c->x * 0.04596;
+    ph->z = c->z * 0.04596;
+    ph->vx = ph->vz = ph->f088 = ph->f090 = ph->speed = 0;
+    ph->roll = ph->pitch = 0;
+    ph->traction = 4.2;
+    ph->grip = 4.2;
+    ph->brake = 0;
+    ph->steer = 0;
+    ph->drive = 0;
 
     if (d->car == 7) {
         static const s32 car7[0x23] = {

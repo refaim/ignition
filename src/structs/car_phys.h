@@ -11,67 +11,78 @@
 #pragma pack(push, 1)
 struct car_phys {
     double mass;  /* +0x0, 0x4923b8 by car */
-    double f008;  /* +0x8, 8000.0 */
+    double inertia;  /* +0x8, 8000.0 */
     double f010;  /* +0x10, 0.6 */
-    double f018;  /* +0x18, |rear wheel x| * 0.04596 * 1.5 */
-    double f020;  /* +0x20, |front wheel x| * 0.04596 * 2 */
+    double rear_len;  /* +0x18, |rear wheel x| * 0.04596 * 1.5 */
+    double front_len;  /* +0x20, |front wheel x| * 0.04596 * 2 */
     double heading;  /* +0x28 */
-    double f030;  /* +0x30 */
+    double yaw_rate;  /* +0x30 */
     double f038[3];  /* +0x38, x * 0.04596 */
     double f050[3];  /* +0x50, z * 0.04596 */
-    double f068;  /* +0x68, x * 0.04596 */
-    double f070;  /* +0x70, z * 0.04596 */
-    double f078;  /* +0x78 */
-    double f080;  /* +0x80 */
+    double x;  /* +0x68 */
+    double z;  /* +0x70 */
+    double vx;  /* +0x78 */
+    double vz;  /* +0x80 */
     double f088;  /* +0x88 */
     double f090;  /* +0x90 */
-    double f098;  /* +0x98 */
-    u8 pad_0a0[0xc];
-    double f0ac;  /* +0xac */
-    s32 f0b4;  /* +0xb4 */
-    s32 f0b8;  /* +0xb8 */
-    s32 f0bc;  /* +0xbc */
-    s32 f0c0;  /* +0xc0 */
-    double f0c4;  /* +0xc4, 4.2 */
-    double f0cc;  /* +0xcc, 4.2 */
-    s32 f0d4;  /* +0xd4 */
-    double f0d8;  /* +0xd8 */
-    u8 pad_0e0[0x10];
+    double speed;  /* +0x98, signed, along the heading */
+    double lateral;  /* +0xa0, the speed across the heading */
+    s32 slipping;  /* +0xa8, the drive passed the traction */
+    double steer;  /* +0xac, the front wheels' angle, radians */
+    double roll;  /* +0xb4, the car's 0x110 */
+    double pitch;  /* +0xbc, the car's 0x108 */
+    double traction;  /* +0xc4, surface, model and difficulty */
+    double grip;  /* +0xcc */
+    s32 brake;  /* +0xd4 */
+    double drive;  /* +0xd8, the engine's force */
+    double traction_force;  /* +0xe0, traction * the weight on the ground */
+    double grip_force;  /* +0xe8 */
     double corner_x[4];  /* +0xf0, the body's corners, scaled */
     double corner_z[4];  /* +0x110 */
     double f130;  /* +0x130, 4.0 */
-    u8 pad_138[0x98];
+    double corner_world[8];  /* +0x138, x, z of each corner */
+    double corner_scaled[8];  /* +0x178, the same, the corners scaled by the speed */
+    double impact;  /* +0x1b8, set by the collisions */
+    double contact_x;  /* +0x1c0 */
+    double contact_z;  /* +0x1c8 */
 };
 #pragma pack(pop)
 
 _Static_assert(offsetof(struct car_phys, mass) == 0x0, "car_phys.mass");
-_Static_assert(offsetof(struct car_phys, f008) == 0x8, "car_phys.f008");
+_Static_assert(offsetof(struct car_phys, inertia) == 0x8, "car_phys.inertia");
 _Static_assert(offsetof(struct car_phys, f010) == 0x10, "car_phys.f010");
-_Static_assert(offsetof(struct car_phys, f018) == 0x18, "car_phys.f018");
-_Static_assert(offsetof(struct car_phys, f020) == 0x20, "car_phys.f020");
+_Static_assert(offsetof(struct car_phys, rear_len) == 0x18, "car_phys.rear_len");
+_Static_assert(offsetof(struct car_phys, front_len) == 0x20, "car_phys.front_len");
 _Static_assert(offsetof(struct car_phys, heading) == 0x28, "car_phys.heading");
-_Static_assert(offsetof(struct car_phys, f030) == 0x30, "car_phys.f030");
+_Static_assert(offsetof(struct car_phys, yaw_rate) == 0x30, "car_phys.yaw_rate");
 _Static_assert(offsetof(struct car_phys, f038) == 0x38, "car_phys.f038");
 _Static_assert(offsetof(struct car_phys, f050) == 0x50, "car_phys.f050");
-_Static_assert(offsetof(struct car_phys, f068) == 0x68, "car_phys.f068");
-_Static_assert(offsetof(struct car_phys, f070) == 0x70, "car_phys.f070");
-_Static_assert(offsetof(struct car_phys, f078) == 0x78, "car_phys.f078");
-_Static_assert(offsetof(struct car_phys, f080) == 0x80, "car_phys.f080");
+_Static_assert(offsetof(struct car_phys, x) == 0x68, "car_phys.x");
+_Static_assert(offsetof(struct car_phys, z) == 0x70, "car_phys.z");
+_Static_assert(offsetof(struct car_phys, vx) == 0x78, "car_phys.vx");
+_Static_assert(offsetof(struct car_phys, vz) == 0x80, "car_phys.vz");
 _Static_assert(offsetof(struct car_phys, f088) == 0x88, "car_phys.f088");
 _Static_assert(offsetof(struct car_phys, f090) == 0x90, "car_phys.f090");
-_Static_assert(offsetof(struct car_phys, f098) == 0x98, "car_phys.f098");
-_Static_assert(offsetof(struct car_phys, f0ac) == 0xac, "car_phys.f0ac");
-_Static_assert(offsetof(struct car_phys, f0b4) == 0xb4, "car_phys.f0b4");
-_Static_assert(offsetof(struct car_phys, f0b8) == 0xb8, "car_phys.f0b8");
-_Static_assert(offsetof(struct car_phys, f0bc) == 0xbc, "car_phys.f0bc");
-_Static_assert(offsetof(struct car_phys, f0c0) == 0xc0, "car_phys.f0c0");
-_Static_assert(offsetof(struct car_phys, f0c4) == 0xc4, "car_phys.f0c4");
-_Static_assert(offsetof(struct car_phys, f0cc) == 0xcc, "car_phys.f0cc");
-_Static_assert(offsetof(struct car_phys, f0d4) == 0xd4, "car_phys.f0d4");
-_Static_assert(offsetof(struct car_phys, f0d8) == 0xd8, "car_phys.f0d8");
+_Static_assert(offsetof(struct car_phys, speed) == 0x98, "car_phys.speed");
+_Static_assert(offsetof(struct car_phys, lateral) == 0xa0, "car_phys.lateral");
+_Static_assert(offsetof(struct car_phys, slipping) == 0xa8, "car_phys.slipping");
+_Static_assert(offsetof(struct car_phys, steer) == 0xac, "car_phys.steer");
+_Static_assert(offsetof(struct car_phys, roll) == 0xb4, "car_phys.roll");
+_Static_assert(offsetof(struct car_phys, pitch) == 0xbc, "car_phys.pitch");
+_Static_assert(offsetof(struct car_phys, traction) == 0xc4, "car_phys.traction");
+_Static_assert(offsetof(struct car_phys, grip) == 0xcc, "car_phys.grip");
+_Static_assert(offsetof(struct car_phys, brake) == 0xd4, "car_phys.brake");
+_Static_assert(offsetof(struct car_phys, drive) == 0xd8, "car_phys.drive");
+_Static_assert(offsetof(struct car_phys, traction_force) == 0xe0, "car_phys.traction_force");
+_Static_assert(offsetof(struct car_phys, grip_force) == 0xe8, "car_phys.grip_force");
 _Static_assert(offsetof(struct car_phys, corner_x) == 0xf0, "car_phys.corner_x");
 _Static_assert(offsetof(struct car_phys, corner_z) == 0x110, "car_phys.corner_z");
 _Static_assert(offsetof(struct car_phys, f130) == 0x130, "car_phys.f130");
+_Static_assert(offsetof(struct car_phys, corner_world) == 0x138, "car_phys.corner_world");
+_Static_assert(offsetof(struct car_phys, corner_scaled) == 0x178, "car_phys.corner_scaled");
+_Static_assert(offsetof(struct car_phys, impact) == 0x1b8, "car_phys.impact");
+_Static_assert(offsetof(struct car_phys, contact_x) == 0x1c0, "car_phys.contact_x");
+_Static_assert(offsetof(struct car_phys, contact_z) == 0x1c8, "car_phys.contact_z");
 _Static_assert(sizeof(struct car_phys) == 0x1d0, "car_phys");
 
 #endif /* IGN_STRUCT_CAR_PHYS_H */

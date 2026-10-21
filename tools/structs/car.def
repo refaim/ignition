@@ -49,6 +49,11 @@ struct car 0x484c 0x5daffc
 0x378 s32 f378
 0x39c s32 grid                  the place on the grid
 0x3a0 s32 f3a0
+0x3a4 double f3a4               lap timing, cleared by 0x41f8f0
+0x3b4 double f3b4
+0x3bc double f3bc
+0x3c4 double f3c4
+0x3cc double f3cc
 0x3dc s32 f3dc[8] 0x28
 0x51c s32 f51c
 0x520 s32 f520

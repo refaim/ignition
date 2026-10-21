@@ -1,0 +1,19 @@
+# A race camera (0x5daff4, 0xc8 bytes, one a driver); 0x41e740 sets
+# it behind its car.
+struct race_cam 0xc8 0x5daff4
+0x000 double height             the car's y + 1400
+0x008 double heading
+0x038 double f38
+0x040 double f40                420.0
+0x048 double f48                450.0
+0x050 s32 f50                   400
+0x054 s32 dist                  400
+0x058 s32 f58                   200
+0x05c s32 f5c                   164
+0x060 double f60                25.0
+0x078 double x                  dist / 2 behind the car
+0x080 double y
+0x088 double z
+0x0a8 double fa8                the car's heading
+0x0b0 double fb0                the car's f110
+0x0c0 double fc0

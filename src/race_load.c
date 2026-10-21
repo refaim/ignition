@@ -20,6 +20,7 @@
 #include "menu_panels.h"
 #include "race.h"
 #include "race_cars.h"
+#include "race_init.h"
 #include "startup.h"
 #include "stubs.h"
 #include "video.h"
@@ -492,7 +493,7 @@ void race_load_2(void)
     race_progress(0x28);
     race_load_cars();
     race_progress(0x2e);
-    STUB(0x41e740, "race_load_cameras");
+    race_init_cameras();
     race_progress(0x34);
     STUB(0x41f9b0, "race_load_sounds");
     race_progress(0x3c);

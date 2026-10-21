@@ -71,7 +71,13 @@ struct car {
     u8 pad_37c[0x20];
     s32 grid;  /* +0x39c, the place on the grid */
     s32 f3a0;  /* +0x3a0 */
-    u8 pad_3a4[0x38];
+    double f3a4;  /* +0x3a4, lap timing, cleared by 0x41f8f0 */
+    u8 pad_3ac[0x8];
+    double f3b4;  /* +0x3b4 */
+    double f3bc;  /* +0x3bc */
+    double f3c4;  /* +0x3c4 */
+    double f3cc;  /* +0x3cc */
+    u8 pad_3d4[0x8];
     struct { s32 v; u8 pad[0x24]; } f3dc[8];  /* +0x3dc */
     s32 f51c;  /* +0x51c */
     s32 f520;  /* +0x520 */
@@ -169,6 +175,11 @@ _Static_assert(offsetof(struct car, f370) == 0x370, "car.f370");
 _Static_assert(offsetof(struct car, f378) == 0x378, "car.f378");
 _Static_assert(offsetof(struct car, grid) == 0x39c, "car.grid");
 _Static_assert(offsetof(struct car, f3a0) == 0x3a0, "car.f3a0");
+_Static_assert(offsetof(struct car, f3a4) == 0x3a4, "car.f3a4");
+_Static_assert(offsetof(struct car, f3b4) == 0x3b4, "car.f3b4");
+_Static_assert(offsetof(struct car, f3bc) == 0x3bc, "car.f3bc");
+_Static_assert(offsetof(struct car, f3c4) == 0x3c4, "car.f3c4");
+_Static_assert(offsetof(struct car, f3cc) == 0x3cc, "car.f3cc");
 _Static_assert(offsetof(struct car, f3dc) == 0x3dc, "car.f3dc");
 _Static_assert(offsetof(struct car, f51c) == 0x51c, "car.f51c");
 _Static_assert(offsetof(struct car, f520) == 0x520, "car.f520");

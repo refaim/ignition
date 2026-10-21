@@ -14,7 +14,7 @@ extern int g_fatal_error;
 extern char g_error_text[256];
 extern s32 g_screen_width;
 extern s32 g_screen_height;
-extern u8 g_back_buffer[320 * 200];
+extern u8 g_back_buffer[800 * 600];
 extern u8 *g_sysgfx;
 extern u8 *g_sysgfx2;
 extern u8 *g_sys_palette;

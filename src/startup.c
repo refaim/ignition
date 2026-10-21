@@ -26,7 +26,7 @@ int g_fatal_error;              /* 0x54f970 */
 char g_error_text[256];         /* 0x6035f0 */
 s32 g_screen_width;             /* 0x553000 */
 s32 g_screen_height;            /* 0x563c10 */
-u8 g_back_buffer[320 * 200];    /* 0x563db0 */
+u8 g_back_buffer[800 * 600];    /* 0x563db0, as large as the race's largest mode */    /* 0x563db0 */
 u8 *g_sysgfx;                   /* 0x54f998, N_SYSGFX.PIC */
 u8 *g_sysgfx2;                  /* 0x553088, N_SYSG_2.PIC */
 u8 *g_sys_palette;              /* 0x563bfc, SYS.COL */

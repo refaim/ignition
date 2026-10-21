@@ -88,7 +88,7 @@ static int text_frame(void *user)
     if (g_plat_keys[DIK_ESCAPE]) {
         return 0;
     }
-    memcpy(g_video_screen, g_back_buffer, sizeof(g_back_buffer));
+    memcpy(g_video_screen, g_back_buffer, 320 * 200);
     video_present();
     return 1;
 }

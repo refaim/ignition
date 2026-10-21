@@ -22,6 +22,10 @@
 #include "scene.h"
 #include "net.h"
 #include "stubs.h"
+#include "lisa/gfx.h"
+#include "race_frame.h"
+#include "startup.h"
+#include "video.h"
 
 struct race_cam *g_race_cams;               /* 0x5daff4, one a driver */
 struct srf g_srf;                           /* 0x4937bc, 0x4c53a4.. */
@@ -337,6 +341,7 @@ void race_reset_state(void)
 }
 
 s32 *r_552f24;                              /* 0x552f24, 0x258 bytes */
+s32 r_498478, r_49847c;
 s32 r_563c18, r_563d88, r_552f18, r_54f9a8, r_5532ac, r_563ce4;
 double r_552e48;
 s32 r_5531d0[0x2c];                         /* 0x5531d0..0x553280 */
@@ -363,7 +368,7 @@ void race_load_world(void)
     snprintf(name, sizeof(name), "LEVELS\\%s%s.SRF", g_track_dir, g_track_name);
     race_srf_load(name);
     race_progress(0x64);
-    STUB(0x43dea0, "race_init_hud");
+    race_init_hud();
     r_552f24 = pool_calloc(0x258);
     r_563c18 = 0;
     r_563d88 = 0;
@@ -387,4 +392,86 @@ void race_load_world(void)
     }
     STUB(0x420c00, "race_frame_time");
     race_clear_laps();
+}
+
+s32 g_view_w, g_view_h;                     /* 0x5285c4, 0x552f50 */
+
+/* The view's share of the screen for each SCREEN SIZE (0x4949f0). */
+static const double s_view_scale[4][2] = {
+    { 1.0, 1.0 }, { 0.8, 1.0 }, { 0.6, 1.0 }, { 0.5, 0.83 }
+};
+
+/* 0x43e2a0: each driver's view: the screen's middle, or with two
+ * players the right half for the first and the left for the second. */
+static void race_layout_views(void)
+{
+    int w = g_screen_width, h = g_screen_height, split = g_two_players && !r_552f58;
+    int i;
+
+    g_view_w = (s32)(w * s_view_scale[r_527f28][0] * (split ? 0.5 : 1.0));
+    g_view_h = (s32)(h * s_view_scale[r_527f28][1]);
+    r_552d80 = (s32)(w * 204.796875);
+    r_552f5c = (s32)(h * 327.675);
+    for (i = 0; i < g_driver_count; i++) {
+        struct race_driver *d = &g_drivers[i];
+
+        if (split) {
+            d->view_x0 = w / 4 * 3 - g_view_w / 2 + 1;
+            d->view_y0 = h / 2 - g_view_h / 2;
+            d->view_x1 = w / 4 * 3 + g_view_w / 2;
+            d->view_y1 = g_view_h / 2 + h / 2;
+            g_race_cams[i].f58 = g_race_cams[0].f58;
+            g_race_cams[i].f5c = g_race_cams[0].f5c;
+            g_race_cams[i].f60 = g_race_cams[0].f60;
+        } else {
+            d->view_x0 = w / 2 - g_view_w / 2;
+            d->view_y0 = h / 2 - g_view_h / 2;
+            d->view_x1 = g_view_w / 2 + w / 2;
+            d->view_y1 = g_view_h / 2 + h / 2;
+        }
+    }
+    if (split) {
+        struct race_driver *d = &g_drivers[1];
+
+        d->view_x0 = w / 4 - g_view_w / 2;
+        d->view_y0 = h / 2 - g_view_h / 2;
+        d->view_x1 = g_view_w / 2 + w / 4 - 1;
+        d->view_y1 = g_view_h / 2 + h / 2;
+    }
+    scene_set_screen(split ? w / 2 : w, h);
+    r_498478 = r_552d80 * 500;
+    r_49847c = r_552f5c * 500;
+}
+
+/* 0x43dea0: the race's video mode from RESOLUTION, the cameras' focal
+ * lengths and near distance for it, and the views. The original also
+ * darkens the palette for the rain here (0x445f20). */
+void race_init_hud(void)
+{
+    static const s32 modes[3][2] = { { 320, 200 }, { 640, 480 }, { 800, 600 } };
+    static const s32 focal[3][2] = { { 200, 164 }, { 425, 425 }, { 550, 550 } };
+    static const double near_d[3] = { 25.0, 10.0, 10.0 };
+    int size = g_race_screen_size, i;
+
+    g_video_mode.width = modes[size][0];
+    g_video_mode.height = modes[size][1];
+    g_video_mode.bpp = 8;
+    g_video_mode.flag = 1;
+    if (!video_set_mode()) {
+        snprintf(g_error_text, sizeof(g_error_text), "Cannot use this graphics mode.\n");
+        g_fatal_error = 1;
+        return;
+    }
+    g_screen_width = modes[size][0];
+    g_screen_height = modes[size][1];
+    for (i = 0; i < g_driver_count; i++) {
+        g_race_cams[i].f58 = focal[size][0];
+        g_race_cams[i].f5c = focal[size][1];
+        g_race_cams[i].f60 = near_d[size];
+    }
+    video_set_palette(g_level_col + 8);
+    set_target(g_back_buffer, g_screen_width, g_screen_width, g_screen_height, 8);
+    memset(g_back_buffer, 0, (size_t)g_screen_width * g_screen_height);
+    race_layout_views();
+    race_frame_time();
 }

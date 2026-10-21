@@ -57,5 +57,7 @@ void race_init_cameras(void);
 void race_make_effects(void);
 void race_clear_laps(void);
 void race_reset_state(void);
+void race_init_hud(void);
+extern s32 g_view_w, g_view_h;
 
 #endif /* IGN_RACE_INIT_H */

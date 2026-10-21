@@ -28,7 +28,9 @@ struct race_driver {
     s32 f14;                /* +0x14, 30 */
     s32 f18;                /* +0x18 */
     u8 keys[8];             /* +0x1c, scan codes */
-    u8 f24[0x18];           /* +0x24 */
+    s32 f24, f28;           /* +0x24 */
+    s32 view_x0, view_y0;   /* +0x2c, the view on the screen */
+    s32 view_x1, view_y1;   /* +0x34, exclusive */
     char name[0x10];        /* +0x3c */
 };
 

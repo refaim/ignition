@@ -204,16 +204,27 @@ right aligned to x.
 
 ### The port's renderer
 
-The port does not reimplement the software rasteriser or the low
-resolution modes as output. It keeps the Lisa object API and draws the
-objects with OpenGL:
+The port does not port the software rasteriser. Everything draws on
+the GPU, keeping the 8 bit colour indices and the game's colour tables:
 
-- 2D screens that the game draws into a buffer (the menu's 320 x 200
-  surface, text) stay 8 bit surfaces, shown through a palette shader,
-  centred at their original 4:3 aspect in a wide window (`video.c`,
-  `gfx_gl.c`).
-- Lisa objects (sprites, meshes, particles) become OpenGL draws, so 3D
-  scenes render at the window's full size and aspect.
+- `canvas.c` makes the game's 8 bit screen buffers (the menu's screen
+  and background) GPU render targets at an internal resolution: the
+  RESOLUTION option (setting 0x10b) gives 320 x 200, 640 x 480,
+  800 x 600, or NATIVE, the window's size, which the port adds. Their
+  logical size stays the original's. Sprites, text, panel blends, the
+  intro, the background and the menu cars draw into them. A colour
+  table is classed row by row (identity, one colour, or a blend); only
+  blending rows read the pixel under them, from a copy of the area.
+- `gl3d.c` draws meshes with the original's projection, a depth buffer
+  instead of the depth buckets, and the screen space command lists of
+  the menu background in order.
+- The race's 3D draws at the internal resolution, as wide as the
+  window's shape; the HUD's 320 x 200 layer shows over it where it is
+  not colour 0.
+- `video.c` and `gfx_gl.c` show a surface through the palette, centred
+  at 4:3, or the race's layers across the window.
+- `--software` or Alt+R switches the 2D back to the original's CPU
+  drawing into the 8 bit buffers, with the 3D read back into them.
 
 ## Game
 

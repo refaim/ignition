@@ -96,7 +96,6 @@ int net_send_settings(void *state, void *settings)
 
 
 
-STUB_VOID(0x418be0, race_load_2)
 STUB_VOID(0x418c40, race_load_world)
 /* Shows the back buffer, so the loading screen stays up. */
 void race_frame(void)

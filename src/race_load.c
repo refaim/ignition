@@ -20,6 +20,7 @@
 #include "menu_panels.h"
 #include "race.h"
 #include "startup.h"
+#include "stubs.h"
 #include "video.h"
 
 u8 g_race_cfg[0x5a0];                   /* 0x6393a0 */
@@ -477,4 +478,23 @@ void race_load_1(void)
     g_two_players = 0;
     read_settings();
     load_level_files();
+}
+
+/* 0x418be0 */
+void race_load_2(void)
+{
+    race_unpack_types();
+    race_track_order();
+    race_progress(0x22);
+    race_make_tables();
+    race_progress(0x28);
+    STUB(0x41d190, "race_load_cars");
+    race_progress(0x2e);
+    STUB(0x41e740, "race_load_cameras");
+    race_progress(0x34);
+    STUB(0x41f9b0, "race_load_sounds");
+    race_progress(0x3c);
+    STUB(0x41b470, "race_make_world");
+    race_progress(0x46);
+    log_printf("track: %d pieces, %d in order\n", g_road_count, g_track_link_count);
 }

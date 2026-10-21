@@ -7,7 +7,7 @@ TARGET := ignition
 SRCDIR := src
 BUILD  := build
 
-CORE_SRC := $(SRCDIR)/app.c $(SRCDIR)/game.c $(SRCDIR)/stubs.c $(SRCDIR)/net.c $(SRCDIR)/scene.c $(SRCDIR)/gl3d.c $(SRCDIR)/menucar.c $(SRCDIR)/menubg.c $(SRCDIR)/race_load.c \
+CORE_SRC := $(SRCDIR)/app.c $(SRCDIR)/game.c $(SRCDIR)/stubs.c $(SRCDIR)/net.c $(SRCDIR)/scene.c $(SRCDIR)/gl3d.c $(SRCDIR)/menucar.c $(SRCDIR)/menubg.c $(SRCDIR)/race_load.c $(SRCDIR)/race_track.c \
             $(SRCDIR)/lisa/lisa.c $(SRCDIR)/lisa/log.c $(SRCDIR)/lisa/mem.c $(SRCDIR)/lisa/file.c \
             $(SRCDIR)/lisa/exit.c $(SRCDIR)/lisa/gfx.c $(SRCDIR)/lisa/texture.c $(SRCDIR)/lisa/sprite.c \
             $(SRCDIR)/lisa/font.c $(SRCDIR)/startup.c $(SRCDIR)/input.c \

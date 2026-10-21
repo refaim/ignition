@@ -34,6 +34,51 @@ struct race_driver {
 
 _Static_assert(sizeof(struct race_driver) == 0x4c, "race_driver");
 
+/* A placement of the .PLC: s32 count, then these. */
+struct plc_entry {
+    s32 mesh;               /* +0x00, dwords into the .MSH */
+    s32 type;               /* +0x04, low 12 bits after 0x41b360 */
+    s32 x, y, z;            /* +0x08 */
+};
+
+static inline struct plc_entry *plc_at(s32 *plc, int i)
+{
+    return (struct plc_entry *)(plc + 1) + i;
+}
+
+/* The fields packed in a placement's type (0x552e40). */
+struct plc_extra {
+    s32 f0, f1, f2;         /* bits 12..15, 16..23, 24..31 */
+};
+
+/* A road piece's place in the track's order and its heading
+ * (0x553784, 12 bytes). Pieces on the second branch of a fork have a
+ * negative order. */
+struct road_order {
+    s32 order;              /* 10000 for none */
+    double heading;         /* radians, 0..2 pi */
+};
+
+/* The track's pieces in order (0x552f60, 24 bytes); at a fork the
+ * second branch is in alt. */
+struct track_link {
+    s32 plc;                /* +0x00 */
+    double heading;         /* +0x04 */
+    s32 alt_plc;            /* +0x0c, -1 none, -2 on a fork */
+    double alt_heading;     /* +0x10 */
+};
+
+extern struct plc_extra *g_plc_extra;       /* 0x552e40 */
+extern struct road_order *g_road_order;     /* 0x553784, 1500 */
+extern struct track_link *g_track_links;    /* 0x552f60, 1500 */
+extern s32 g_track_link_count;              /* 0x5287f8 */
+extern s32 g_road_count;                    /* 0x553074 */
+extern u8 *g_colour_key;                    /* 0x563cf8, [s << 8 | d] = s ? s : d */
+
+void race_unpack_types(void);
+void race_make_tables(void);
+void race_track_order(void);
+
 /* The settings as the race read them (0x6393a0). */
 extern u8 g_race_cfg[0x5a0];
 

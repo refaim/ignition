@@ -57,7 +57,6 @@ extern s32 g_net_players;           /* 0x50f7a8 */
 /* 3D scene; the renderer's buffers are replaced by OpenGL */
 
 /* game */
-void race_load_2(void);             /* 0x418be0 */
 void race_load_world(void);         /* 0x418c40 */
 void race_frame(void);              /* 0x4173fb, inside game_frame */
 void race_end(void);                /* 0x420870 */

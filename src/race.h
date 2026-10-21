@@ -140,6 +140,9 @@ extern struct scene_desc *g_world;      /* 0x54f908, one a placement */
 
 void race_make_world(void);
 void race_debug_view(void);
+struct scene;
+struct scene_obj;
+void race_draw_view(const struct scene *sc, struct scene_obj *const *objs, int n);
 
 void race_load_1(void);
 void race_load_2(void);

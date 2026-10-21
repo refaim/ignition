@@ -18,6 +18,8 @@ u8 *g_video_screen;
 u8 g_video_palette[768];
 
 static int s_gfx_ready;
+static unsigned s_layer;
+static const u8 *s_layer_snapshot;
 static int s_screen_w, s_screen_h;
 
 static int gfx_register_generic(void);
@@ -153,6 +155,41 @@ void video_schedule_shot(u32 ms, const char *path)
     snprintf(s_shot_path, sizeof(s_shot_path), "%s", path);
 }
 
+/* With a 3D layer the shot is the drawable, at its size. */
+static void write_drawable_shot(int w, int h)
+{
+    FILE *fp = fopen(s_shot_path, "wb");
+    u8 header[18] = { 0, 0, 2 };
+    u8 *rgb = malloc((size_t)w * h * 3);
+    int x, y;
+
+    if (fp == NULL || rgb == NULL) {
+        if (fp != NULL) {
+            fclose(fp);
+        }
+        free(rgb);
+        return;
+    }
+    gfx_read_rgb(w, h, rgb);
+    header[12] = (u8)w;
+    header[13] = (u8)(w >> 8);
+    header[14] = (u8)h;
+    header[15] = (u8)(h >> 8);
+    header[16] = 24;
+    header[17] = 0x20;      /* top to bottom; GL reads bottom up */
+    fwrite(header, 1, sizeof(header), fp);
+    for (y = 0; y < h; y++) {
+        for (x = 0; x < w; x++) {
+            const u8 *c = rgb + ((size_t)(h - 1 - y) * w + x) * 3;
+            u8 bgr[3] = { c[2], c[1], c[0] };
+
+            fwrite(bgr, 1, 3, fp);
+        }
+    }
+    fclose(fp);
+    free(rgb);
+}
+
 static void write_shot(void)
 {
     FILE *fp = fopen(s_shot_path, "wb");
@@ -190,11 +227,31 @@ void video_present(void)
     }
     plat_drawable_size(&w, &h);
     gfx_begin_frame(w, h);
-    gfx_draw_screen(g_video_screen, s_screen_w, s_screen_h, s_screen_w,
-                    g_video_palette, video_aspect());
-    plat_present();
+    if (s_layer != 0) {
+        gfx_draw_layers(s_layer, g_video_screen, s_layer_snapshot, s_screen_w, s_screen_h,
+                        s_screen_w, g_video_palette, video_aspect());
+    } else {
+        gfx_draw_screen(g_video_screen, s_screen_w, s_screen_h, s_screen_w,
+                        g_video_palette, video_aspect());
+    }
     if (s_shot_path[0] != '\0' && plat_time_ms() >= s_shot_ms) {
-        write_shot();
+        if (s_layer != 0) {
+            write_drawable_shot(w, h);
+        } else {
+            write_shot();
+        }
         s_shot_path[0] = '\0';
     }
+    plat_present();
+}
+
+void video_set_layer(unsigned layer, const u8 *snapshot)
+{
+    s_layer = layer;
+    s_layer_snapshot = snapshot;
+}
+
+void video_drawable_size(int *w, int *h)
+{
+    plat_drawable_size(w, h);
 }

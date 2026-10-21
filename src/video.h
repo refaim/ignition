@@ -62,5 +62,9 @@ void video_schedule_shot(u32 ms, const char *path);
 /* The aspect the surface is shown at. 320 x 200 was shown on a 4:3
  * monitor, so it keeps 4:3; other modes have square pixels. */
 float video_aspect(void);
+/* Shows `layer` (gl3d_view_texture) under the screen; where the screen
+ * equals `snapshot` the layer shows through. 0 for none. */
+void video_set_layer(unsigned layer, const u8 *snapshot);
+void video_drawable_size(int *w, int *h);
 
 #endif /* IGN_VIDEO_H */

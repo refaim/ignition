@@ -17,7 +17,14 @@
 void gl3d_begin(int w, int h);
 /* Draws objects as seen from `sc`, the original's view window placed
  * at (ox, oy) on the frame. */
-void gl3d_draw(const struct scene *sc, struct scene_obj *const *objs, int count, int ox, int oy);
+void gl3d_draw(const struct scene *sc, struct scene_obj *const *objs, int count, double ox,
+               double oy);
+/* Starts the view: a frame of w x h pixels kept on the GPU that spans
+ * vw x vh of the original's pixels, as video_set_layer shows it. */
+void gl3d_view_begin(int w, int h, double vw, double vh);
+void gl3d_view_end(void);
+/* The view's colour indices: a GL texture, R, row 0 at the top. */
+unsigned gl3d_view_texture(void);
 /* Copies what was drawn over `screen` (w x h at `pitch`). */
 void gl3d_end(u8 *screen, int pitch);
 /* A screen space command, as the original's rasteriser takes them

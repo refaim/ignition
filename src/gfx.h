@@ -29,4 +29,13 @@ void gfx_begin_frame(int width, int height);
 void gfx_draw_screen(const u8 *pixels, int w, int h, int pitch,
                      const u8 *palette, float aspect);
 
+/* Draws `layer`, a GL texture of colour indices (row 0 at the top),
+ * over the whole drawable, then the surface over it as gfx_draw_screen
+ * places it, but only its pixels that differ from `snapshot`. */
+void gfx_draw_layers(unsigned layer, const u8 *pixels, const u8 *snapshot, int w, int h,
+                     int pitch, const u8 *palette, float aspect);
+
+/* The drawable's pixels as drawn so far, bottom row first. */
+void gfx_read_rgb(int w, int h, u8 *rgb);
+
 #endif /* IGN_GFX_H */

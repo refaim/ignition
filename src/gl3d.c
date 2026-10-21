@@ -51,14 +51,24 @@ struct texture_entry {
 static int s_ready;
 static GLuint s_program, s_vao, s_vbo;
 static GLint s_u_matrix, s_u_pages;
-static GLuint s_fbo, s_color, s_depth;
-static int s_w, s_h;
+/* Render targets: 0 is read back over an 8 bit screen, 1 is the view
+ * kept on the GPU. */
+struct target {
+    GLuint fbo, color, depth;
+    int w, h;
+};
+
+static struct target s_targets[2];
+static struct target *s_target;
+static int s_w, s_h;            /* the target's size */
+static double s_vw, s_vh;       /* the original's pixels it spans */
 static struct mesh_entry s_meshes[MAX_MESHES];
 static int s_mesh_count;
 static GLint s_vbo_used, s_vbo_size;
 static struct texture_entry s_textures[MAX_TEXTURES];
 static int s_texture_count;
 static u8 *s_readback;
+static size_t s_readback_size;
 
 /* The raster path. */
 enum { MAX_TABLES = 16, RASTER_FLOATS = 8 };     /* x, y, u, v, page, colour, mode, - */
@@ -158,7 +168,6 @@ static void init(void)
                           (void *)(3 * sizeof(float)));
     glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, FLOATS * sizeof(float),
                           (void *)(5 * sizeof(float)));
-    glGenFramebuffers(1, &s_fbo);
     s_ready = 1;
 }
 
@@ -325,48 +334,83 @@ void gl3d_flush(void)
     s_vbo_used = 0;
 }
 
-void gl3d_begin(int w, int h)
+static void target_begin(struct target *t, int w, int h)
 {
     if (!s_ready) {
         init();
     }
-    glBindFramebuffer(GL_FRAMEBUFFER, s_fbo);
-    if (w != s_w || h != s_h) {
-        if (s_color != 0) {
-            glDeleteTextures(1, &s_color);
-            glDeleteRenderbuffers(1, &s_depth);
+    if (t->fbo == 0) {
+        glGenFramebuffers(1, &t->fbo);
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, t->fbo);
+    if (w != t->w || h != t->h) {
+        if (t->color != 0) {
+            glDeleteTextures(1, &t->color);
+            glDeleteRenderbuffers(1, &t->depth);
         }
-        glGenTextures(1, &s_color);
-        glBindTexture(GL_TEXTURE_2D, s_color);
+        glGenTextures(1, &t->color);
+        glBindTexture(GL_TEXTURE_2D, t->color);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RG8, w, h, 0, GL_RG, GL_UNSIGNED_BYTE, NULL);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, s_color, 0);
-        glGenRenderbuffers(1, &s_depth);
-        glBindRenderbuffer(GL_RENDERBUFFER, s_depth);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, t->color, 0);
+        glGenRenderbuffers(1, &t->depth);
+        glBindRenderbuffer(GL_RENDERBUFFER, t->depth);
         glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, w, h);
-        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, s_depth);
-        free(s_readback);
-        s_readback = malloc((size_t)w * h * 2);
-        s_w = w;
-        s_h = h;
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, t->depth);
+        t->w = w;
+        t->h = h;
     }
+    s_target = t;
+    s_w = w;
+    s_h = h;
     glViewport(0, 0, w, h);
     glClearColor(0, 0, 0, 0);
     glClearDepth(1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
+void gl3d_begin(int w, int h)
+{
+    target_begin(&s_targets[0], w, h);
+    s_vw = w;
+    s_vh = h;
+    if (s_readback_size < (size_t)w * h * 2) {
+        free(s_readback);
+        s_readback_size = (size_t)w * h * 2;
+        s_readback = malloc(s_readback_size);
+    }
+}
+
+void gl3d_view_begin(int w, int h, double vw, double vh)
+{
+    target_begin(&s_targets[1], w, h);
+    s_vw = vw;
+    s_vh = vh;
+}
+
+void gl3d_view_end(void)
+{
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+unsigned gl3d_view_texture(void)
+{
+    return s_targets[1].color;
+}
+
 /* Mesh coordinates to clip space for one object. Rows 0 and 1 map to
  * pixels from the frame's top left (GL's row 0 is the screen's first
  * row, so the read back needs no flip); w is Zc + near. */
-static void object_matrix(const struct scene *sc, const struct scene_obj *o, int ox, int oy,
-                          float out[16])
+static void object_matrix(const struct scene *sc, const struct scene_obj *o, double ox,
+                          double oy, float out[16])
 {
     double view[3][3], rot[3][3], m[3][3], t[3], clip[4][4];
     double n = sc->near_ofs, near_w = 1.0, far_w = 200000.0;
-    double ax = -2.0 * sc->focal_x * sc->zoom / s_w, bx = 2.0 * (ox + sc->center_x) / s_w - 1.0;
-    double ay = -2.0 * sc->focal_y / s_h, by = 2.0 * (oy + sc->center_y) / s_h - 1.0;
+    double ax = -2.0 * sc->focal_x * sc->zoom / s_vw, bx = 2.0 * (ox + sc->center_x) / s_vw - 1.0;
+    double ay = -2.0 * sc->focal_y / s_vh, by = 2.0 * (oy + sc->center_y) / s_vh - 1.0;
     double az = (far_w + near_w) / (far_w - near_w), bz = -2.0 * far_w * near_w / (far_w - near_w);
     double d[3];
     int i, j, k;
@@ -411,7 +455,8 @@ static void object_matrix(const struct scene *sc, const struct scene_obj *o, int
     }
 }
 
-void gl3d_draw(const struct scene *sc, struct scene_obj *const *objs, int count, int ox, int oy)
+void gl3d_draw(const struct scene *sc, struct scene_obj *const *objs, int count, double ox,
+               double oy)
 {
     int i;
 

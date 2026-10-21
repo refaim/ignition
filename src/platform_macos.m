@@ -206,20 +206,21 @@ static void key_event(int dik, int down)
 
 enum { SCHEDULED = 32 };
 
-static struct { u32 ms; int key; int state; } s_scheduled[SCHEDULED];
+static struct { u32 ms, hold; int key; int state; } s_scheduled[SCHEDULED];
 static int s_scheduled_count;
 
-void plat_schedule_key(u32 ms, int key)
+void plat_schedule_key(u32 ms, int key, u32 hold)
 {
     if (s_scheduled_count < SCHEDULED) {
         s_scheduled[s_scheduled_count].ms = ms;
         s_scheduled[s_scheduled_count].key = key;
+        s_scheduled[s_scheduled_count].hold = hold;
         s_scheduled[s_scheduled_count].state = 0;
         s_scheduled_count++;
     }
 }
 
-/* A scheduled key goes down when its time comes and up 60 ms later. */
+/* A scheduled key goes down when its time comes and up `hold` ms later. */
 static void run_scheduled(void)
 {
     u32 now = plat_time_ms();
@@ -229,7 +230,7 @@ static void run_scheduled(void)
         if (s_scheduled[i].state == 0 && now >= s_scheduled[i].ms) {
             key_event(s_scheduled[i].key, 1);
             s_scheduled[i].state = 1;
-        } else if (s_scheduled[i].state == 1 && now >= s_scheduled[i].ms + 60) {
+        } else if (s_scheduled[i].state == 1 && now >= s_scheduled[i].ms + s_scheduled[i].hold) {
             key_event(s_scheduled[i].key, 0);
             s_scheduled[i].state = 2;
         }

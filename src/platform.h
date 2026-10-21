@@ -45,7 +45,7 @@ void plat_pump_events(void);
 
 /* Queues a press and release of `key` `ms` after start up, as if typed;
  * for scripted test runs. */
-void plat_schedule_key(u32 ms, int key);
+void plat_schedule_key(u32 ms, int key, u32 hold);
 
 /* Keeps the game running while the window is not active; the original
  * stops. For scripted runs. */

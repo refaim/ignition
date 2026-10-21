@@ -148,16 +148,25 @@ class Tr:
         self.emit(f"{name} = {e};")
         return name
 
+    def fill(self, i):
+        # A block entered with values the translator did not see pushed
+        # (a path it took a different depth on): name them as unknown.
+        while len(self.st) <= i:
+            self.st.insert(0, f"st_unknown{len(self.st)}")
+
     def get(self, i):
+        self.fill(i)
         return self.st[-1 - i]
 
     def set(self, i, e):
+        self.fill(i)
         self.st[-1 - i] = e
 
     def push(self, e):
         self.st.append(e)
 
     def pop(self):
+        self.fill(0)
         return self.st.pop()
 
     def stidx(self, op):

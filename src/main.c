@@ -139,10 +139,11 @@ int main(int argc, char **argv)
         } else if (strcmp(argv[i], "--background") == 0) {
             g_plat_run_inactive = 1;
         } else if (strcmp(argv[i], "--press") == 0 && i + 1 < argc) {
-            unsigned ms, key;
+            unsigned ms, key, hold = 60;
 
-            if (sscanf(argv[++i], "%u:%x", &ms, &key) == 2) {
-                plat_schedule_key(ms, (int)key);
+            /* ms:key in hex, then how long it is held (60 ms). */
+            if (sscanf(argv[++i], "%u:%x:%u", &ms, &key, &hold) >= 2) {
+                plat_schedule_key(ms, (int)key, hold);
             }
         } else if (strcmp(argv[i], "--text") == 0 && i + 1 < argc) {
             text_arg = argv[++i];

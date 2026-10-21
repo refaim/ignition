@@ -106,6 +106,14 @@ extern char g_track_dir[16];            /* 0x553790, "CANADA\\" */
 extern char g_track_name[16];           /* 0x552f40, "CANADA" */
 extern char g_ghost_name[16];           /* 0x5532a0, "MOOSEJAW" */
 
+/* From the settings (0x419260), named by address until their use is
+ * known. */
+extern s32 r_527f28, r_563c6c, r_552f10, r_553068, r_527f78, r_525e68;
+extern s32 r_552e58, r_563be0, r_553084, r_54f958, r_527f20, r_5daff8;
+extern s32 g_race_sfx_volume;           /* 0x601668 */
+extern s32 g_race_cd_volume;            /* 0x527f30 */
+extern s32 g_race_screen_size;          /* g_screen_size */
+
 /* The level's files. */
 extern u8 *g_level_col;                 /* 0x54f900 */
 extern u8 *g_level_pan;                 /* 0x5dfe64 */
@@ -126,6 +134,12 @@ extern int g_race_tex_pages[RACE_TEX_SLOTS];
 extern u8 *g_race_fnt;                  /* 0x525e58, IGNITION.FNT */
 extern int g_race_fonts[9];             /* 0x528624.. */
 extern u8 *g_race_pics[8];              /* s_pangfx .. pokal */
+
+struct scene_desc;
+extern struct scene_desc *g_world;      /* 0x54f908, one a placement */
+
+void race_make_world(void);
+void race_debug_view(void);
 
 void race_load_1(void);
 void race_load_2(void);

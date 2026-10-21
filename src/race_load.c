@@ -494,7 +494,7 @@ void race_load_2(void)
     race_progress(0x34);
     STUB(0x41f9b0, "race_load_sounds");
     race_progress(0x3c);
-    STUB(0x41b470, "race_make_world");
+    race_make_world();
     race_progress(0x46);
     log_printf("track: %d pieces, %d in order\n", g_road_count, g_track_link_count);
 }

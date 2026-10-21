@@ -101,7 +101,7 @@ STUB_VOID(0x418c40, race_load_world)
 void race_frame(void)
 {
     STUB(0x4173fb, "race_frame");
-    present_back_buffer();
+    race_debug_view();
 }
 STUB_VOID(0x420870, race_end)
 

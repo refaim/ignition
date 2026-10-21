@@ -6,6 +6,7 @@
 #include <stddef.h>
 
 #include "lisa/gfx.h"
+#include "canvas.h"
 #include "lisa/sprite.h"
 #include "stubs.h"
 
@@ -123,6 +124,14 @@ static void draw(const struct sprite *sprite, const struct sprite_pos *pos, cons
     struct tex_desc t;
 
     tex_get_info(&t, sprite->tex);
+    if (canvas_sprite(t.pixels, t.width, t.height, t.stride,
+                      matrix != NULL ? pos->x - sprite->hot_x
+                                     : ((pos->x - sprite->hot_x) >> 8) * 256,
+                      matrix != NULL ? pos->y - sprite->hot_y
+                                     : ((pos->y - sprite->hot_y) >> 8) * 256,
+                      sprite->hot_x, sprite->hot_y, matrix)) {
+        return;
+    }
     if (matrix != NULL) {
         STUB(0x468c70, "sprite_draw_rotated");
         return;

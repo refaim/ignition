@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include "app.h"
+#include "canvas.h"
 #include "game.h"
 #include "cdp.h"
 #include "frontend.h"
@@ -111,12 +112,18 @@ int frontend_load_language(void)
     return s_load_language;
 }
 
+/* The animations draw each frame over the last, so they keep their own
+ * picture, put on the menu screen after each frame. */
+static u8 s_intro_pixels[320 * 200];
+
 /* Starts the intro's first animation into `screen` (0x409b4f). */
 void frontend_intro_start(void *file, u8 *screen)
 {
+    (void)screen;
+    memset(s_intro_pixels, 0, sizeof(s_intro_pixels));
     s_intro_anim.size = g_intro_sizes[0];
     s_intro_anim.file = file;
-    s_intro_anim.screen = screen;
+    s_intro_anim.screen = s_intro_pixels;
     cdp_open(&s_intro_anim);
 }
 
@@ -159,6 +166,21 @@ void menu_sound_tick(void)
     if (g_menu_sound) {
         sound_tick();
     }
+}
+
+/* The internal resolution the RESOLUTION option asks for, from the
+ * settings file: the menu reads it before the settings are loaded. */
+static int menu_resolution(void)
+{
+    s32 version = 0, mode = CANVAS_320X200;
+
+    if (file_exists(SETTINGS_FILE) == 1) {
+        file_read_at(SETTINGS_FILE, &version, 4, 0);
+        if (version == SETTINGS_VERSION) {
+            file_read_at(SETTINGS_FILE, &mode, 4, SET_RESOLUTION);
+        }
+    }
+    return mode >= CANVAS_320X200 && mode <= CANVAS_NATIVE ? mode : CANVAS_320X200;
 }
 
 /* 0x403da0 */
@@ -207,7 +229,7 @@ static void menu_sound_init(void)
     if (r == 2 && !s_sound_warned) {
         int mini = g_fonts_menu[6];
 
-        memset(g_menu_screen, 0, 64000);
+        canvas_clear(g_menu_screen, 0, 64000);
         g_fonts[mini].align = FONT_ALIGN_CENTER;
         text_draw("NO SOUNDCARD FOUND, PLEASE REFER TO THE MANUAL", mini, 160, 90);
         text_draw("PRESS RETURN TO CONTINUE", mini, 160, 110);
@@ -322,6 +344,9 @@ int menu_load_assets(void)
     g_menu_palette_work = malloc(0x300);
     g_menu_buffer1 = calloc(0xfb41, 1);    /* new, uncleared, in the original */
     g_menu_buffer2 = calloc(0xfb41, 1);
+    /* The background is drawn on the GPU; the page's layer is put
+     * together on the CPU and blended over it. */
+    canvas_register(g_menu_buffer1, 320, 200);
     g_menu_palette = malloc(0x300);
     file_read_at("baltazar\\data\\menu.col", g_menu_palette, 0x300, 8);
     g_pic_cars = read_pixels("baltazar\\data\\bilar.pic", 0x1e786);
@@ -417,8 +442,15 @@ static void menu_iris(double t)
     double radius = t * scale * 4.0;
     int row = (int)(-100.0 * scale);
     double end = 300.0 * scale;
+    /* The table row each pixel goes through; MENU.TAB's row 0 leaves
+     * the pixel alone. */
+    static u8 levels[320 * 200];
+    int gpu = canvas_is_gpu(g_menu_screen) && w == 320 && h == 200;
 
     menu_sound_tick();
+    if (gpu) {
+        memset(levels, 0, sizeof(levels));
+    }
     for (; row < end; row++) {
         double half = h / 2;
         int x = 0, col;
@@ -438,8 +470,15 @@ static void menu_iris(double t)
             u8 *p = &g_menu_screen[row * w + col];
             u8 level = g_cone_table[x * 800 + 400 + col - w / 2];
 
-            *p = g_menu_table[level << 8 | *p];
+            if (gpu) {
+                levels[row * w + col] = level;
+            } else {
+                *p = g_menu_table[level << 8 | *p];
+            }
         }
+    }
+    if (gpu) {
+        canvas_remap(g_menu_screen, levels, g_menu_table);
     }
 }
 
@@ -455,6 +494,8 @@ int menu_init(void)
     g_menu_palette = malloc(0x300);
     file_read_at("baltazar\\data\\menu.col", g_menu_palette, 0x300, 8);
     g_menu_screen = malloc(0xfb41);
+    canvas_set_resolution(menu_resolution());
+    canvas_register(g_menu_screen, 320, 200);
     g_menu_camera = scene_create();
     s_mode_pending = 1;
     menu_set_mode();
@@ -483,7 +524,7 @@ int menu_init(void)
 
     mode = g_menu_modes[g_menu_mode_index];
     set_target(g_menu_screen, mode[0], mode[0], mode[1], 8);
-    memset(g_menu_screen, 0, 64000);
+    canvas_clear(g_menu_screen, 0, 64000);
     loading = ui_text(0x47e0a0 + 200 * g_menu_language);
     text_draw(loading, small, 160 - text_width(loading, small) / 2, 0x5e);
     menu_present();
@@ -594,6 +635,7 @@ static void intro_step(void)
                     cdp_open(&s_intro_anim);
                 }
             }
+            canvas_put(g_menu_screen, s_intro_pixels, 320);
             if (s_intro_anim.frame == 2) {
                 cdp_draw(&s_intro_anim);
             }
@@ -762,7 +804,7 @@ static void intro_fades(void)
     } else if (fe_47dc48) {
         fe_47dc48 = 0;
         memset(g_menu_buffer2, 0, 64000);
-        memset(g_menu_screen, 0, 64000);
+        canvas_clear(g_menu_screen, 0, 64000);
         fe_4be8b0 = sound_load(0, 3, 0xfde8, 0x5622);
         fe_4be8b4 = sound_load(0, 3, 0xfde8, 0x5622);
     }
@@ -920,6 +962,8 @@ int menu_exit(void)
     free_block(&g_menu_black);
     free_block(&g_menu_white);
     free_block(&g_menu_palette_work);
+    canvas_unregister(g_menu_screen);
+    canvas_unregister(g_menu_buffer1);
     free_block(&g_menu_screen);
     free_block(&g_menu_buffer1);
     free_block(&g_menu_buffer2);

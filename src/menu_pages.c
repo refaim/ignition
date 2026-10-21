@@ -15,6 +15,7 @@
 #include <string.h>
 
 #include "app.h"
+#include "canvas.h"
 #include "frontend.h"
 #include "frontend_state.h"
 #include "input.h"
@@ -86,6 +87,9 @@ void blend_rect(const u8 *src, int x0, int y0, int x1, int y1, u8 *dst, int dx, 
 {
     int r, x;
 
+    if (canvas_blend_rect(src, x0, y0, x1, y1, dst, dx, dy, table, src_pitch)) {
+        return;
+    }
     for (r = 0; r < y1 - y0; r++) {
         const u8 *s = src + (y0 + r) * src_pitch;
         u8 *d = dst + (dy + r) * dst_pitch + dx - x0;
@@ -540,7 +544,7 @@ int menu_page_handler_a(void)
     }
     if (fe_4be850 == 0.0 || fe_4be850 >= 1278.0) {
         if (cur == page(PAGE_LANGUAGE)) {
-            memset(g_menu_screen, 0, 64000);
+            canvas_clear(g_menu_screen, 0, 64000);
         } else {
             g_menu_background_t += menu_dt();
             if (g_menu_background_t >= 2.1176470588235294) {
@@ -549,7 +553,7 @@ int menu_page_handler_a(void)
                 }
                 menu_background_render();
             }
-            memcpy(g_menu_screen, g_menu_buffer1, 64000);
+            canvas_copy(g_menu_screen, g_menu_buffer1, 64000);
         }
     }
     if (cur != page(PAGE_LANGUAGE) && cur != page(13) && cur != page(14)
@@ -754,7 +758,7 @@ static void choose_language(void)
         fe_4be560 = 0.0;
         fe_4be56c = 0;
         fe_4be850 = 0.01;
-        memset(g_menu_screen, 0, 64000);
+        canvas_clear(g_menu_screen, 0, 64000);
         loading = ui_text(0x47e0a0 + 200 * g_menu_language);
         text_draw(loading, g_fonts_menu[7], 160 - text_width(loading, g_fonts_menu[7]) / 2, 0x5e);
         menu_present();
@@ -765,7 +769,7 @@ static void choose_language(void)
             g_intro_sizes[i] = (u32)size;
             file_read_at(s_intro_files[i], fe_4be880[i], (u32)size, 0);
         }
-        memset(g_menu_screen, 0, 64000);
+        canvas_clear(g_menu_screen, 0, 64000);
         menu_present();
         frontend_intro_start(fe_4be880[0], g_menu_screen);
     } else {

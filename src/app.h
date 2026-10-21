@@ -39,6 +39,7 @@ u32 app_time_ms(void);
 
 /* Alt+Enter: rebuilds the video and input devices for the other mode. */
 void app_toggle_fullscreen(void);
+void app_toggle_renderer(void);
 
 /* The window was destroyed (not by a mode switch). */
 void app_on_destroy(void);

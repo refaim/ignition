@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "app.h"
+#include "canvas.h"
 #include "gfx.h"
 #include "platform.h"
 #include "video.h"
@@ -18,6 +19,7 @@ u8 *g_video_screen;
 u8 g_video_palette[768];
 
 static int s_gfx_ready;
+static const u8 *s_present;     /* a canvas surface to show, or NULL */
 static unsigned s_layer;
 static const u8 *s_layer_snapshot;
 static int s_screen_w, s_screen_h;
@@ -57,7 +59,7 @@ int video_create_window(void)
         return 0;
     }
     if (!s_gfx_ready) {
-        if (!gfx_init()) {
+        if (!gfx_init() || !canvas_init()) {
             return 0;
         }
         s_gfx_ready = 1;
@@ -103,6 +105,12 @@ int video_blit(const u8 *src, int pitch, int x, int y, int w, int h, int dx, int
 {
     int row;
 
+    if (canvas_is_gpu(src)) {
+        /* A GPU surface is shown as it is. */
+        s_present = src;
+        return 1;
+    }
+    s_present = NULL;
     if (g_video_screen == NULL) {
         return 0;
     }
@@ -179,12 +187,15 @@ static void write_drawable_shot(int w, int h)
     header[17] = 0x20;      /* top to bottom; GL reads bottom up */
     fwrite(header, 1, sizeof(header), fp);
     for (y = 0; y < h; y++) {
-        for (x = 0; x < w; x++) {
-            const u8 *c = rgb + ((size_t)(h - 1 - y) * w + x) * 3;
-            u8 bgr[3] = { c[2], c[1], c[0] };
+        u8 *row = rgb + (size_t)(h - 1 - y) * w * 3;
 
-            fwrite(bgr, 1, 3, fp);
+        for (x = 0; x < w; x++) {
+            u8 t = row[3 * x];
+
+            row[3 * x] = row[3 * x + 2];
+            row[3 * x + 2] = t;
         }
+        fwrite(row, 3, (size_t)w, fp);
     }
     fclose(fp);
     free(rgb);
@@ -227,7 +238,9 @@ void video_present(void)
     }
     plat_drawable_size(&w, &h);
     gfx_begin_frame(w, h);
-    if (s_layer != 0) {
+    if (s_present != NULL) {
+        gfx_draw_index_texture(canvas_texture(s_present), g_video_palette, video_aspect());
+    } else if (s_layer != 0) {
         gfx_draw_layers(s_layer, g_video_screen, s_layer_snapshot, s_screen_w, s_screen_h,
                         s_screen_w, g_video_palette, video_aspect());
     } else {
@@ -235,7 +248,7 @@ void video_present(void)
                         g_video_palette, video_aspect());
     }
     if (s_shot_path[0] != '\0' && plat_time_ms() >= s_shot_ms) {
-        if (s_layer != 0) {
+        if (s_layer != 0 || s_present != NULL) {
             write_drawable_shot(w, h);
         } else {
             write_shot();

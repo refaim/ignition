@@ -135,8 +135,13 @@ int car3d_draw(s32 car, int spin, double scale, int x, int y)
     /* The original draws a view of the menu's size centred on (x, y),
      * into the menu screen. */
     scene_look_at(sc);
-    gl3d_begin(mode[0], mode[1]);
-    gl3d_draw(sc, g_scene_visible, sc->obj_count, x - mode[0] / 2, y - mode[1] / 2);
-    gl3d_end(g_menu_screen, mode[0]);
+    if (gl3d_surface_begin(g_menu_screen, mode[0], mode[1])) {
+        gl3d_draw(sc, g_scene_visible, sc->obj_count, x - mode[0] / 2, y - mode[1] / 2);
+        gl3d_surface_end();
+    } else {
+        gl3d_begin(mode[0], mode[1]);
+        gl3d_draw(sc, g_scene_visible, sc->obj_count, x - mode[0] / 2, y - mode[1] / 2);
+        gl3d_end(g_menu_screen, mode[0]);
+    }
     return 0;
 }

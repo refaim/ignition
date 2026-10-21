@@ -25,6 +25,10 @@ void gl3d_view_begin(int w, int h, double vw, double vh);
 void gl3d_view_end(void);
 /* The view's colour indices: a GL texture, R, row 0 at the top. */
 unsigned gl3d_view_texture(void);
+/* Draws into a canvas surface of logical size lw x lh, over what it
+ * holds, with a cleared depth buffer. Returns 0 if `key` is not one. */
+int gl3d_surface_begin(u8 *key, int lw, int lh);
+void gl3d_surface_end(void);
 /* Copies what was drawn over `screen` (w x h at `pitch`). */
 void gl3d_end(u8 *screen, int pitch);
 /* A screen space command, as the original's rasteriser takes them

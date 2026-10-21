@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "canvas.h"
 #include "gl3d.h"
 
 enum {
@@ -642,12 +643,13 @@ static int cmd_mode(int type)
 
 void gl3d_raster(u8 *target, int w, int h, int pitch, const struct raster_cmd *cmds, int count)
 {
-    int i, k, run;
+    int i, k, run, pw, ph;
+    int gpu = canvas_is_gpu(target);
 
     if (!s_raster_ready) {
         raster_init();
     }
-    if (w != s_raster_w || h != s_raster_h) {
+    if (!gpu && (w != s_raster_w || h != s_raster_h)) {
         if (s_raster_color != 0) {
             glDeleteTextures(1, &s_raster_color);
             glDeleteTextures(1, &s_raster_dst);
@@ -683,13 +685,18 @@ void gl3d_raster(u8 *target, int w, int h, int pitch, const struct raster_cmd *c
         }
     }
 
-    glBindFramebuffer(GL_FRAMEBUFFER, s_raster_fbo);
-    glViewport(0, 0, w, h);
-    glBindTexture(GL_TEXTURE_2D, s_raster_color);
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, w, h, GL_RED, GL_UNSIGNED_BYTE, target);
-    glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+    if (gpu) {
+        /* Straight into the surface, at its resolution. */
+        canvas_bind(target, &pw, &ph, 0);
+    } else {
+        glBindFramebuffer(GL_FRAMEBUFFER, s_raster_fbo);
+        glViewport(0, 0, w, h);
+        glBindTexture(GL_TEXTURE_2D, s_raster_color);
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch);
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, w, h, GL_RED, GL_UNSIGNED_BYTE, target);
+        glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+    }
     glUseProgram(s_raster_program);
     glBindVertexArray(s_raster_vao);
     glBindBuffer(GL_ARRAY_BUFFER, s_raster_vbo);
@@ -713,9 +720,25 @@ void gl3d_raster(u8 *target, int w, int h, int pitch, const struct raster_cmd *c
             }
         } else {
             run = 1;
-            glActiveTexture(GL_TEXTURE2);
-            glBindTexture(GL_TEXTURE_2D, s_raster_dst);
-            glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, w, h);
+            if (gpu) {
+                const struct raster_cmd *c = &cmds[i];
+                float x0 = c->x[0], x1 = c->x[0], y0 = c->y[0], y1 = c->y[0];
+                GLuint copy;
+
+                for (k = 1; k < 3; k++) {
+                    x0 = c->x[k] < x0 ? c->x[k] : x0;
+                    x1 = c->x[k] > x1 ? c->x[k] : x1;
+                    y0 = c->y[k] < y0 ? c->y[k] : y0;
+                    y1 = c->y[k] > y1 ? c->y[k] : y1;
+                }
+                copy = canvas_snapshot_rect(target, x0, y0, x1, y1);
+                glActiveTexture(GL_TEXTURE2);
+                glBindTexture(GL_TEXTURE_2D, copy);
+            } else {
+                glActiveTexture(GL_TEXTURE2);
+                glBindTexture(GL_TEXTURE_2D, s_raster_dst);
+                glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, w, h);
+            }
             glActiveTexture(GL_TEXTURE1);
             glBindTexture(GL_TEXTURE_2D, table_get(cmds[i].table));
             glActiveTexture(GL_TEXTURE0);
@@ -723,9 +746,34 @@ void gl3d_raster(u8 *target, int w, int h, int pitch, const struct raster_cmd *c
         glDrawArrays(GL_TRIANGLES, i * 3, run * 3);
     }
 
-    glPixelStorei(GL_PACK_ALIGNMENT, 1);
-    glPixelStorei(GL_PACK_ROW_LENGTH, pitch);
-    glReadPixels(0, 0, w, h, GL_RED, GL_UNSIGNED_BYTE, target);
-    glPixelStorei(GL_PACK_ROW_LENGTH, 0);
+    if (!gpu) {
+        glPixelStorei(GL_PACK_ALIGNMENT, 1);
+        glPixelStorei(GL_PACK_ROW_LENGTH, pitch);
+        glReadPixels(0, 0, w, h, GL_RED, GL_UNSIGNED_BYTE, target);
+        glPixelStorei(GL_PACK_ROW_LENGTH, 0);
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+int gl3d_surface_begin(u8 *key, int lw, int lh)
+{
+    int pw, ph;
+
+    if (!s_ready) {
+        init();
+    }
+    if (canvas_bind(key, &pw, &ph, 1) == 0) {
+        return 0;
+    }
+    s_target = NULL;
+    s_w = pw;
+    s_h = ph;
+    s_vw = lw;
+    s_vh = lh;
+    return 1;
+}
+
+void gl3d_surface_end(void)
+{
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }

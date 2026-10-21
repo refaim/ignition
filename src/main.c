@@ -2,7 +2,8 @@
  * main.c - entry point. WinMain 0x4120a0.
  *
  *   ignition [--data DIR] [--view FILE.PIC] [--text TEXT] [--press MS:KEY]...
- *            [--background] [--shot MS:FILE.TGA] [--cue IMAGE.CUE]
+ *            [--background] [--shot MS:FILE.TGA] [--cue IMAGE.CUE] [--res N]
+ *            [--software]
  *
  * --data is the folder with the game files, the disc root as extracted
  * by `make extract`. --view shows one picture through the renderer, with
@@ -13,13 +14,18 @@
  * milliseconds after start up, for scripted runs; --background keeps the
  * game running while its window is not active; --shot writes the screen
  * to a TGA file at a time. --cue names the disc image for CD music;
- * without it the .cue next to the data folder plays.
+ * without it the .cue next to the data folder plays. --res sets the
+ * internal resolution: 0 320 x 200, 1 640 x 480, 2 800 x 600, 3 the
+ * window's. --software starts with the 2D drawn on the CPU, as the
+ * original did (Alt+R switches).
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "app.h"
+#include "canvas.h"
 #include "cd.h"
 #include "dik.h"
 #include "lisa/file.h"
@@ -126,6 +132,10 @@ int main(int argc, char **argv)
             }
         } else if (strcmp(argv[i], "--cue") == 0 && i + 1 < argc) {
             cd_set_image(argv[++i]);
+        } else if (strcmp(argv[i], "--software") == 0) {
+            canvas_set_hardware(0);
+        } else if (strcmp(argv[i], "--res") == 0 && i + 1 < argc) {
+            canvas_force_resolution(atoi(argv[++i]));
         } else if (strcmp(argv[i], "--background") == 0) {
             g_plat_run_inactive = 1;
         } else if (strcmp(argv[i], "--press") == 0 && i + 1 < argc) {

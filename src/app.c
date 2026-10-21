@@ -3,6 +3,7 @@
  */
 
 #include "app.h"
+#include "canvas.h"
 #include "game.h"
 #include "input.h"
 #include "lisa/lisa.h"
@@ -119,4 +120,10 @@ void app_on_destroy(void)
     video_shutdown();
     input_shutdown();
     plat_request_quit();
+}
+
+/* Alt+R: the 2D on the GPU or on the CPU. */
+void app_toggle_renderer(void)
+{
+    canvas_set_hardware(!canvas_hardware());
 }

@@ -254,3 +254,21 @@ void gfx_read_rgb(int w, int h, u8 *rgb)
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
     glReadPixels(0, 0, w, h, GL_RGB, GL_UNSIGNED_BYTE, rgb);
 }
+
+void gfx_draw_index_texture(unsigned tex, const u8 *palette, float aspect)
+{
+    float sw, sh;
+
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, s_palette_tex);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 256, 1, GL_RGB, GL_UNSIGNED_BYTE, palette);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, (GLuint)tex);
+    screen_rect(aspect, &sw, &sh);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_SCISSOR_TEST);
+    glUseProgram(s_program);
+    glUniform4f(s_u_rect, -sw, -sh, sw, sh);
+    glBindVertexArray(s_vao);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+}

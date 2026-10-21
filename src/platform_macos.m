@@ -268,6 +268,12 @@ static void handle_event(NSEvent *ev)
             app_toggle_fullscreen();
             break;
         }
+        /* Alt+R switches between the GPU and the original's CPU 2D. */
+        if (dik == DIK_R && ([ev modifierFlags] & NSEventModifierFlagOption)
+            && ![ev isARepeat]) {
+            app_toggle_renderer();
+            break;
+        }
         if (dik != 0 && ![ev isARepeat]) {
             key_event(dik, 1);
         }

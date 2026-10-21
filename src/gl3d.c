@@ -392,6 +392,24 @@ void gl3d_view_begin(int w, int h, double vw, double vh)
     s_vh = vh;
 }
 
+/* Fills rows y0..y1 of the view (in its virtual rows), across its whole
+ * width, with a palette index, as the original fills the back buffer
+ * before drawing into it. */
+void gl3d_view_fill(double y0, double y1, int index)
+{
+    int r0 = (int)(y0 * s_h / s_vh + 0.5), r1 = (int)(y1 * s_h / s_vh + 0.5);
+
+    if (r1 <= r0) {
+        return;
+    }
+    glEnable(GL_SCISSOR_TEST);
+    glScissor(0, r0, s_w, r1 - r0);
+    glClearColor((index & 0xff) / 255.0f, 1.0f, 0, 0);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glClearColor(0, 0, 0, 0);
+    glDisable(GL_SCISSOR_TEST);
+}
+
 void gl3d_view_end(void)
 {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);

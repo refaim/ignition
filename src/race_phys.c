@@ -14,6 +14,7 @@
 #include "phys.h"
 #include "race.h"
 #include "race_cars.h"
+#include "race_ai.h"
 #include "race_contact.h"
 #include "race_control.h"
 #include "race_frame.h"
@@ -70,13 +71,6 @@ static void race_contact_remote(int car, int code)
 {
     (void)car; (void)code;
     STUB(0x426b40, "race_contact_remote");
-}
-
-/* 0x4134e0: the computer's driving, one car a step. Not ported yet. */
-static void race_ai(int car)
-{
-    (void)car;
-    STUB(0x4134e0, "race_ai");
 }
 
 /* 0x427d70: the middle of the car's move, between its axles'. */

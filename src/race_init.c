@@ -18,6 +18,8 @@
 #include "lisa/mem.h"
 #include "race.h"
 #include "race_cars.h"
+#include "race_hud.h"
+#include "race_ai.h"
 #include "race_init.h"
 #include "scene.h"
 #include "net.h"
@@ -261,7 +263,8 @@ void race_clear_laps(void)
     r_525e48 = g_frame_time;
 }
 
-s32 r_5532b8, r_619308, r_5532b0;
+s32 r_619308, r_5532b0;
+double r_5532b8;                            /* the replay camera's y */
 double r_553288, r_5532c0, r_6192f8, r_619318;
 s32 r_563d28, r_563d2c, r_563d38, r_563d3c, r_552f30, r_552f34;
 double r_525e30;
@@ -274,9 +277,10 @@ s32 g_champ_points[RACE_DRIVERS];           /* 0x563d00 */
 s32 r_6192a0[10], r_6192c8[10];
 s32 *g_ghost_buffer;                        /* 0x563d7c */
 s32 r_553280, r_553070, r_5530a8, r_563c60, r_619310, r_563c38;
+float r_525e2c;                             /* the wobbling lens's phase */
 s32 r_527f40[11];                          /* 0x527f40, by car */
 s32 r_5285d0, r_5db03c, r_5530e0, r_494990, r_563c04, r_552f58, r_54f97c, r_563ce0;
-s32 r_5531b8, r_54f988, r_563da0, r_5daff0, r_525e2c, r_601674, r_5531c0, r_5531c4;
+s32 r_5531b8, r_54f988, r_563da0, r_5daff0, r_601674, r_5531c0, r_5531c4;
 s32 r_5532c8, r_563c64, r_552f4c, r_54f978, r_563d44, r_527f24, r_5530b8, r_552f54;
 s32 r_54f9d0, r_5db038, r_6036f0[8], r_553010[8];
 double r_54f980, r_54f948, r_54f9a0, r_552f68, r_563bd0, r_563d48;
@@ -298,7 +302,8 @@ void race_reset_state(void)
     r_5530e0 = r_494990 = r_563c04 = r_552f58 = 0;
     r_552f68 = 0;
     r_54f97c = r_563ce0 = r_5531b8 = r_54f988 = r_563da0 = r_5daff0 = 0;
-    r_525e2c = r_601674 = r_5531c0 = r_5531c4 = 0;
+    r_525e2c = 0;
+    r_601674 = r_5531c0 = r_5531c4 = 0;
     r_563bd0 = r_563d48 = 0;
     r_5532c8 = 0;
     r_563c64 = -1;
@@ -353,12 +358,12 @@ void race_load_world(void)
     char name[64];
 
     race_pos_deltas();
-    STUB(0x414e40, "race_load_ai_track");
+    race_load_ai_track();
     race_progress(0x4b);
     memset(r_5531d0, 0, sizeof(r_5531d0));
     race_make_effects();
     race_progress(0x4e);
-    STUB(0x41e990, "race_load_41e990");
+    race_hud_sprites();
     race_progress(0x51);
     race_reset_state();
     race_progress(0x54);

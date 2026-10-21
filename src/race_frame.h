@@ -17,7 +17,6 @@ void race_f_420e60(void);
 void race_f_444450(void);
 void race_f_434190(void);
 void race_f_4357a0(void);
-void race_f_436990(double dt);
 void race_f_441390(void);
 void race_f_4383b0(void);
 void race_f_438880(void);

@@ -24,6 +24,7 @@
 #include "race_init.h"
 #include "race_phys.h"
 #include "race_respawn.h"
+#include "race_view.h"
 #include "startup.h"
 #include "stubs.h"
 #include "video.h"
@@ -231,7 +232,7 @@ static void race_step(double dt)
         race_f_4357a0();
     }
     r_563d48_last = (s32)(g_frame_time - r_525e48) * 0.036;
-    race_f_436990(dt);
+    race_view(dt);
 }
 
 /* 0x4173fb */

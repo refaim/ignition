@@ -33,7 +33,8 @@ extern s32 g_weather;
 extern double g_best_lap;
 
 /* Globals the stages set, named by address until their use is known. */
-extern s32 r_5532b8, r_619308, r_5532b0;
+extern s32 r_619308, r_5532b0;
+extern double r_5532b8;
 extern double r_553288, r_5532c0, r_6192f8, r_619318;
 extern s32 r_563d28, r_563d2c, r_563d38, r_563d3c, r_552f30, r_552f34;
 extern double r_525e30;
@@ -52,7 +53,11 @@ extern s32 r_5532b0, r_601674;
 extern s32 r_5530e0;                    /* steps since the start */
 extern s32 r_552f58;                    /* the screen went back to one view */
 extern s32 r_563c60;                    /* the ghost stops recording */
-extern double r_54f980;
+extern double r_54f980;                 /* ticks since the players finished, -1 before */
+extern float r_525e2c;
+extern s32 r_527f40[11];                /* counts to 120 after the start, by player */
+extern s32 r_5530a8;
+extern s32 r_552f4c;                    /* the exit fade, from 100 */
 extern double r_552e48;
 extern s32 r_5285c0;                    /* the car being updated */
 

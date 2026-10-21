@@ -2,8 +2,8 @@
 """Writes src/race_data.c: the race's initialised tables, read from the
 image of IGN_WIN.EXE (.ida-mcp/image.bin, from VA 0x479000).
 
-Each table is (name, address, C type, count[, const]); s32 and double
-tables are read as such, char4 as 4 byte strings.
+Each table is (name, address, C type, count[, const]); s16, s32 and
+double tables are read as such, char4 as 4 byte strings.
 """
 
 import pathlib
@@ -21,8 +21,18 @@ TABLES = [
     ("g_car_499a90", 0x499A90, "s32", 11, True),
     ("g_car_499880", 0x499880, "s32", 44, True),
     ("g_car_codes", 0x497200, "char4", 11, True),
-    # Nine doubles a car, the first written at load (0x41988f).
-    ("g_car_493988", 0x493988, "double", 11 * 9, False),
+    # The computer drivers' manner, nine doubles a car (0x414e40): skill,
+    # four weights, how far it looks for cars (written at load, 0x41988f),
+    # two more, and a whole number.
+    ("g_ai_params", 0x493960, "double", 11 * 9, False),
+    # How many segments ahead the driver looks.
+    ("g_ai_steps", 0x4937C8, "s16", 6, True),
+    # Forks, four a track: the segment, the chance of the second branch
+    # in percent, and the lane it keeps.
+    ("g_ai_forks", 0x4937D8, "s16", 7 * 4 * 3, True),
+    # Speed limits, eight a track: the segment (even) and km/h; 500
+    # means full throttle, -999 an unused entry.
+    ("g_ai_limits", 0x493880, "s16", 7 * 8 * 2, True),
     # The controls (0x442030..0x444e20), by car; the twelfth entry is
     # the computer's.
     ("g_boost_force", 0x4923E8, "s32", 12, True),
@@ -37,6 +47,11 @@ TABLES = [
     # -5000; and where the disc sits ahead of the camera, a dx, dz in
     # cells by the camera's pitch (36 rows) and yaw (36).
     ("g_cells_disc", 0x499FA0, "s32", 43, True),
+    # The cameras over the finish, three a track: x, y, z, then pitch
+    # and yaw in radians.
+    ("g_finish_cams", 0x498538, "float", 7 * 3 * 5, True),
+    # The sky's colour by track.
+    ("g_sky_colour", 0x497ED8, "s32", 7, True),
     ("g_cells_ahead", 0x49A058, "s32", 36 * 36 * 2, True),
     # Ground contact (0x424570): grip by surface type 0..29; a car's
     # traction by car, the twelfth the computer's; the grip's scale by
@@ -48,6 +63,15 @@ TABLES = [
     ("g_ai_grip", 0x499930, "double", 44, True),
     # A smoke puff's frames on its page: u0, v0, u1, v1 for nine.
     ("g_smoke_frames", 0x497FF8, "s32", 36, True),
+    # The HUD by layout (small, large, high resolution): where its
+    # sprites are cut from the panel pictures (x, y, w, h, 36 a layout),
+    # the text rows and columns (8 a layout) and the sprites' places
+    # (28 a layout), from the view's corners; the hint sign shown for a
+    # piece's hint by difficulty (mirrored tracks swap left and right).
+    ("g_hud_cuts", 0x4974F8, "s32", 3 * 144, True),
+    ("g_hud_text", 0x497BC8, "s32", 3 * 8, True),
+    ("g_hud_places", 0x497C28, "s32", 3 * 28, True),
+    ("g_hud_signs", 0x497D74, "s32", 80, True),
 ]
 
 
@@ -66,10 +90,18 @@ def main():
             vals = struct.unpack_from(f"<{count}i", img, off)
             body = ", ".join(str(v) for v in vals)
             decl = f"{q}s32 {name}[{count}]"
+        elif typ == "s16":
+            vals = struct.unpack_from(f"<{count}h", img, off)
+            body = ", ".join(str(v) for v in vals)
+            decl = f"{q}s16 {name}[{count}]"
         elif typ == "double":
             vals = struct.unpack_from(f"<{count}d", img, off)
             body = ", ".join(repr(v) for v in vals)
             decl = f"{q}double {name}[{count}]"
+        elif typ == "float":
+            vals = struct.unpack_from(f"<{count}f", img, off)
+            body = ", ".join(repr(v) + "f" for v in vals)
+            decl = f"{q}float {name}[{count}]"
         else:
             vals = [img[off + 4 * i:off + 4 * i + 4].split(b"\0")[0].decode("latin1")
                     for i in range(count)]

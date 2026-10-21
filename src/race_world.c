@@ -417,6 +417,21 @@ void race_make_world(void)
 /* An all zero screen: the back buffer's colour 0 shows the 3D. */
 static const u8 s_clear[800 * 600];
 
+/* Rows the view fills with a colour before drawing, as the original
+ * fills the back buffer (the sky, track 2's band). */
+static struct { double y0, y1; int index; } s_fills[4];
+static int s_fill_count;
+
+void race_view_fill(double y0, double y1, int index)
+{
+    if (s_fill_count < 4) {
+        s_fills[s_fill_count].y0 = y0;
+        s_fills[s_fill_count].y1 = y1;
+        s_fills[s_fill_count].index = index;
+        s_fill_count++;
+    }
+}
+
 /* Draws the 3D at the drawable's size, its field of view widened to
  * the drawable's shape; the back buffer is left clear for the HUD, and
  * presenting shows it over the 3D where it is not 0. */
@@ -442,6 +457,10 @@ void race_draw_view(const struct scene *sc, struct scene_obj *const *objs, int n
         h = ih;
     }
     gl3d_view_begin(w, h, vw, g_screen_height);
+    for (int i = 0; i < s_fill_count; i++) {
+        gl3d_view_fill(s_fills[i].y0, s_fills[i].y1, s_fills[i].index);
+    }
+    s_fill_count = 0;
     gl3d_draw(sc, objs, n, (vw - g_screen_width) / 2, 0);
     gl3d_view_end();
     video_set_layer(gl3d_view_texture(), s_clear);

@@ -5,6 +5,7 @@
 
 #include "race.h"
 #include "race_frame.h"
+#include "race_hud.h"
 #include "sound.h"
 #include "stubs.h"
 
@@ -48,6 +49,7 @@ void race_f_444450(void)
 /* 0x434190 */
 void race_f_434190(void)
 {
+    race_age_messages();
     STUB(0x434190, "race_f_434190");
 }
 
@@ -55,15 +57,6 @@ void race_f_434190(void)
 void race_f_4357a0(void)
 {
     STUB(0x4357a0, "race_f_4357a0");
-}
-
-/* 0x436990 */
-void race_f_436990(double dt)
-{
-    (void)dt;
-    STUB(0x436990, "race_f_436990");
-    /* Until the views are ported: the stand-in view. */
-    race_debug_view();
 }
 
 /* 0x441390 */

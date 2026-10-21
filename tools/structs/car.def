@@ -117,8 +117,10 @@ struct car 0x484c 0x5daffc
 0x5c4 s32 f5c4
 0x5c8 s32 off_track             frames with all corners off the track
 0x5cc double probe_scale       1 + km/h / 220
+0x5d4 s32 f5d4                 ticks after finishing, to 25
 0x5d8 s32 wall_surface[4]       each corner's surface, full-size probe
-0x5fc s32 narrow                the corners were probed at half size
+0x5f8 s32 sign_ticks            ticks the road's hint sign has shown
+0x5fc s32 narrow               the corners were probed at half size
 0x600 s32 last_narrow
 0x604 s32 f604
 0x608 s32 seg_frames           frames in the current segment, 0..29

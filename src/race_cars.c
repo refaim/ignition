@@ -130,7 +130,7 @@ static void pick_ai_cars(void)
 
         if (d->control == 1) {
             g_cars[i].ai_skill = g_car_499880[g_car_499a90[d->car] + 11 * g_mirror];
-            g_car_493988[d->car * 9] = g_mirror * 0.19 + 0.4;
+            g_ai_params[d->car * 9 + 5] = g_mirror * 0.19 + 0.4;
         } else {
             g_cars[i].ai_skill = 0;
         }

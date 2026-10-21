@@ -22,6 +22,7 @@ void gl3d_draw(const struct scene *sc, struct scene_obj *const *objs, int count,
 /* Starts the view: a frame of w x h pixels kept on the GPU that spans
  * vw x vh of the original's pixels, as video_set_layer shows it. */
 void gl3d_view_begin(int w, int h, double vw, double vh);
+void gl3d_view_fill(double y0, double y1, int index);
 void gl3d_view_end(void);
 /* The view's colour indices: a GL texture, R, row 0 at the top. */
 unsigned gl3d_view_texture(void);

@@ -12,7 +12,10 @@ extern const s32 g_ai_car_order[40];  /* 0x4997e0 */
 extern const s32 g_car_499a90[11];  /* 0x499a90 */
 extern const s32 g_car_499880[44];  /* 0x499880 */
 extern const char g_car_codes[11][4];  /* 0x497200 */
-extern double g_car_493988[99];  /* 0x493988 */
+extern double g_ai_params[99];  /* 0x493960 */
+extern const s16 g_ai_steps[6];  /* 0x4937c8 */
+extern const s16 g_ai_forks[84];  /* 0x4937d8 */
+extern const s16 g_ai_limits[112];  /* 0x493880 */
 extern const s32 g_boost_force[12];  /* 0x4923e8 */
 extern const double g_steer_speed[12];  /* 0x492418 */
 extern const double g_steer_range[12];  /* 0x492478 */
@@ -20,11 +23,17 @@ extern const s32 g_steer_rate[12];  /* 0x4924d8 */
 extern const double g_boost_refill[12];  /* 0x492508 */
 extern const double g_gear_scale[4];  /* 0x4929e8 */
 extern const s32 g_cells_disc[43];  /* 0x499fa0 */
+extern const float g_finish_cams[105];  /* 0x498538 */
+extern const s32 g_sky_colour[7];  /* 0x497ed8 */
 extern const s32 g_cells_ahead[2592];  /* 0x49a058 */
 extern const double g_surface_grip[30];  /* 0x4972d0 */
 extern const double g_car_traction[12];  /* 0x492358 */
 extern const double g_grip_scale[4];  /* 0x492a08 */
 extern const double g_ai_grip[44];  /* 0x499930 */
 extern const s32 g_smoke_frames[36];  /* 0x497ff8 */
+extern const s32 g_hud_cuts[432];  /* 0x4974f8 */
+extern const s32 g_hud_text[24];  /* 0x497bc8 */
+extern const s32 g_hud_places[84];  /* 0x497c28 */
+extern const s32 g_hud_signs[80];  /* 0x497d74 */
 
 #endif /* IGN_RACE_DATA_H */

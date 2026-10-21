@@ -381,10 +381,11 @@ class Tr:
             c = self.cond(mn)
             self.spill()
             exits.append((t, len(self.st)))
+            dest = f"L_{t:x}" if t is not None else f"/* {ops} */"
             if c is not None:
-                self.emit(f"if ({c}) goto L_{t:x};")
+                self.emit(f"if ({c}) goto {dest};")
             else:
-                self.emit(f"if (/* {mn} */) goto L_{t:x};")
+                self.emit(f"if (/* {mn} */) goto {dest};")
             self.flags = None
             return True
         if mn in ("retn", "ret"):

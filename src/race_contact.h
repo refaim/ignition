@@ -34,6 +34,18 @@ float race_rand(void);
 /* 0x434380: starts an effect. Not ported yet. */
 void race_effect(struct race_effect *e);
 
+/* A message on the screen (0x552f24, five of them). */
+struct race_msg {
+    s32 active;
+    char text[0x64];
+    s32 life;               /* +0x68, ticks it stays */
+    s32 blink;              /* +0x6c, ticks on, then as many off */
+    s32 age;                /* +0x70 */
+    s32 view;               /* +0x74, -1 the whole screen */
+};
+
+_Static_assert(sizeof(struct race_msg) == 0x78, "race_msg");
+
 /* 0x441170: shows a message, at most five at once; view -1 is the
  * whole screen, 0 or 1 a player's half. Returns its slot or -1. */
 int race_message(const char *text, int a, int b, int view);

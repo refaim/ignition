@@ -183,6 +183,7 @@ void race_place_car(int car);
 void race_debug_view(void);
 struct scene;
 struct scene_obj;
+void race_view_fill(double y0, double y1, int index);
 void race_draw_view(const struct scene *sc, struct scene_obj *const *objs, int n);
 
 void race_load_1(void);

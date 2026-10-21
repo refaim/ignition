@@ -20,6 +20,7 @@
 #include "lisa/log.h"
 #include "race.h"
 #include "race_cars.h"
+#include "race_ai.h"
 #include "race_contact.h"
 #include "race_data.h"
 #include "race_init.h"
@@ -44,15 +45,6 @@ s32 r_619300;
 s32 g_squash_meshes[11][2000];
 
 /* A message on the screen (0x552f24, 0x78 bytes). */
-struct race_msg {
-    s32 active;
-    char text[0x64];
-    s32 f68, f6c, f70;
-    s32 view;
-};
-
-_Static_assert(sizeof(struct race_msg) == 0x78, "race_msg");
-
 enum {
     SEG_NONE = 10000,
     LANG_COUNT = 6
@@ -74,7 +66,7 @@ static const char *const s_is_out[LANG_COUNT] = {
 /* 0x446180 */
 float race_rand(void)
 {
-    float r = (float)((rand() & 0x3fff) * 6.103515625e-05);
+    float r = (float)((race_msrand() & 0x3fff) * 6.103515625e-05);
 
     if (r < 0.0f || r > 1.0f) {
         log_printf("FLUM SLUMP!!\n");
@@ -103,9 +95,9 @@ int race_message(const char *text, int a, int b, int view)
     m[i].active = 1;
     /* sprintf in the original, unbounded. */
     snprintf(m[i].text, sizeof(m[i].text), "%s", text);
-    m[i].f68 = a;
-    m[i].f6c = b;
-    m[i].f70 = 0;
+    m[i].life = a;
+    m[i].blink = b;
+    m[i].age = 0;
     m[i].view = view;
     return i;
 }

@@ -131,9 +131,10 @@ struct car {
     s32 f5c4;  /* +0x5c4 */
     s32 off_track;  /* +0x5c8, frames with all corners off the track */
     double probe_scale;  /* +0x5cc, 1 + km/h / 220 */
-    u8 pad_5d4[0x4];
+    s32 f5d4;  /* +0x5d4, ticks after finishing, to 25 */
     s32 wall_surface[4];  /* +0x5d8, each corner's surface, full-size probe */
-    u8 pad_5e8[0x14];
+    u8 pad_5e8[0x10];
+    s32 sign_ticks;  /* +0x5f8, ticks the road's hint sign has shown */
     s32 narrow;  /* +0x5fc, the corners were probed at half size */
     s32 last_narrow;  /* +0x600 */
     s32 f604;  /* +0x604 */
@@ -276,7 +277,9 @@ _Static_assert(offsetof(struct car, min_z) == 0x5c0, "car.min_z");
 _Static_assert(offsetof(struct car, f5c4) == 0x5c4, "car.f5c4");
 _Static_assert(offsetof(struct car, off_track) == 0x5c8, "car.off_track");
 _Static_assert(offsetof(struct car, probe_scale) == 0x5cc, "car.probe_scale");
+_Static_assert(offsetof(struct car, f5d4) == 0x5d4, "car.f5d4");
 _Static_assert(offsetof(struct car, wall_surface) == 0x5d8, "car.wall_surface");
+_Static_assert(offsetof(struct car, sign_ticks) == 0x5f8, "car.sign_ticks");
 _Static_assert(offsetof(struct car, narrow) == 0x5fc, "car.narrow");
 _Static_assert(offsetof(struct car, last_narrow) == 0x600, "car.last_narrow");
 _Static_assert(offsetof(struct car, f604) == 0x604, "car.f604");

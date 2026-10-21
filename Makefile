@@ -7,7 +7,7 @@ TARGET := ignition
 SRCDIR := src
 BUILD  := build
 
-CORE_SRC := $(SRCDIR)/app.c $(SRCDIR)/game.c $(SRCDIR)/stubs.c $(SRCDIR)/net.c $(SRCDIR)/canvas.c $(SRCDIR)/scene.c $(SRCDIR)/gl3d.c $(SRCDIR)/menucar.c $(SRCDIR)/menubg.c $(SRCDIR)/race_load.c $(SRCDIR)/race_track.c $(SRCDIR)/race_world.c $(SRCDIR)/race_cars.c $(SRCDIR)/phys.c $(SRCDIR)/race_phys.c $(SRCDIR)/srf.c $(SRCDIR)/race_contact.c $(SRCDIR)/race_respawn.c $(SRCDIR)/race_camera.c $(SRCDIR)/race_control.c $(SRCDIR)/race_init.c $(SRCDIR)/race.c $(SRCDIR)/race_frame_stubs.c $(SRCDIR)/race_input.c $(SRCDIR)/race_data.c \
+CORE_SRC := $(SRCDIR)/app.c $(SRCDIR)/game.c $(SRCDIR)/stubs.c $(SRCDIR)/net.c $(SRCDIR)/canvas.c $(SRCDIR)/scene.c $(SRCDIR)/gl3d.c $(SRCDIR)/menucar.c $(SRCDIR)/menubg.c $(SRCDIR)/race_load.c $(SRCDIR)/race_track.c $(SRCDIR)/race_world.c $(SRCDIR)/race_cars.c $(SRCDIR)/phys.c $(SRCDIR)/race_phys.c $(SRCDIR)/race_ai.c $(SRCDIR)/srf.c $(SRCDIR)/race_contact.c $(SRCDIR)/race_respawn.c $(SRCDIR)/race_camera.c $(SRCDIR)/race_view.c $(SRCDIR)/race_hud.c $(SRCDIR)/race_control.c $(SRCDIR)/race_init.c $(SRCDIR)/race.c $(SRCDIR)/race_frame_stubs.c $(SRCDIR)/race_input.c $(SRCDIR)/race_data.c \
             $(SRCDIR)/lisa/lisa.c $(SRCDIR)/lisa/log.c $(SRCDIR)/lisa/mem.c $(SRCDIR)/lisa/file.c \
             $(SRCDIR)/lisa/exit.c $(SRCDIR)/lisa/gfx.c $(SRCDIR)/lisa/texture.c $(SRCDIR)/lisa/sprite.c \
             $(SRCDIR)/lisa/font.c $(SRCDIR)/startup.c $(SRCDIR)/input.c \

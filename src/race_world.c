@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include "game.h"
+#include "platform.h"
 #include "gl3d.h"
 #include "lisa/log.h"
 #include "lisa/mem.h"
@@ -108,59 +109,67 @@ void race_make_world(void)
     STUB(0x41bb1f, "race_make_world: collision objects, flares, cars, srf");
 }
 
-static u8 s_snapshot[320 * 200];
+/* An all zero screen: the back buffer's colour 0 shows the 3D. */
+static const u8 s_clear[320 * 200];
 
-/* Draws the 3D twice: at 320 x 200 into the back buffer, as the HUD
- * blends with it, and at the window's size, wider, kept on the GPU.
- * Presenting shows the wide view and, over it, what the HUD changed. */
+/* Draws the 3D at the drawable's size, its field of view widened to
+ * the drawable's shape; the back buffer is left clear for the HUD, and
+ * presenting shows it over the 3D where it is not 0. */
 void race_draw_view(const struct scene *sc, struct scene_obj *const *objs, int n)
 {
     int w, h;
     double vw;
 
-    gl3d_begin(320, 200);
-    gl3d_draw(sc, objs, n, 0, 0);
     memset(g_back_buffer, 0, sizeof(g_back_buffer));
-    gl3d_end(g_back_buffer, 320);
-    memcpy(s_snapshot, g_back_buffer, sizeof(s_snapshot));
-
     video_drawable_size(&w, &h);
     if (w <= 0 || h <= 0) {
         return;
     }
-    /* 320 x 200 fills a 4:3 picture; a wider window sees more at the
-     * sides. */
+    /* The original's 320 x 200 fills a 4:3 picture; a wider drawable
+     * sees more at the sides. */
     vw = 320.0 * ((double)w / h) / (4.0 / 3.0);
     gl3d_view_begin(w, h, vw, 200.0);
     gl3d_draw(sc, objs, n, (vw - 320.0) / 2, 0);
     gl3d_view_end();
-    video_set_layer(gl3d_view_texture(), s_snapshot);
+    video_set_layer(gl3d_view_texture(), s_clear);
 }
 
 /* Until the race's cameras are ported: the track from behind the
  * start line, drawn into the back buffer. */
 void race_debug_view(void)
 {
-    static double t;
+    static u32 start;
     struct scene *sc = g_scene;
     struct scene_obj *objs[1500];
-    const struct track_link *l;
-    const struct plc_entry *e;
+    const struct plc_entry *a, *b;
+    double t, f, ha, hb, dh, h, x, y, z;
     int n = 0, i, piece;
 
-    if (sc == NULL || g_track_link_count == 0) {
+    if (sc == NULL || g_track_link_count < 2) {
         return;
     }
-    t += 0.02;
-    piece = (int)t % g_track_link_count;
-    l = &g_track_links[piece];
-    e = plc_at(g_level_plc, l->plc);
-    sc->x = e->x + 0x6400 + sin(l->heading) * 600.0;
-    sc->y = e->y + 300.0;
-    sc->z = e->z + 0x6400 - cos(l->heading) * 600.0;
-    sc->target_x = e->x + 0x6400;
-    sc->target_y = e->y;
-    sc->target_z = e->z + 0x6400;
+    /* Two pieces a second, gliding from one to the next. */
+    if (start == 0) {
+        start = plat_time_ms();
+    }
+    t = (plat_time_ms() - start) / 500.0;
+    piece = (int)t % (g_track_link_count - 1);
+    f = t - (int)t;
+    a = plc_at(g_level_plc, g_track_links[piece].plc);
+    b = plc_at(g_level_plc, g_track_links[piece + 1].plc);
+    ha = g_track_links[piece].heading;
+    hb = g_track_links[piece + 1].heading;
+    dh = remainder(hb - ha, 2.0 * M_PI);
+    h = ha + dh * f;
+    x = a->x + (b->x - a->x) * f + 0x6400;
+    y = a->y + (b->y - a->y) * f;
+    z = a->z + (b->z - a->z) * f + 0x6400;
+    sc->x = x + sin(h) * 600.0;
+    sc->y = y + 300.0;
+    sc->z = z - cos(h) * 600.0;
+    sc->target_x = (s32)x;
+    sc->target_y = (s32)y;
+    sc->target_z = (s32)z;
     scene_look_at(sc);
     for (i = 0; i < g_level_plc[0] && n < 1500; i++) {
         if (g_world[i].obj != NULL) {

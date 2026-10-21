@@ -25,6 +25,7 @@ struct car 0x484c 0x5daffc
 0x100 double f100
 0x108 double f108
 0x110 double f110
+0x118 double f118
 0x120 double f120               y
 0x128 double f128               y
 0x130 double f130               0.01
@@ -42,6 +43,8 @@ struct car 0x484c 0x5daffc
 0x348 s32 f348
 0x34c s32 f34c
 0x350 s32 f350
+0x354 s32 f354
+0x358 s32 f358
 0x364 s32 f364
 0x368 s32 f368
 0x36c s32 f36c
@@ -90,5 +93,6 @@ struct car 0x484c 0x5daffc
 0x62c double f62c
 0x634 float f634                10.0
 0x638 float f638                4000.0
+0x431c s32 f431c
 0x4834 double f4834
 0x483c double f483c

@@ -11,6 +11,7 @@
 #include "dik.h"
 #include "frontend.h"
 #include "game.h"
+#include "race_frame.h"
 #include "input.h"
 #include "lisa/font.h"
 #include "lisa/gfx.h"

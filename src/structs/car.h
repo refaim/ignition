@@ -37,7 +37,7 @@ struct car {
     double f100;  /* +0x100 */
     double f108;  /* +0x108 */
     double f110;  /* +0x110 */
-    u8 pad_118[0x8];
+    double f118;  /* +0x118 */
     double f120;  /* +0x120, y */
     double f128;  /* +0x128, y */
     double f130;  /* +0x130, 0.01 */
@@ -61,7 +61,9 @@ struct car {
     s32 f348;  /* +0x348 */
     s32 f34c;  /* +0x34c */
     s32 f350;  /* +0x350 */
-    u8 pad_354[0x10];
+    s32 f354;  /* +0x354 */
+    s32 f358;  /* +0x358 */
+    u8 pad_35c[0x8];
     s32 f364;  /* +0x364 */
     s32 f368;  /* +0x368 */
     s32 f36c;  /* +0x36c */
@@ -120,7 +122,9 @@ struct car {
     double f62c;  /* +0x62c */
     float f634;  /* +0x634, 10.0 */
     float f638;  /* +0x638, 4000.0 */
-    u8 pad_63c[0x41f8];
+    u8 pad_63c[0x3ce0];
+    s32 f431c;  /* +0x431c */
+    u8 pad_4320[0x514];
     double f4834;  /* +0x4834 */
     double f483c;  /* +0x483c */
     u8 pad_4844[0x8];
@@ -151,6 +155,7 @@ _Static_assert(offsetof(struct car, heading) == 0xf8, "car.heading");
 _Static_assert(offsetof(struct car, f100) == 0x100, "car.f100");
 _Static_assert(offsetof(struct car, f108) == 0x108, "car.f108");
 _Static_assert(offsetof(struct car, f110) == 0x110, "car.f110");
+_Static_assert(offsetof(struct car, f118) == 0x118, "car.f118");
 _Static_assert(offsetof(struct car, f120) == 0x120, "car.f120");
 _Static_assert(offsetof(struct car, f128) == 0x128, "car.f128");
 _Static_assert(offsetof(struct car, f130) == 0x130, "car.f130");
@@ -168,6 +173,8 @@ _Static_assert(offsetof(struct car, f344) == 0x344, "car.f344");
 _Static_assert(offsetof(struct car, f348) == 0x348, "car.f348");
 _Static_assert(offsetof(struct car, f34c) == 0x34c, "car.f34c");
 _Static_assert(offsetof(struct car, f350) == 0x350, "car.f350");
+_Static_assert(offsetof(struct car, f354) == 0x354, "car.f354");
+_Static_assert(offsetof(struct car, f358) == 0x358, "car.f358");
 _Static_assert(offsetof(struct car, f364) == 0x364, "car.f364");
 _Static_assert(offsetof(struct car, f368) == 0x368, "car.f368");
 _Static_assert(offsetof(struct car, f36c) == 0x36c, "car.f36c");
@@ -216,6 +223,7 @@ _Static_assert(offsetof(struct car, f624) == 0x624, "car.f624");
 _Static_assert(offsetof(struct car, f62c) == 0x62c, "car.f62c");
 _Static_assert(offsetof(struct car, f634) == 0x634, "car.f634");
 _Static_assert(offsetof(struct car, f638) == 0x638, "car.f638");
+_Static_assert(offsetof(struct car, f431c) == 0x431c, "car.f431c");
 _Static_assert(offsetof(struct car, f4834) == 0x4834, "car.f4834");
 _Static_assert(offsetof(struct car, f483c) == 0x483c, "car.f483c");
 _Static_assert(sizeof(struct car) == 0x484c, "car");

@@ -40,6 +40,17 @@ extern double r_525e30;
 extern s32 r_525e38, r_525e3c;
 extern s32 r_525e48;
 
+/* The race's state (0x41fe60 resets it). */
+extern double g_race_clock;             /* 0x5285d8, ticks */
+extern s32 g_view_car;                  /* 0x4949a4 */
+extern s32 g_champ_points[11];          /* 0x563d00 */
+extern s32 r_494990;                    /* paused */
+extern s32 r_563d88;                    /* the race is over */
+extern s32 r_552f18;                    /* 4 racing; 2, 3 waiting for the network */
+extern s32 r_54f97c, r_5532c8, r_553070, r_553280, r_5530b8, r_563da0, r_5daff0;
+extern s32 r_5532b0, r_601674;
+extern double r_552e48;
+
 void race_pos_deltas(void);
 int race_srf_load(const char *name);
 void race_init_cameras(void);

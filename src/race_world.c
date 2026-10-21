@@ -14,33 +14,52 @@
 #include "lisa/log.h"
 #include "lisa/mem.h"
 #include "race.h"
+#include "race_cars.h"
+#include "structs/coll_obj.h"
 #include "scene.h"
 #include "startup.h"
 #include "stubs.h"
 #include "video.h"
 
 struct scene_desc *g_world;             /* 0x54f908 */
+s32 r_552d80, r_552f5c;                 /* read by the car 7 setup */
 s32 r_563c80[0x18];                     /* 0x563c80, view sizes */
+s32 r_563d98;
 s32 r_54f9d4, r_527f2c;
 s32 r_54f954, r_563cf0, r_563d78, r_552f78, r_54f9b8;
 
-/* Whether a placement of type 100 and up is in this race: some only
- * come with r_553084 (0x41b8a6). */
-static int placed(int i, int type)
+/* Collision objects (0x54f904, 0x98 bytes), sound sources (0x553078),
+ * lens flares (0x563c68) and moving objects (0x525e6c). */
+struct coll_obj *g_coll_objs;           /* 0x54f904 */
+struct sound_src *g_sound_srcs;         /* 0x553078 */
+struct flare *g_flares;                 /* 0x563c68 */
+struct scene_desc *g_flare_objs;        /* 0x553460 */
+struct mover *g_movers;                 /* 0x525e6c */
+struct scene_desc *g_car_objs;          /* 0x5db02c */
+struct scene_desc *g_wheel_objs;        /* 0x552fbc, 4 a car */
+struct scene_desc *g_car7_objs;         /* 0x552f70 */
+struct scene_desc *g_shadow_objs;       /* 0x552f20 */
+struct scene_desc *g_arrow_objs;        /* 0x553788, cars then 2 arrows */
+s32 r_54f930;                           /* set: cars and shadows unlinked */
+
+/* The lens flare's sprite, a mesh of one point (0x498448). */
+static s32 s_flare_mesh[14] = {
+    1, 1, 0, 0, 0, 7, 0, 0, 0, 0x4000, 0x4000, 0, 6553500, 6553500
+};
+/* The arrow over the players' cars (0x552f80). */
+static s32 s_arrow_mesh[14] = {
+    1, 1, 0, -100, 0, 8, 0, 0x1f00, 0x7500, 0x4a00, 0x9900, 0, 0xc000, 0xb333
+};
+/* Network players' names over their cars (0x639940, 0x3c each). */
+static s32 s_name_meshes[RACE_DRIVERS][15];
+
+static int skipped(int i, int type)
 {
-    if (type >= 300 && type < 350 && !r_553084) {
+    if (r_553084) {
         return 0;
     }
-    if (type >= 150 && type <= 199 && !r_553084) {
-        return 0;
-    }
-    if (type == 357 && !r_553084) {
-        return 0;
-    }
-    if ((type == 350 || type == 351) && g_level_pos[i] != -1 && !r_553084) {
-        return 0;
-    }
-    return 1;
+    return (type >= 300 && type < 350) || (type >= 150 && type <= 199) || type == 357
+        || ((type == 350 || type == 351) && g_level_pos[i] != -1);
 }
 
 static void create(int i, struct plc_entry *e)
@@ -59,15 +78,279 @@ static void create(int i, struct plc_entry *e)
     scene_obj_link(d);
 }
 
-/* 0x41b470, the scenery so far: the cars, their wheels and shadows,
- * the collision objects, lens flares and the .SRF come later. */
+static void *pool_calloc(size_t size)
+{
+    void *p = mem_calloc(g_race_pool, (u32)size);
+
+    g_race_bytes += (s32)size;
+    if (p == NULL) {
+        mem_out_of_memory();
+    }
+    return p;
+}
+
+/* 0x41bb1f */
+static void make_collision_objects(void)
+{
+    int n = g_level_plc[0], i, k = 0, phase = 0;
+
+    if (r_54f954 <= 0) {
+        return;
+    }
+    g_coll_objs = pool_calloc((size_t)r_54f954 * sizeof(*g_coll_objs));
+    for (i = 0; i < n; i++) {
+        s32 t = plc_at(g_level_plc, i)->type;
+
+        if (t >= 150 && t < 200) {
+            g_coll_objs[k++].plc = i;
+        }
+    }
+    for (k = 0; k < r_54f954; k++) {
+        struct coll_obj *o = &g_coll_objs[k];
+        const struct plc_entry *p = plc_at(g_level_plc, o->plc);
+
+        o->type = p->type - 150;
+        o->x = p->x + 0x6400;
+        o->y = p->y;
+        o->z = p->z + 0x6400;
+        memset(o->f24, 0, sizeof(o->f24));
+        o->f08 = 0;
+        switch (p->type) {
+        case 150:
+        case 154:
+            /* These go round in phases of 4 to 30. */
+            o->f84 = 0.3f;
+            o->f88 = 100.0f;
+            o->f90 = (float)phase;
+            o->f94 = 30;
+            phase += 4;
+            if (o->f94 <= phase) {
+                phase = 0;
+            }
+            break;
+        case 152:
+            o->f84 = 25.0f;
+            o->f88 = 8000.0f;
+            break;
+        case 153:
+            o->f84 = 2.0f;
+            o->f88 = 1500.0f;
+            break;
+        default:
+            log_printf("Ingen info om kollisions objektet!!\n");
+            exit(0);
+        }
+    }
+}
+
+/* 0x41be37 */
+static void make_sound_sources(int first357)
+{
+    int n = g_level_plc[0], i, k = 0;
+
+    if (r_563cf0 <= 0) {
+        return;
+    }
+    g_sound_srcs = pool_calloc((size_t)r_563cf0 * sizeof(*g_sound_srcs));
+    for (i = 0; i < n; i++) {
+        s32 t = plc_at(g_level_plc, i)->type;
+
+        if (!(t >= 400 && t < 499) && i != first357) {
+            continue;
+        }
+        if (t == 406 && g_track == 1 && !r_553084 && i != first357) {
+            continue;
+        }
+        g_sound_srcs[k].plc = i;
+        g_sound_srcs[k].voice = race_sound_3d(1, 0, i == first357 ? 0 : t - 400, -1, 0, 11000,
+                                              0, 0.0f, 0.0f);
+        k++;
+    }
+}
+
+/* 0x41bf2b */
+static void make_flares(void)
+{
+    int n = g_level_plc[0], i, e = 0, k = 0;
+
+    if (r_563d78 <= 0) {
+        return;
+    }
+    g_flares = pool_calloc((size_t)r_563d78 * sizeof(*g_flares));
+    if (r_54f9b8 > 0) {
+        g_flare_objs = pool_calloc((size_t)r_54f9b8 * sizeof(*g_flare_objs));
+    }
+    for (i = 0; i < n; i++) {
+        const struct plc_entry *p = plc_at(g_level_plc, i);
+        s32 t = p->type;
+
+        if (t >= 350 && t < 360 && !(t == 357 && !r_553084)
+            && !((t == 350 || t == 351) && g_level_pos[i] != -1 && !r_553084)) {
+            g_flares[e].plc = i;
+            g_flares[e].kind = t - 350;
+            if (g_flares[e].kind == 4 && r_54f9b8 > 0) {
+                struct scene_desc *d = &g_flare_objs[k++];
+
+                if (scene_obj_create(d, s_flare_mesh, 3, 200, 0, -1, 0) != 0) {
+                    log_printf("Error while creating lens flaires");
+                    exit(1);
+                }
+                d->x = p->x + 0x6400;
+                d->y = p->y + 80;
+                d->z = p->z + 0x6400;
+                d->ax = d->ay = d->az = 0;
+                scene_obj_link(d);
+            }
+            e++;
+        }
+        if (t == 304 && r_553084 == 1) {
+            g_flares[e].plc = i;
+            g_flares[e].kind = t - 350;
+            e++;
+        }
+    }
+}
+
+/* 0x41c1aa */
+static void make_movers(void)
+{
+    int n = g_level_plc[0], i, k = 0;
+    s32 step = 0;
+
+    if (r_552f78 <= 0) {
+        return;
+    }
+    g_movers = pool_calloc((size_t)r_552f78 * sizeof(*g_movers));
+    for (i = 0; i < n; i++) {
+        s32 t = plc_at(g_level_plc, i)->type;
+
+        if (t < 300 || t >= 350 || (t == 302 && g_track == 1 && !r_553084)) {
+            continue;
+        }
+        g_movers[k].plc = i;
+        g_movers[k].type = t;
+        if (t == 305) {
+            /* Type 305 objects start 8 frames apart, up to 32. */
+            g_movers[k].phase = step;
+            step += 8;
+            if (step > 0x20) {
+                step = 0;
+            }
+        } else {
+            g_movers[k].phase = 0;
+        }
+        g_movers[k].f0c = 0;
+        k++;
+    }
+}
+
+/* Puts a car's object desc at its car, turned as it is. */
+static void at_car(struct scene_desc *d, const struct car *c)
+{
+    d->x = (s32)c->x;
+    d->y = (s32)c->y;
+    d->z = (s32)c->z;
+    d->ax = (s32)(c->f108 * 572.957795130822);
+    d->ay = (s32)(c->heading * 572.957795130822);
+    d->az = (s32)(c->f110 * 572.957795130822);
+}
+
+/* 0x41c29f */
+static void make_car_objects(void)
+{
+    int i, w;
+
+    g_car_objs = pool_calloc((size_t)g_driver_count * sizeof(*g_car_objs));
+    g_arrow_objs = pool_calloc((size_t)(g_driver_count + 2) * sizeof(*g_arrow_objs));
+    g_race_bytes -= 2 * (s32)sizeof(*g_arrow_objs);
+    g_wheel_objs = pool_calloc((size_t)g_driver_count * 4 * sizeof(*g_wheel_objs));
+    g_car7_objs = pool_calloc((size_t)g_driver_count * sizeof(*g_car7_objs));
+    g_shadow_objs = pool_calloc((size_t)g_driver_count * sizeof(*g_shadow_objs));
+    for (i = 0; i < g_driver_count; i++) {
+        const struct car *c = &g_cars[i];
+        const struct race_driver *d = &g_drivers[i];
+
+        at_car(&g_car_objs[i], c);
+        if (scene_obj_create(&g_car_objs[i], g_car_meshes[d->car], 1, 100 + i, 0, -1, 0) != 0) {
+            log_printf("Error while creating car\n");
+            exit(1);
+        }
+        if (!r_54f930) {
+            scene_obj_link(&g_car_objs[i]);
+        }
+        for (w = 0; w < 4; w++) {
+            struct scene_desc *wd = &g_wheel_objs[4 * i + w];
+
+            at_car(wd, c);
+            if (scene_obj_create(wd, g_driver_wheels[i][w], 1, 210, 0, -1, 0) != 0) {
+                log_printf("Error while creating wheel\n");
+                exit(1);
+            }
+            scene_obj_link(wd);
+        }
+        if (d->car == 7 && !r_54f930) {
+            at_car(&g_car7_objs[i], c);
+            if (scene_obj_create(&g_car7_objs[i], g_car7[i], 2, 200, 0, -1, 0) != 0) {
+                log_printf("Error while creating car\n");
+                exit(1);
+            }
+            scene_obj_link(&g_car7_objs[i]);
+        }
+        at_car(&g_shadow_objs[i], c);
+        if (scene_obj_create(&g_shadow_objs[i], g_car_hulls[i].v, 0, 200, 0, -1, 0) != 0) {
+            log_printf("Error while creating shadow\n");
+            exit(1);
+        }
+        if (!r_54f930) {
+            scene_obj_link(&g_shadow_objs[i]);
+        }
+        if (d->control == 2 && i != 0) {
+            /* A network player's name, drawn into the blank page. */
+            static const s32 name[15] = {
+                1, 1, 0, -100, 0, 8, 0, 0, 0, 0x1700, 0x900, 0, 0x18000, 0x16666, 0
+            };
+            struct scene_desc *ad = &g_arrow_objs[i];
+
+            memcpy(s_name_meshes[i], name, sizeof(name));
+            s_name_meshes[i][7] = i * 0x1800;
+            s_name_meshes[i][9] = i * 0x1800 + 0x1700;
+            ad->x = (s32)c->x;
+            ad->y = (s32)c->y;
+            ad->z = (s32)c->z;
+            ad->ax = ad->ay = ad->az = 0;
+            if (scene_obj_create(ad, s_name_meshes[i], 8, 200, 0, -1, 0) != 0) {
+                log_printf("Error while creating car name obj\n");
+                exit(1);
+            }
+            scene_obj_link(ad);
+        }
+    }
+    /* The arrows over the players' cars, made but shown later. */
+    for (i = 0; i < 1 + (g_two_players == 1); i++) {
+        struct scene_desc *ad = &g_arrow_objs[g_driver_count + i];
+        const struct car *c = &g_cars[i];
+
+        ad->x = (s32)c->x;
+        ad->y = (s32)c->y;
+        ad->z = (s32)c->z;
+        ad->ax = ad->ay = ad->az = 0;
+        if (scene_obj_create(ad, s_arrow_mesh, 2, 200, 0, -1, 0) != 0) {
+            log_printf("Error while creating car arrow obj\n");
+            exit(1);
+        }
+    }
+    /* The original also draws network players' names into the blank
+     * texture page here; there is no network play. */
+}
+
+/* 0x41b470 */
 void race_make_world(void)
 {
     static const s32 sizes[0x18] = {
         1, 0, 0, 0, 0, 0, 0, 0, 2, 1, 1, 1, 1, 1, 1, 0, 2, 1, 1, 1, 1, 1, 1, 0
     };
     struct scene *sc = scene_create();
-    int n = g_level_plc[0], i;
+    int n = g_level_plc[0], i, first357 = -1;
 
     sc->perspective = r_525e68;
     sc->zoom = g_mirror >= 3 ? -1.0 : 1.0;
@@ -84,11 +367,7 @@ void race_make_world(void)
     if (raster_set_grid(0xc800, 0xc800, 1500) == -1) {
         mem_out_of_memory();
     }
-    g_world = mem_calloc(g_race_pool, (u32)n * sizeof(*g_world));
-    g_race_bytes += n * (s32)sizeof(*g_world);
-    if (g_world == NULL) {
-        mem_out_of_memory();
-    }
+    g_world = pool_calloc((size_t)n * sizeof(*g_world));
     r_54f954 = r_563cf0 = r_563d78 = r_552f78 = r_54f9b8 = 0;
     for (i = 0; i < n; i++) {
         struct plc_entry *e = plc_at(g_level_plc, i);
@@ -99,15 +378,39 @@ void race_make_world(void)
     }
     for (i = 0; i < n; i++) {
         struct plc_entry *e = plc_at(g_level_plc, i);
+        s32 t = e->type;
 
-        if (e->type >= 100 && placed(i, e->type)) {
-            create(i, e);
-            if (e->type >= 150 && e->type < 200) {
-                r_54f954++;
+        if (t < 100 || skipped(i, t)) {
+            continue;
+        }
+        create(i, e);
+        if (t >= 150 && t < 200) {
+            r_54f954++;
+        }
+        if (t >= 400 && t < 500 && !(t == 406 && g_track == 1 && !r_553084)) {
+            r_563cf0++;
+        }
+        if (((t >= 350 && t < 360) || t == 304) && !(t == 357 && !r_553084)) {
+            r_563d78++;
+            if (t == 357 && first357 == -1) {
+                first357 = i;
+                r_563cf0++;
             }
         }
+        if (t >= 300 && t < 350 && !(t == 302 && g_track == 1 && !r_553084)) {
+            r_552f78++;
+        }
+        if (t == 354) {
+            r_54f9b8++;
+        }
     }
-    STUB(0x41bb1f, "race_make_world: collision objects, flares, cars, srf");
+    make_collision_objects();
+    make_sound_sources(first357);
+    make_flares();
+    make_movers();
+    make_car_objects();
+    r_563d98 = 0;
+    sc->gather_radius = g_track == 2 ? 25 : 0;
 }
 
 /* An all zero screen: the back buffer's colour 0 shows the 3D. */
@@ -147,45 +450,32 @@ void race_draw_view(const struct scene *sc, struct scene_obj *const *objs, int n
  * start line, drawn into the back buffer. */
 void race_debug_view(void)
 {
-    static u32 start;
     struct scene *sc = g_scene;
-    struct scene_obj *objs[1500];
-    const struct plc_entry *a, *b;
-    double t, f, ha, hb, dh, h, x, y, z;
-    int n = 0, i, piece;
+    static struct scene_obj *objs[3000];
+    const struct car *c;
+    int n;
 
-    if (sc == NULL || g_track_link_count < 2) {
+    if (sc == NULL || g_cars == NULL) {
         return;
     }
-    /* Two pieces a second, gliding from one to the next. */
-    if (start == 0) {
-        start = plat_time_ms();
-    }
-    t = (plat_time_ms() - start) / 500.0;
-    piece = (int)t % (g_track_link_count - 1);
-    f = t - (int)t;
-    a = plc_at(g_level_plc, g_track_links[piece].plc);
-    b = plc_at(g_level_plc, g_track_links[piece + 1].plc);
-    ha = g_track_links[piece].heading;
-    hb = g_track_links[piece + 1].heading;
-    dh = remainder(hb - ha, 2.0 * M_PI);
-    h = ha + dh * f;
-    x = a->x + (b->x - a->x) * f + 0x6400;
-    y = a->y + (b->y - a->y) * f;
-    z = a->z + (b->z - a->z) * f + 0x6400;
-    sc->x = x + sin(h) * 600.0;
-    sc->y = y + 300.0;
-    sc->z = z - cos(h) * 600.0;
-    sc->target_x = (s32)x;
-    sc->target_y = (s32)y;
-    sc->target_z = (s32)z;
+    /* Behind and above the first car, looking at it. */
+    c = &g_cars[0];
+    sc->x = c->x - cos(c->heading) * 500.0;
+    sc->y = c->y + 250.0;
+    sc->z = c->z - sin(c->heading) * 500.0;
+    sc->target_x = (s32)c->x;
+    sc->target_y = (s32)c->y;
+    sc->target_z = (s32)c->z;
     scene_look_at(sc);
-    for (i = 0; i < g_level_plc[0] && n < 1500; i++) {
-        if (g_world[i].obj != NULL) {
-            objs[n++] = g_world[i].obj;
-        }
-    }
+    n = scene_gather(sc, 24, objs, 3000);
     race_draw_view(sc, objs, n);
     video_set_palette(g_level_col + 8);
     present_back_buffer();
+}
+
+s32 race_sound_3d(int a, int b, int sample, int c, int d, int e, int f, float x, float z)
+{
+    (void)a; (void)b; (void)sample; (void)c; (void)d; (void)e; (void)f; (void)x; (void)z;
+    STUB(0x43e710, "race_sound_3d");
+    return 0;
 }

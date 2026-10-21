@@ -1,0 +1,30 @@
+# Each driver's physics block (0x563d54, 0x1d0 bytes).
+struct car_phys 0x1d0 0x563d54
+0x000 double mass               0x4923b8 by car
+0x008 double f008               8000.0
+0x010 double f010               0.6
+0x018 double f018               |rear wheel x| * 0.04596 * 1.5
+0x020 double f020               |front wheel x| * 0.04596 * 2
+0x028 double heading
+0x030 double f030
+0x038 double f038[3]            x * 0.04596
+0x050 double f050[3]            z * 0.04596
+0x068 double f068               x * 0.04596
+0x070 double f070               z * 0.04596
+0x078 double f078
+0x080 double f080
+0x088 double f088
+0x090 double f090
+0x098 double f098
+0x0ac double f0ac
+0x0b4 s32 f0b4
+0x0b8 s32 f0b8
+0x0bc s32 f0bc
+0x0c0 s32 f0c0
+0x0c4 double f0c4               4.2
+0x0cc double f0cc               4.2
+0x0d4 s32 f0d4
+0x0d8 double f0d8
+0x0f0 double corner_x[4]        the body's corners, scaled
+0x110 double corner_z[4]
+0x130 double f130               4.0

@@ -91,6 +91,7 @@ int scene_obj_unlink(struct scene_desc *desc);
 int scene_obj_set_mesh(struct scene_desc *desc, const s32 *mesh, int tex, int klass,
                        int f20, int radius, int group);
 void scene_look_at(struct scene *sc);
+int scene_gather(const struct scene *sc, int radius, struct scene_obj **out, int max);
 
 /* Texture slots (0x63c5c8): each the first of the slot's 256 x 256
  * pages of 8 bit texels, which follow at 64 KB steps. */

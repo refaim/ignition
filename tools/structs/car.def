@@ -1,0 +1,89 @@
+# A car in the race (0x5daffc, one a driver). Fields are named by
+# offset until their use is known; comments say what 0x41d190 puts in.
+struct car 0x484c 0x5daffc
+0x000 double x                  world position
+0x008 double y                  up; 30 - the start piece's y
+0x010 double z
+0x048 double rear_x             the position less the rear axle
+0x050 double rear_z
+0x058 double f058
+0x060 double f060
+0x068 double front_x            the position plus the front axle
+0x070 double front_z
+0x078 double f078
+0x080 double f080
+0x0a8 double f0a8               10.0
+0x0b8 double f0b8
+0x0c0 double f0c0
+0x0c8 double f0c8               0.97
+0x0d0 double f0d0               0.97
+0x0d8 double f0d8               35.0
+0x0e0 double f0e0               20.0
+0x0e8 double f0e8               50.0
+0x0f0 double f0f0               80.0
+0x0f8 double heading            radians, 0..2 pi
+0x100 double f100
+0x108 double f108
+0x110 double f110
+0x120 double f120               y
+0x128 double f128               y
+0x130 double f130               0.01
+0x148 double f148               0.4
+0x150 double f150
+0x158 double f158
+0x270 s32 f270
+0x27c s32 gear                  1 at the start
+0x280 double f280               gear * 5 - 5
+0x290 double f290
+0x2fc double corner_x[4]        the body's corners, 1.1 times
+0x31c double corner_z[4]
+0x340 s32 f340
+0x344 s32 f344
+0x348 s32 f348
+0x34c s32 f34c
+0x350 s32 f350
+0x364 s32 f364
+0x368 s32 f368
+0x36c s32 f36c
+0x370 s32 f370
+0x378 s32 f378
+0x39c s32 grid                  the place on the grid
+0x3a0 s32 f3a0
+0x3dc s32 f3dc[8] 0x28
+0x51c s32 f51c
+0x520 s32 f520
+0x524 s32 ai_skill              0x499880, by car and difficulty
+0x528 s32 f528
+0x534 double f534               100.0
+0x53c s32 f53c
+0x540 s32 f540
+0x544 s32 f544
+0x548 s32 f548
+0x54c s32 f54c
+0x550 s32 f550
+0x554 s32 f554
+0x558 s32 f558
+0x564 s32 f564
+0x568 s32 f568
+0x580 s32 f580
+0x584 double f584
+0x58c double f58c
+0x594 double f594               1.0
+0x59c double f59c
+0x5ac s32 front_axle            the front wheels' distance
+0x5b0 s32 rear_axle
+0x5b4 s32 max_x                 the body's extent
+0x5b8 s32 min_x
+0x5bc s32 max_z
+0x5c0 s32 min_z
+0x5c4 s32 f5c4
+0x604 s32 f604
+0x60c double f60c
+0x614 double clock              the race's time, set each frame
+0x61c double f61c
+0x624 double f624
+0x62c double f62c
+0x634 float f634                10.0
+0x638 float f638                4000.0
+0x4834 double f4834
+0x483c double f483c

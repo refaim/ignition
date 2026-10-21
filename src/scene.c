@@ -361,3 +361,38 @@ void scene_obj_rows(const struct scene_obj *o, double m[3][3])
         m[i][1] = -m[i][1];
     }
 }
+
+/* Stage 2 of the frame (0x448e70), without its sphere cull: the
+ * objects in the square of cells `radius` around the camera's cell,
+ * the cell lists checked as the original checks them. */
+int scene_gather(const struct scene *sc, int radius, struct scene_obj **out, int max)
+{
+    int gh, cx, cz, x, z, n = 0;
+
+    if (s_grid == NULL) {
+        return 0;
+    }
+    gh = (s_world_h + 0xff) / 256;
+    cx = (int)sc->x / 256;
+    cz = (int)sc->z / 256;
+    for (z = cz - radius; z <= cz + radius; z++) {
+        if (z < 0 || z >= gh) {
+            continue;
+        }
+        for (x = cx - radius; x <= cx + radius; x++) {
+            struct scene_obj *o;
+
+            if (x < 0 || x >= s_grid_w) {
+                continue;
+            }
+            o = s_grid[z * s_grid_w + x];
+            if (o == NULL || o->self != o) {
+                continue;
+            }
+            for (; o != NULL && n < max; o = o->next) {
+                out[n++] = o;
+            }
+        }
+    }
+    return n;
+}

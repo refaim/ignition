@@ -1,0 +1,13 @@
+# A collision object (0x54f904, placements of type 150..199).
+struct coll_obj 0x98 0x54f904
+0x000 s32 type                  the placement's type - 150
+0x004 s32 plc
+0x008 s32 f08
+0x00c double x
+0x014 double y
+0x01c double z
+0x024 double f24[12]
+0x084 float f84
+0x088 float f88
+0x090 float f90
+0x094 s32 f94

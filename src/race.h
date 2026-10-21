@@ -138,6 +138,44 @@ extern u8 *g_race_pics[8];              /* s_pangfx .. pokal */
 struct scene_desc;
 extern struct scene_desc *g_world;      /* 0x54f908, one a placement */
 
+/* A sound a placement makes (0x553078). */
+struct sound_src {
+    s32 plc;
+    s32 voice;
+};
+
+/* A lens flare's placement (0x563c68, 12 bytes). */
+struct flare {
+    s32 plc;
+    s32 kind;               /* the type - 350 */
+    s32 f08;
+};
+
+/* A moving placement (0x525e6c, 16 bytes). */
+struct mover {
+    s32 plc;
+    s32 type;
+    s32 phase;
+    s32 f0c;
+};
+
+struct coll_obj;
+extern struct coll_obj *g_coll_objs;            /* 0x54f904 */
+extern struct sound_src *g_sound_srcs;          /* 0x553078 */
+extern struct flare *g_flares;                  /* 0x563c68 */
+extern struct scene_desc *g_flare_objs;         /* 0x553460 */
+extern struct mover *g_movers;                  /* 0x525e6c */
+extern struct scene_desc *g_car_objs;           /* 0x5db02c */
+extern struct scene_desc *g_wheel_objs;         /* 0x552fbc */
+extern struct scene_desc *g_car7_objs;          /* 0x552f70 */
+extern struct scene_desc *g_shadow_objs;        /* 0x552f20 */
+extern struct scene_desc *g_arrow_objs;         /* 0x553788 */
+extern s32 r_54f954, r_563cf0, r_563d78, r_552f78, r_54f9b8, r_54f930, r_563d98;
+
+/* 0x43e710: a sound at a place, louder nearer the camera's car. Not
+ * ported yet: returns 0. */
+s32 race_sound_3d(int a, int b, int sample, int c, int d, int e, int f, float x, float z);
+
 void race_make_world(void);
 void race_debug_view(void);
 struct scene;

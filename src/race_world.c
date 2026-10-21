@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "canvas.h"
 #include "game.h"
 #include "platform.h"
 #include "gl3d.h"
@@ -126,8 +127,16 @@ void race_draw_view(const struct scene *sc, struct scene_obj *const *objs, int n
         return;
     }
     /* The original's 320 x 200 fills a 4:3 picture; a wider drawable
-     * sees more at the sides. */
+     * sees more at the sides. The view is drawn at the internal
+     * resolution, as wide as the drawable's shape. */
     vw = 320.0 * ((double)w / h) / (4.0 / 3.0);
+    {
+        int w43, ih;
+
+        canvas_internal_size(&w43, &ih);
+        w = (int)(w43 * vw / 320.0 + 0.5);
+        h = ih;
+    }
     gl3d_view_begin(w, h, vw, 200.0);
     gl3d_draw(sc, objs, n, (vw - 320.0) / 2, 0);
     gl3d_view_end();

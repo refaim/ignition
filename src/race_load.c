@@ -173,7 +173,8 @@ static void read_settings(void)
     track_names();
 
     g_driver_count = race_cfg(0x153);
-    g_race_screen_size = race_cfg(0x10b);
+    /* The port's NATIVE (3) takes the 800 x 600 layout. */
+    g_race_screen_size = race_cfg(0x10b) > 2 ? 2 : race_cfg(0x10b);
     r_527f28 = r_563c6c = race_cfg(0x107);
     g_two_players = race_cfg(0x004);
     r_552f10 = race_cfg(0x197);

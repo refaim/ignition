@@ -185,7 +185,7 @@ int canvas_ready(void)
 
 /* The internal resolution's height, and the width of a 4:3 picture
  * of it: a logical 320 x 200 is shown 4:3. */
-static void internal_size(int *w43, int *h)
+void canvas_internal_size(int *w43, int *h)
 {
     static const int heights[3] = { 200, 480, 600 };
     int dw = 0, dh = 0;
@@ -214,7 +214,7 @@ static void surface_make(struct surface *s)
 {
     int w43, h;
 
-    internal_size(&w43, &h);
+    canvas_internal_size(&w43, &h);
     s->pw = (int)((double)s->lw * w43 / 320.0 + 0.5);
     s->ph = (int)((double)s->lh * h / 200.0 + 0.5);
     s->tex = r_texture(GL_R8, s->pw, s->ph, NULL);

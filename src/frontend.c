@@ -168,6 +168,45 @@ void menu_sound_tick(void)
     }
 }
 
+/* RESOLUTION offers 320X200, 640X480 and 800X600; the port adds
+ * NATIVE, the window's size, as a fourth value. A choice's visuals are
+ * its two labels, then two for each value. */
+static void add_native_resolution(void)
+{
+    static struct menu_visual visuals[MENU_LANGUAGES][10];
+    static int done;
+    int lang, slot, k;
+
+    if (done) {
+        return;
+    }
+    done = 1;
+    for (lang = 0; lang < MENU_LANGUAGES; lang++) {
+        for (slot = 0; slot < MENU_PAGE_SLOTS; slot++) {
+            struct menu_page *p = g_menu_pages[lang][slot];
+
+            if (p == NULL) {
+                continue;
+            }
+            for (k = 0; k < p->count; k++) {
+                struct menu_item *it = &p->items[k];
+
+                if (it->value != (s32 *)(g_settings + SET_RESOLUTION) || it->max != 2
+                    || it->visuals == visuals[lang]) {
+                    continue;
+                }
+                memcpy(visuals[lang], it->visuals, 8 * sizeof(visuals[lang][0]));
+                visuals[lang][8] = visuals[lang][6];
+                visuals[lang][9] = visuals[lang][7];
+                visuals[lang][8].text = "NATIVE";
+                visuals[lang][9].text = "NATIVE";
+                it->visuals = visuals[lang];
+                it->max = 3;
+            }
+        }
+    }
+}
+
 /* The internal resolution the RESOLUTION option asks for, from the
  * settings file: the menu reads it before the settings are loaded. */
 static int menu_resolution(void)
@@ -186,9 +225,18 @@ static int menu_resolution(void)
 /* 0x403da0 */
 void menu_present(void)
 {
+    static s32 last = -1;
     const s32 *mode = g_menu_modes[g_menu_mode_index];
+    s32 res = settings_get(SET_RESOLUTION);
 
     menu_sound_tick();
+    /* The RESOLUTION option takes effect as it changes. */
+    if (res >= CANVAS_320X200 && res <= CANVAS_NATIVE && res != last) {
+        if (last != -1) {
+            canvas_set_resolution(res);
+        }
+        last = res;
+    }
     video_blit(g_menu_screen, mode[0], 0, 0, mode[0], mode[1], 0, 0);
     video_flip();
 }
@@ -494,6 +542,7 @@ int menu_init(void)
     g_menu_palette = malloc(0x300);
     file_read_at("baltazar\\data\\menu.col", g_menu_palette, 0x300, 8);
     g_menu_screen = malloc(0xfb41);
+    add_native_resolution();
     canvas_set_resolution(menu_resolution());
     canvas_register(g_menu_screen, 320, 200);
     g_menu_camera = scene_create();

@@ -38,6 +38,9 @@ void canvas_set_resolution(int mode);
 int canvas_resolution(void);
 /* Overrides the setting (the --res option). */
 void canvas_force_resolution(int mode);
+/* The internal resolution's height and the width a 4:3 picture of it
+ * takes (320 x 200 for the original's). */
+void canvas_internal_size(int *w43, int *h);
 
 /* Makes `key`, a buffer of lw x lh, a GPU surface. */
 void canvas_register(u8 *key, int lw, int lh);

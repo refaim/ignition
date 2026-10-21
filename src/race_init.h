@@ -49,6 +49,10 @@ extern s32 r_563d88;                    /* the race is over */
 extern s32 r_552f18;                    /* 4 racing; 2, 3 waiting for the network */
 extern s32 r_54f97c, r_5532c8, r_553070, r_553280, r_5530b8, r_563da0, r_5daff0;
 extern s32 r_5532b0, r_601674;
+extern s32 r_5530e0;                    /* steps since the start */
+extern s32 r_552f58;                    /* the screen went back to one view */
+extern s32 r_563c60;                    /* the ghost stops recording */
+extern double r_54f980;
 extern double r_552e48;
 extern s32 r_5285c0;                    /* the car being updated */
 

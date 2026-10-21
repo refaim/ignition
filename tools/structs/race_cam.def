@@ -2,7 +2,9 @@
 # it behind its car.
 struct race_cam 0xc8 0x5daff4
 0x000 double height             the car's y + 1400
-0x008 double heading
+0x008 double heading            eases toward fa8, 0..2 pi (0x43c910)
+0x028 double back_heading       eases toward back_target, 0..2 pi
+0x030 double f30                * 0.98 a step; toward 150 while the car is out
 0x038 double f38
 0x040 double f40                420.0
 0x048 double f48                450.0
@@ -11,9 +13,15 @@ struct race_cam 0xc8 0x5daff4
 0x058 s32 f58                   200
 0x05c s32 f5c                   164
 0x060 double f60                25.0
+0x068 double yaw                900 - heading in tenths of a degree, 0..3599
+0x070 double back_yaw           the same from back_heading
 0x078 double x                  dist / 2 behind the car
 0x080 double y
 0x088 double z
+0x090 double back_x             dist / 2 ahead of the car, for looking back
+0x098 double back_y
+0x0a0 double back_z
 0x0a8 double fa8                the car's heading
 0x0b0 double fb0                the car's f110
+0x0b8 double back_target        the car's heading + pi
 0x0c0 double fc0

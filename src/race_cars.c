@@ -318,7 +318,7 @@ static void init_car(int i, const s32 rear[CAR_MODELS], const s32 front[CAR_MODE
     c->f0e0 = 20.0;
     c->f0e8 = 50.0;
     c->f0f0 = 80.0;
-    c->f150 = c->f158 = 0;
+    c->surface[0] = c->surface[1] = c->surface[2] = c->surface[3] = 0;
     c->f120 = y;
     c->f128 = y;
     c->f148 = 0.4;
@@ -346,7 +346,7 @@ static void init_car(int i, const s32 rear[CAR_MODELS], const s32 front[CAR_MODE
     c->f378 = (s32)((c->f568 + 4) / (double)g_track_link_count * 4.0);
     c->f340 = 0;
     c->f4834 = c->f483c = 0;
-    c->f580 = 0;
+    c->wrong_way = 0;
     c->f584 = (c->f108 * 57.295779513082195 + c->f0b8) * 10.0;
     c->f58c = (c->f110 * 57.295779513082195 + c->f0c0) * 10.0;
     c->f594 = 1.0;

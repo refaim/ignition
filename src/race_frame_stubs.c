@@ -8,49 +8,10 @@
 #include "sound.h"
 #include "stubs.h"
 
-/* 0x420d10 */
-void race_f_420d10(void)
-{
-    STUB(0x420d10, "race_f_420d10");
-}
-
 /* 0x417d20 */
 void race_f_417d20(void)
 {
     STUB(0x417d20, "race_f_417d20");
-}
-
-/* 0x427d70 */
-void race_f_427d70(int car)
-{
-    (void)car;
-    STUB(0x427d70, "race_f_427d70");
-}
-
-/* 0x422680 */
-void race_f_422680(double dt)
-{
-    (void)dt;
-    STUB(0x422680, "race_f_422680");
-}
-
-/* 0x435910 */
-void race_f_435910(void)
-{
-    STUB(0x435910, "race_f_435910");
-}
-
-/* 0x43d540 */
-void race_f_43d540(int car)
-{
-    (void)car;
-    STUB(0x43d540, "race_f_43d540");
-}
-
-/* 0x43c910 */
-void race_f_43c910(void)
-{
-    STUB(0x43c910, "race_f_43c910");
 }
 
 /* 0x42bc20 */
@@ -65,24 +26,10 @@ void race_f_434580(void)
     STUB(0x434580, "race_f_434580");
 }
 
-/* 0x43edf0 */
-void race_f_43edf0(int view, double dt)
-{
-    (void)view;
-    (void)dt;
-    STUB(0x43edf0, "race_f_43edf0");
-}
-
 /* 0x445940 */
 void race_f_445940(void)
 {
     STUB(0x445940, "race_f_445940");
-}
-
-/* 0x435350 */
-void race_f_435350(void)
-{
-    STUB(0x435350, "race_f_435350");
 }
 
 /* 0x420eb0 */
@@ -91,12 +38,6 @@ void race_f_420eb0(void)
     STUB(0x420eb0, "race_f_420eb0");
 }
 
-
-/* 0x442ec0 */
-void race_f_442ec0(void)
-{
-    STUB(0x442ec0, "race_f_442ec0");
-}
 
 /* 0x444450 */
 void race_f_444450(void)
@@ -148,16 +89,3 @@ void sound_tick_race(void)
     sound_tick();
 }
 
-/* 0x442030 */
-void race_f_442030(int accel, int brake, int steer, int action)
-{
-    (void)accel; (void)brake; (void)steer; (void)action;
-    STUB(0x442030, "race_f_442030");
-}
-
-/* 0x444e20 */
-void race_f_444e20(int car)
-{
-    (void)car;
-    STUB(0x444e20, "race_f_444e20");
-}

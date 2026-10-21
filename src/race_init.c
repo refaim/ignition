@@ -273,7 +273,8 @@ s32 g_view_car;                             /* 0x4949a4, the car the camera foll
 s32 g_champ_points[RACE_DRIVERS];           /* 0x563d00 */
 s32 r_6192a0[10], r_6192c8[10];
 s32 *g_ghost_buffer;                        /* 0x563d7c */
-s32 r_553280, r_553070, r_5530a8, r_563c60, r_527f40, r_527f44, r_619310, r_563c38;
+s32 r_553280, r_553070, r_5530a8, r_563c60, r_619310, r_563c38;
+s32 r_527f40[11];                          /* 0x527f40, by car */
 s32 r_5285d0, r_5db03c, r_5530e0, r_494990, r_563c04, r_552f58, r_54f97c, r_563ce0;
 s32 r_5531b8, r_54f988, r_563da0, r_5daff0, r_525e2c, r_601674, r_5531c0, r_5531c4;
 s32 r_5532c8, r_563c64, r_552f4c, r_54f978, r_563d44, r_527f24, r_5530b8, r_552f54;
@@ -287,7 +288,7 @@ void race_reset_state(void)
 
     r_553280 = r_553070 = r_5530a8 = r_563c60 = 0;
     r_54f980 = -1.0;
-    r_527f40 = r_527f44 = -1;
+    r_527f40[0] = r_527f40[1] = -1;
     g_race_clock = 0;
     r_619310 = g_track;
     r_563c38 = r_5285d0 = 0;
@@ -390,7 +391,7 @@ void race_load_world(void)
             cd_play_track(g_race_cd_track);
         }
     }
-    STUB(0x420c00, "race_frame_time");
+    race_frame_time();
     race_clear_laps();
 }
 

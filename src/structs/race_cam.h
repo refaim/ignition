@@ -11,8 +11,10 @@
 #pragma pack(push, 1)
 struct race_cam {
     double height;  /* +0x0, the car's y + 1400 */
-    double heading;  /* +0x8 */
-    u8 pad_010[0x28];
+    double heading;  /* +0x8, eases toward fa8, 0..2 pi (0x43c910) */
+    u8 pad_010[0x18];
+    double back_heading;  /* +0x28, eases toward back_target, 0..2 pi */
+    double f30;  /* +0x30, * 0.98 a step; toward 150 while the car is out */
     double f38;  /* +0x38 */
     double f40;  /* +0x40, 420.0 */
     double f48;  /* +0x48, 450.0 */
@@ -21,20 +23,25 @@ struct race_cam {
     s32 f58;  /* +0x58, 200 */
     s32 f5c;  /* +0x5c, 164 */
     double f60;  /* +0x60, 25.0 */
-    u8 pad_068[0x10];
+    double yaw;  /* +0x68, 900 - heading in tenths of a degree, 0..3599 */
+    double back_yaw;  /* +0x70, the same from back_heading */
     double x;  /* +0x78, dist / 2 behind the car */
     double y;  /* +0x80 */
     double z;  /* +0x88 */
-    u8 pad_090[0x18];
+    double back_x;  /* +0x90, dist / 2 ahead of the car, for looking back */
+    double back_y;  /* +0x98 */
+    double back_z;  /* +0xa0 */
     double fa8;  /* +0xa8, the car's heading */
     double fb0;  /* +0xb0, the car's f110 */
-    u8 pad_0b8[0x8];
+    double back_target;  /* +0xb8, the car's heading + pi */
     double fc0;  /* +0xc0 */
 };
 #pragma pack(pop)
 
 _Static_assert(offsetof(struct race_cam, height) == 0x0, "race_cam.height");
 _Static_assert(offsetof(struct race_cam, heading) == 0x8, "race_cam.heading");
+_Static_assert(offsetof(struct race_cam, back_heading) == 0x28, "race_cam.back_heading");
+_Static_assert(offsetof(struct race_cam, f30) == 0x30, "race_cam.f30");
 _Static_assert(offsetof(struct race_cam, f38) == 0x38, "race_cam.f38");
 _Static_assert(offsetof(struct race_cam, f40) == 0x40, "race_cam.f40");
 _Static_assert(offsetof(struct race_cam, f48) == 0x48, "race_cam.f48");
@@ -43,11 +50,17 @@ _Static_assert(offsetof(struct race_cam, dist) == 0x54, "race_cam.dist");
 _Static_assert(offsetof(struct race_cam, f58) == 0x58, "race_cam.f58");
 _Static_assert(offsetof(struct race_cam, f5c) == 0x5c, "race_cam.f5c");
 _Static_assert(offsetof(struct race_cam, f60) == 0x60, "race_cam.f60");
+_Static_assert(offsetof(struct race_cam, yaw) == 0x68, "race_cam.yaw");
+_Static_assert(offsetof(struct race_cam, back_yaw) == 0x70, "race_cam.back_yaw");
 _Static_assert(offsetof(struct race_cam, x) == 0x78, "race_cam.x");
 _Static_assert(offsetof(struct race_cam, y) == 0x80, "race_cam.y");
 _Static_assert(offsetof(struct race_cam, z) == 0x88, "race_cam.z");
+_Static_assert(offsetof(struct race_cam, back_x) == 0x90, "race_cam.back_x");
+_Static_assert(offsetof(struct race_cam, back_y) == 0x98, "race_cam.back_y");
+_Static_assert(offsetof(struct race_cam, back_z) == 0xa0, "race_cam.back_z");
 _Static_assert(offsetof(struct race_cam, fa8) == 0xa8, "race_cam.fa8");
 _Static_assert(offsetof(struct race_cam, fb0) == 0xb0, "race_cam.fb0");
+_Static_assert(offsetof(struct race_cam, back_target) == 0xb8, "race_cam.back_target");
 _Static_assert(offsetof(struct race_cam, fc0) == 0xc0, "race_cam.fc0");
 _Static_assert(sizeof(struct race_cam) == 0xc8, "race_cam");
 

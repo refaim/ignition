@@ -17,9 +17,13 @@
 #include "input.h"
 #include "lisa/font.h"
 #include "race.h"
+#include "race_camera.h"
 #include "race_cars.h"
+#include "race_control.h"
 #include "race_frame.h"
 #include "race_init.h"
+#include "race_phys.h"
+#include "race_respawn.h"
 #include "startup.h"
 #include "stubs.h"
 #include "video.h"
@@ -59,6 +63,59 @@ double race_frame_time(void)
     return dt > 10.799999999999999 ? 10.8 : dt;
 }
 
+/* 0x4410c0: the race's clock into each car still racing: its total time
+ * and the time of the lap it is on. */
+static void race_lap_clocks(void)
+{
+    int i;
+
+    for (i = 0; i < g_driver_count; i++) {
+        struct car *c = &g_cars[i];
+
+        if (c->f528 == 0 && (g_race_mode == 3 || c->laps < 3)) {
+            c->f3a4 = r_553090;
+            c->lap_time = r_553090 - c->lap_start;
+        }
+    }
+}
+
+/* 0x420d10
+ * The start: r_552e48 counts the ticks since the race was shown, and
+ * at 200 (or once the network says go, r_5532c8 1) the race's clock
+ * starts from 0 and r_552e48 becomes -1, which lets the engines drive.
+ * Also keeps the lap clocks, and splits the screen again once the
+ * first player has finished a two player race. */
+static void race_countdown(void)
+{
+    if (r_552e48 > -1.0) {
+        r_552e48 = (s32)(g_frame_time - r_525e48) * 0.036;
+        if (!(r_552e48 < 200.0) || r_5532c8 == 1) {
+            if (r_552e48 < 200.0) {
+                r_525e48 = (s32)-(5555.555555555556 - (double)g_frame_time);
+            } else {
+                race_frame_time();
+                race_clear_laps();
+            }
+            r_552e48 = -1.0;
+            r_5532c8 = 2;
+            g_cars[0].net_event = 10;
+        }
+    }
+    r_5530e0++;
+    race_lap_clocks();
+    if (g_two_players == 1 && g_cars[0].f528 == 1 && g_cars[1].f528 == 1 && r_552f58 == 0
+        && !(r_54f980 < 120.0)) {
+        r_552f58 = 1;
+        race_init_hud();
+    }
+    if (r_563da0 > 0) {
+        r_563da0 = (s32)(r_563da0 + r_563d80);
+        if (r_563da0 > 20) {
+            r_563c60 = 1;
+        }
+    }
+}
+
 /* Steps the race when a tick or more has passed. */
 static void race_step(double dt)
 {
@@ -66,7 +123,7 @@ static void race_step(double dt)
 
     g_race_clock += dt;
     r_563d80 = dt;
-    race_f_420d10();
+    race_countdown();
     /* The countdowns after the last car finishes or the player
      * gives up. */
     if (r_5532ac_t > 0) {
@@ -104,24 +161,24 @@ static void race_step(double dt)
         if (g_cars[i].f528 == 1) {
             finished++;
         }
-        if (g_cars[i].f431c == 10 && !r_5532c8) {
+        if (g_cars[i].net_event == 10 && !r_5532c8) {
             r_5532c8 = 1;
         }
     }
     r_553070 = 0;
     r_553280 = finished;
     for (i = 0; i < g_driver_count; i++) {
-        race_f_427d70(i);
+        race_car_center(i);
     }
-    race_f_422680(r_563d80);
+    race_physics(r_563d80);
     for (r_5285c0 = 0; r_5285c0 < g_driver_count; r_5285c0++) {
         struct car *c = &g_cars[r_5285c0];
 
         if (c->y > 1800.0) {
-            race_f_435910();
+            race_respawn();
         }
         if (c->f354 == 0 && c->f358 == 0) {
-            race_f_43d540(r_5285c0);
+            race_place_car(r_5285c0);
         } else {
             c->f118 = 0;
             if (g_drivers[r_5285c0].control == 2 && r_5285c0 != 0
@@ -129,14 +186,14 @@ static void race_step(double dt)
                 scene_obj_unlink(&g_arrow_objs[r_5285c0]);
             }
         }
-        race_f_43c910();
+        race_chase_camera();
         race_f_42bc20();
         if (r_5daff8 == 1) {
             sound_tick_race();
         }
         if (r_5285c0 == 0 || (r_5285c0 == 1 && g_two_players == 1)) {
             race_f_434580();
-            race_f_43edf0(r_5285c0, dt);
+            race_wrong_way(r_5285c0, dt);
         }
     }
     if (g_race_mode == 2 && r_552e48 == -1.0 && r_553068 == 1 && r_5530b8 == 0) {
@@ -146,7 +203,7 @@ static void race_step(double dt)
 
     /* The fixed steps, one a tick. */
     for (r_54f9a0_acc += dt; r_54f9a0_acc >= 1.0; r_54f9a0_acc -= 1.0) {
-        race_f_435350();
+        race_car_visuals();
         if (!r_563da0 && !r_5daff0) {
             race_f_420eb0();
         }
@@ -158,13 +215,13 @@ static void race_step(double dt)
                 race_f_420e60();
             }
             if (control == 2 && r_5285c0 != 0) {
-                race_f_442ec0();
+                race_boost();
                 if (g_drivers[r_5285c0].car == 8) {
                     race_f_444450();
                 }
             }
             if (c->f350 == 1) {
-                race_f_435910();
+                race_respawn();
             }
         }
         race_f_434190();

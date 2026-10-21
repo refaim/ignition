@@ -5,6 +5,7 @@
 #include "input.h"
 #include "race.h"
 #include "race_cars.h"
+#include "race_control.h"
 #include "race_frame.h"
 #include "race_init.h"
 
@@ -93,7 +94,7 @@ static void race_keyboard(void)
         } else if (c->look_back == 1 && !input_key_down(d->keys[7])) {
             c->look_back = 0;
         }
-        race_f_442030(accel, brake, c->steer, c->action);
+        race_control(accel, brake, c->steer, c->action);
     }
     /* The gears, a press at a time, unless they are automatic. */
     if (key(d, 4) && d->f28 != d->keys[4] && d->f0c == 0) {
@@ -112,7 +113,7 @@ static void race_keyboard(void)
         d->f28 = 0;
     }
     if (d->f0c == 1 && c->gear != 0) {
-        race_f_444e20(i);
+        race_gearbox(i);
     }
     c->last_action = c->action;
 }
@@ -126,6 +127,6 @@ void race_f_420e60(void)
         }
         race_keyboard();
     } else {
-        race_f_442030(0, 0, 0, 0);
+        race_control(0, 0, 0, 0);
     }
 }

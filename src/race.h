@@ -179,6 +179,7 @@ extern s32 r_54f954, r_563cf0, r_563d78, r_552f78, r_54f9b8, r_54f930, r_563d98;
 s32 race_sound_3d(int a, int b, int sample, int c, int d, int e, int f, float x, float z);
 
 void race_make_world(void);
+void race_place_car(int car);
 void race_debug_view(void);
 struct scene;
 struct scene_obj;

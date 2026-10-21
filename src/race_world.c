@@ -15,6 +15,7 @@
 #include "lisa/mem.h"
 #include "race.h"
 #include "race_cars.h"
+#include "race_init.h"
 #include "structs/coll_obj.h"
 #include "scene.h"
 #include "startup.h"
@@ -446,27 +447,29 @@ void race_draw_view(const struct scene *sc, struct scene_obj *const *objs, int n
     video_set_layer(gl3d_view_texture(), s_clear);
 }
 
-/* Until the race's cameras are ported: the track from behind the
- * start line, drawn into the back buffer. */
+/* Until the view (0x436990) is ported: the chase camera of the car
+ * being watched, drawn into the back buffer. Angles are in tenths of a
+ * degree. */
 void race_debug_view(void)
 {
     struct scene *sc = g_scene;
     static struct scene_obj *objs[3000];
+    const struct race_cam *cam;
     const struct car *c;
     int n;
 
-    if (sc == NULL || g_cars == NULL) {
+    if (sc == NULL || g_cars == NULL || g_race_cams == NULL) {
         return;
     }
-    /* Behind and above the first car, looking at it. */
-    c = &g_cars[0];
-    sc->x = c->x - cos(c->heading) * 500.0;
-    sc->y = c->y + 250.0;
-    sc->z = c->z - sin(c->heading) * 500.0;
-    sc->target_x = (s32)c->x;
-    sc->target_y = (s32)c->y;
-    sc->target_z = (s32)c->z;
-    scene_look_at(sc);
+    c = &g_cars[g_view_car];
+    cam = &g_race_cams[g_view_car];
+    sc->stage_lookat = 0;
+    sc->x = c->look_back ? cam->back_x : cam->x;
+    sc->z = c->look_back ? cam->back_z : cam->z;
+    sc->y = cam->height + cam->f38;
+    sc->pitch = cam->f40 + cam->f48 + cam->f30;
+    sc->yaw = c->look_back ? cam->back_yaw : cam->yaw;
+    sc->roll = 0.0;
     n = scene_gather(sc, 24, objs, 3000);
     race_draw_view(sc, objs, n);
     video_set_palette(g_level_col + 8);
@@ -478,4 +481,132 @@ s32 race_sound_3d(int a, int b, int sample, int c, int d, int e, int f, float x,
     (void)a; (void)b; (void)sample; (void)c; (void)d; (void)e; (void)f; (void)x; (void)z;
     STUB(0x43e710, "race_sound_3d");
     return 0;
+}
+
+/* An object at the car's place, with angles in tenths of a degree. */
+static void place_at(struct scene_desc *d, const struct car *c, s32 ax, s32 az)
+{
+    d->x = (s32)c->x;
+    d->y = (s32)c->y;
+    d->z = (s32)c->z;
+    d->ax = ax;
+    d->ay = (s32)(c->heading * 57.295779513082195 * 10.0);
+    d->az = az;
+}
+
+/* A front wheel turned by the steering: the model's wheel rotated about
+ * its hub, then put back at the hub. */
+static void steer_wheel(s32 *dst, int w, int model, double cs, double sn)
+{
+    const s32 *src = g_wheel_meshes[4 * model + w];
+    int v;
+
+    for (v = 0; v < g_wheel_info[4 * model + w].verts; v++) {
+        double x = src[2 + 3 * v], z = src[4 + 3 * v];
+
+        dst[2 + 3 * v] = (s32)(x * cs - sn * z + g_wheel_dx[4 * model + w]);
+        dst[4 + 3 * v] = (s32)(cs * z + sn * x + g_wheel_dz[4 * model + w]);
+    }
+}
+
+/* 0x43d540
+ * Puts car i's objects where the car is: the body (and car 7's extra
+ * part), the front wheels turned by the steering, the four wheels, the
+ * shadow on the ground (pushed out by the height, as the sun is low)
+ * and the name over other players' cars. A squashed car's wheels lie
+ * flat. Also sets the box the collisions use. */
+void race_place_car(int i)
+{
+    const struct car *c = &g_cars[i];
+    int model = g_drivers[i].car, w, v;
+    double up = c->y - c->f120, sx, sy, sz;
+    double t = c->steer_shown * 0.017453292519943334, cs = cos(t), sn = sin(t);
+    struct car_hull *h = &g_car_hulls[i];
+
+    place_at(&g_car_objs[i], c, (s32)c->f584, (s32)c->f58c);
+    if (r_54f930 == 0 && scene_obj_move(&g_car_objs[i]) != 0) {
+        log_printf("FEL VID LI_MOVEOBJECT HANDLE CAR\n");
+    }
+    if (c->f558 == 0) {
+        steer_wheel(g_driver_wheels[i][0], 0, model, cs, sn);
+        steer_wheel(g_driver_wheels[i][1], 1, model, cs, sn);
+    } else {
+        for (w = 0; w < 4; w++) {
+            const s32 *src = g_wheel_meshes[4 * model + w];
+            s32 *dst = g_driver_wheels[i][w];
+
+            for (v = 0; v < g_wheel_info[4 * model + w].verts; v++) {
+                dst[2 + 3 * v] = (s32)((double)src[2 + 3 * v] + g_wheel_dx[4 * model + w]);
+                dst[3 + 3 * v] = src[4 + 3 * v];
+                dst[4 + 3 * v] = (s32)((double)src[3 + 3 * v] + g_wheel_dz[4 * model + w] * 1.5);
+            }
+        }
+    }
+    for (w = 0; w < 4; w++) {
+        struct scene_desc *d = &g_wheel_objs[4 * i + w];
+
+        d->x = (s32)c->x;
+        d->y = (s32)c->y;
+        d->z = (s32)c->z;
+        d->ax = (s32)(c->f108 * 572.957795130822);
+        d->ay = (s32)(c->heading * 572.957795130822);
+        d->az = (s32)(c->f110 * 572.957795130822);
+        if (scene_obj_move(d) != 0) {
+            log_printf("FEL VID LI_MOVEOBJECT HANDLE WHEEL\n");
+        }
+    }
+    if (model == 7 && r_54f930 == 0) {
+        place_at(&g_car7_objs[i], c, (s32)c->f584, (s32)c->f58c);
+        if (scene_obj_move(&g_car7_objs[i]) != 0) {
+            log_printf("FEL VID LI_MOVEOBJECT HANDLE CAR\n");
+        }
+    }
+    sx = c->x + up;
+    sz = c->z + up;
+    sy = c->f120;
+    if (!(0.0 <= sx) || !(sx <= 50000.0)) {
+        sx = 28000.0;
+    }
+    if (sy < -2500.0 || sy > 2500.0) {
+        sx = 0.0;
+    }
+    if (!(0.0 <= sz) || !(sz <= 50000.0)) {
+        sz = 28000.0;
+    }
+    h->v[2] = (s32)c->corner_x[2];
+    h->v[4] = (s32)(c->corner_z[2] * 1.2);
+    h->v[5] = (s32)c->corner_x[3];
+    h->v[7] = (s32)(c->corner_z[3] * 1.2);
+    h->v[8] = (s32)c->corner_x[1];
+    h->v[10] = (s32)(c->corner_z[1] * 1.2);
+    h->v[11] = (s32)c->corner_x[0];
+    h->v[13] = (s32)(c->corner_z[0] * 1.2);
+    {
+        struct scene_desc *d = &g_shadow_objs[i];
+
+        d->x = (s32)sx;
+        d->y = (s32)sy;
+        d->z = (s32)sz;
+        d->ax = (s32)(c->f108 * 572.957795130822);
+        d->ay = (s32)(c->heading * 572.957795130822);
+        d->az = (s32)(c->f110 * 572.957795130822);
+        if (r_54f930 == 0 && scene_obj_move(d) != 0) {
+            log_printf("FEL VID LI_MOVEOBJECT HANDLE SHADOW\n");
+        }
+    }
+    if (g_drivers[i].control == 2 && i != 0) {
+        struct scene_desc *d = &g_arrow_objs[i];
+
+        d->x = (s32)c->x;
+        d->y = (s32)c->y;
+        d->z = (s32)c->z;
+        d->ax = d->ay = d->az = 0;
+        if (d->in_grid == 1) {
+            if (scene_obj_move(d) != 0) {
+                log_printf("FEL VID LI_MOVEOBJECT HANDLE CAR NAME\n");
+            }
+        } else if (scene_obj_link(d) != 0) {
+            log_printf("FEL VID LI_PLACEOBJECT HANDLE CAR NAME\n");
+        }
+    }
 }

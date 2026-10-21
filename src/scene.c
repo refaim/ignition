@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "race_data.h"
 #include "scene.h"
 
 struct scene *g_scene;                      /* 0x63c5f0 */
@@ -395,4 +396,71 @@ int scene_gather(const struct scene *sc, int radius, struct scene_obj **out, int
         }
     }
     return n;
+}
+
+s32 g_scene_group;                          /* 0x63c5d8 */
+
+/* The original keeps an object's address where the port keeps its
+ * index; the .SRF names objects by their offset into the pool. */
+int scene_obj_index(const struct scene_obj *o)
+{
+    return (int)(o - s_objs);
+}
+
+struct scene_obj *scene_obj_at(int index)
+{
+    return &s_objs[index];
+}
+
+/* 0x448c30
+ * Gathers the objects of the cells in a disc ahead of the camera (where
+ * by its pitch and yaw) into the visible list. With g_scene_group set
+ * only objects of no group or that group come in. The original walks
+ * past the grid's ends into other memory; the port skips such cells. */
+int scene_gather_view(void)
+{
+    struct scene *sc = g_scene;
+    int sector, start, row, cells, k, n = 0;
+    const s32 *ahead;
+
+    sc->obj_count = 0;
+    sector = (int)(sc->pitch * 0.01) * 36 + (int)(sc->yaw * 0.01);
+    if (sector < 0 || sector >= 36 * 36) {
+        sector = 0;
+    }
+    ahead = &g_cells_ahead[2 * sector];
+    cells = s_grid_w * ((s_world_h + 0xff) / 256);
+    start = ((int)sc->z / 256 + ahead[1] + g_cells_disc[1]) * s_grid_w
+            + (int)sc->x / 256 + ahead[0] + g_cells_disc[2];
+    /* Rows of (cells, step to the next row); the last step is -5000. */
+    for (row = 3;; row += 2) {
+        for (k = 0; k < g_cells_disc[row]; k++) {
+            struct scene_obj *o;
+
+            start++;
+            if (s_grid == NULL || start < 0 || start >= cells) {
+                continue;
+            }
+            o = s_grid[start];
+            if (o == NULL || o->self != o) {
+                continue;
+            }
+            for (; o != NULL; o = o->next) {
+                if (o->self != o || n >= 1500) {
+                    continue;
+                }
+                if (g_scene_group != 0 && o->group != 0 && o->group != g_scene_group) {
+                    continue;
+                }
+                g_scene_visible[n++] = o;
+            }
+        }
+        if (g_cells_disc[row + 1] == -5000) {
+            break;
+        }
+        start += g_cells_disc[row + 1] + s_grid_w;
+    }
+    sc->obj_count = n;
+    sc->obj_count_all = n;
+    return 0;
 }

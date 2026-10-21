@@ -13,7 +13,12 @@ struct car {
     double x;  /* +0x0, world position */
     double y;  /* +0x8, up; 30 - the start piece's y */
     double z;  /* +0x10 */
-    u8 pad_018[0x30];
+    double dx;  /* +0x18, the move in the last step */
+    double vy;  /* +0x20, down; 0.2 of gravity a step */
+    double dz;  /* +0x28 */
+    double prev_dx;  /* +0x30, the step before's */
+    double f038;  /* +0x38, 0 on a respawn */
+    double prev_dz;  /* +0x40 */
     double rear_x;  /* +0x48, the position less the rear axle */
     double rear_z;  /* +0x50 */
     double f058;  /* +0x58 */
@@ -22,9 +27,12 @@ struct car {
     double front_z;  /* +0x70 */
     double f078;  /* +0x78 */
     double f080;  /* +0x80 */
-    u8 pad_088[0x20];
+    double rear_dir;  /* +0x88, the rear axle's direction of travel */
+    double slip;  /* +0x90, fmod(rear_dir - heading, 2 pi): forward within pi / 2 */
+    double front_dir;  /* +0x98 */
+    double front_slip;  /* +0xa0, front_dir - heading - steer, 0..2 pi */
     double f0a8;  /* +0xa8, 10.0 */
-    u8 pad_0b0[0x8];
+    double steer_shown;  /* +0xb0, the steering wheel's angle, easing to f0a8 * steer */
     double f0b8;  /* +0xb8 */
     double f0c0;  /* +0xc0 */
     double f0c8;  /* +0xc8, 0.97 */
@@ -43,19 +51,23 @@ struct car {
     double f130;  /* +0x130, 0.01 */
     u8 pad_138[0x10];
     double f148;  /* +0x148, 0.4 */
-    double f150;  /* +0x150 */
-    double f158;  /* +0x158 */
-    u8 pad_160[0x110];
+    s32 surface[4];  /* +0x150, each corner's surface type, -1 none: front two, rear two */
+    s32 last_surface[4];  /* +0x160 */
+    s32 srf_cache[64];  /* +0x170, each corner's last SRF record with a surface (0x40 bytes) */
     s32 f270;  /* +0x270 */
-    u8 pad_274[0x8];
+    s32 deck;  /* +0x274, on an upper deck (surfaces 10..19) */
+    s32 landing;  /* +0x278, 1..4 after touching down, 0 none */
     s32 gear;  /* +0x27c, 1 at the start */
     double f280;  /* +0x280, gear * 5 - 5 */
-    u8 pad_288[0x8];
+    double rpm;  /* +0x288, 0..100 */
     double f290;  /* +0x290 */
-    u8 pad_298[0x64];
+    s32 f298;  /* +0x298 */
+    s32 f29c;  /* +0x29c, 0 on a respawn */
+    u8 pad_2a0[0x58];
+    s32 skid;  /* +0x2f8, frames of tyre screech left */
     double corner_x[4];  /* +0x2fc, the body's corners, 1.1 times */
     double corner_z[4];  /* +0x31c */
-    u8 pad_33c[0x4];
+    s32 f33c;  /* +0x33c, 0 on a respawn */
     s32 f340;  /* +0x340 */
     s32 steer;  /* +0x344, -100 left .. 100 right */
     s32 f348;  /* +0x348 */
@@ -69,18 +81,18 @@ struct car {
     s32 f368;  /* +0x368 */
     s32 f36c;  /* +0x36c */
     s32 f370;  /* +0x370 */
-    u8 pad_374[0x4];
+    s32 laps;  /* +0x374, laps done */
     s32 f378;  /* +0x378 */
     u8 pad_37c[0x20];
     s32 grid;  /* +0x39c, the place on the grid */
     s32 f3a0;  /* +0x3a0 */
     double f3a4;  /* +0x3a4, lap timing, cleared by 0x41f8f0 */
-    u8 pad_3ac[0x8];
+    double lap_time;  /* +0x3ac, the lap so far */
     double f3b4;  /* +0x3b4 */
     double f3bc;  /* +0x3bc */
     double f3c4;  /* +0x3c4 */
     double f3cc;  /* +0x3cc */
-    u8 pad_3d4[0x8];
+    double lap_start;  /* +0x3d4 */
     struct { s32 v; u8 pad[0x24]; } f3dc[8];  /* +0x3dc */
     s32 f51c;  /* +0x51c */
     s32 f520;  /* +0x520 */
@@ -97,17 +109,19 @@ struct car {
     s32 f550;  /* +0x550 */
     s32 f554;  /* +0x554 */
     s32 f558;  /* +0x558 */
-    u8 pad_55c[0x8];
+    s32 f55c;  /* +0x55c, squashed */
+    s32 f560;  /* +0x560, squashed here, not over the network */
     s32 f564;  /* +0x564 */
     s32 f568;  /* +0x568 */
-    u8 pad_56c[0x14];
-    s32 f580;  /* +0x580 */
+    u8 pad_56c[0x10];
+    s32 wall_contact;  /* +0x57c, touched a wall: run the wall collision */
+    s32 wrong_way;  /* +0x580, ticks facing back down the road, 0..120 (0x43edf0) */
     double f584;  /* +0x584 */
     double f58c;  /* +0x58c */
     double f594;  /* +0x594, 1.0 */
     double f59c;  /* +0x59c */
     s32 look_back;  /* +0x5a4, the look back key is held */
-    u8 pad_5a8[0x4];
+    s32 throttle_on;  /* +0x5a8, the throttle is past 50 */
     s32 front_axle;  /* +0x5ac, the front wheels' distance */
     s32 rear_axle;  /* +0x5b0 */
     s32 max_x;  /* +0x5b4, the body's extent */
@@ -115,9 +129,15 @@ struct car {
     s32 max_z;  /* +0x5bc */
     s32 min_z;  /* +0x5c0 */
     s32 f5c4;  /* +0x5c4 */
-    u8 pad_5c8[0x3c];
+    s32 off_track;  /* +0x5c8, frames with all corners off the track */
+    double probe_scale;  /* +0x5cc, 1 + km/h / 220 */
+    u8 pad_5d4[0x4];
+    s32 wall_surface[4];  /* +0x5d8, each corner's surface, full-size probe */
+    u8 pad_5e8[0x14];
+    s32 narrow;  /* +0x5fc, the corners were probed at half size */
+    s32 last_narrow;  /* +0x600 */
     s32 f604;  /* +0x604 */
-    u8 pad_608[0x4];
+    s32 seg_frames;  /* +0x608, frames in the current segment, 0..29 */
     double f60c;  /* +0x60c */
     double clock;  /* +0x614, the race's time, set each frame */
     double f61c;  /* +0x61c */
@@ -125,21 +145,30 @@ struct car {
     double f62c;  /* +0x62c */
     float f634;  /* +0x634, 10.0 */
     float f638;  /* +0x638, 4000.0 */
-    u8 pad_63c[0x368];
+    u8 pad_63c[0x4];
+    double center_dx;  /* +0x640, the middle of the axles' moves (0x427d70) */
+    double center_dz;  /* +0x648 */
+    u8 pad_650[0x354];
     s32 steer_pull;  /* +0x9a4, 50 left, -50 right, easing to 0 */
     double steer_heading;  /* +0x9a8, the road's heading at the car, less pi / 2 */
-    u8 pad_9b0[0x396c];
-    s32 f431c;  /* +0x431c */
-    u8 pad_4320[0x514];
+    double wall_segs[2000];  /* +0x9b0, 500 of x1, z1, x2, z2 near the car (0x428b90) */
+    s32 wall_count;  /* +0x4830, segments in wall_segs */
     double f4834;  /* +0x4834 */
     double f483c;  /* +0x483c */
-    u8 pad_4844[0x8];
+    s32 net_event;  /* +0x4844, 10 the race started; -1 exploded, -2 in water */
+    s32 net_fresh;  /* +0x4848, a packet came this frame */
 };
 #pragma pack(pop)
 
 _Static_assert(offsetof(struct car, x) == 0x0, "car.x");
 _Static_assert(offsetof(struct car, y) == 0x8, "car.y");
 _Static_assert(offsetof(struct car, z) == 0x10, "car.z");
+_Static_assert(offsetof(struct car, dx) == 0x18, "car.dx");
+_Static_assert(offsetof(struct car, vy) == 0x20, "car.vy");
+_Static_assert(offsetof(struct car, dz) == 0x28, "car.dz");
+_Static_assert(offsetof(struct car, prev_dx) == 0x30, "car.prev_dx");
+_Static_assert(offsetof(struct car, f038) == 0x38, "car.f038");
+_Static_assert(offsetof(struct car, prev_dz) == 0x40, "car.prev_dz");
 _Static_assert(offsetof(struct car, rear_x) == 0x48, "car.rear_x");
 _Static_assert(offsetof(struct car, rear_z) == 0x50, "car.rear_z");
 _Static_assert(offsetof(struct car, f058) == 0x58, "car.f058");
@@ -148,7 +177,12 @@ _Static_assert(offsetof(struct car, front_x) == 0x68, "car.front_x");
 _Static_assert(offsetof(struct car, front_z) == 0x70, "car.front_z");
 _Static_assert(offsetof(struct car, f078) == 0x78, "car.f078");
 _Static_assert(offsetof(struct car, f080) == 0x80, "car.f080");
+_Static_assert(offsetof(struct car, rear_dir) == 0x88, "car.rear_dir");
+_Static_assert(offsetof(struct car, slip) == 0x90, "car.slip");
+_Static_assert(offsetof(struct car, front_dir) == 0x98, "car.front_dir");
+_Static_assert(offsetof(struct car, front_slip) == 0xa0, "car.front_slip");
 _Static_assert(offsetof(struct car, f0a8) == 0xa8, "car.f0a8");
+_Static_assert(offsetof(struct car, steer_shown) == 0xb0, "car.steer_shown");
 _Static_assert(offsetof(struct car, f0b8) == 0xb8, "car.f0b8");
 _Static_assert(offsetof(struct car, f0c0) == 0xc0, "car.f0c0");
 _Static_assert(offsetof(struct car, f0c8) == 0xc8, "car.f0c8");
@@ -166,14 +200,22 @@ _Static_assert(offsetof(struct car, f120) == 0x120, "car.f120");
 _Static_assert(offsetof(struct car, f128) == 0x128, "car.f128");
 _Static_assert(offsetof(struct car, f130) == 0x130, "car.f130");
 _Static_assert(offsetof(struct car, f148) == 0x148, "car.f148");
-_Static_assert(offsetof(struct car, f150) == 0x150, "car.f150");
-_Static_assert(offsetof(struct car, f158) == 0x158, "car.f158");
+_Static_assert(offsetof(struct car, surface) == 0x150, "car.surface");
+_Static_assert(offsetof(struct car, last_surface) == 0x160, "car.last_surface");
+_Static_assert(offsetof(struct car, srf_cache) == 0x170, "car.srf_cache");
 _Static_assert(offsetof(struct car, f270) == 0x270, "car.f270");
+_Static_assert(offsetof(struct car, deck) == 0x274, "car.deck");
+_Static_assert(offsetof(struct car, landing) == 0x278, "car.landing");
 _Static_assert(offsetof(struct car, gear) == 0x27c, "car.gear");
 _Static_assert(offsetof(struct car, f280) == 0x280, "car.f280");
+_Static_assert(offsetof(struct car, rpm) == 0x288, "car.rpm");
 _Static_assert(offsetof(struct car, f290) == 0x290, "car.f290");
+_Static_assert(offsetof(struct car, f298) == 0x298, "car.f298");
+_Static_assert(offsetof(struct car, f29c) == 0x29c, "car.f29c");
+_Static_assert(offsetof(struct car, skid) == 0x2f8, "car.skid");
 _Static_assert(offsetof(struct car, corner_x) == 0x2fc, "car.corner_x");
 _Static_assert(offsetof(struct car, corner_z) == 0x31c, "car.corner_z");
+_Static_assert(offsetof(struct car, f33c) == 0x33c, "car.f33c");
 _Static_assert(offsetof(struct car, f340) == 0x340, "car.f340");
 _Static_assert(offsetof(struct car, steer) == 0x344, "car.steer");
 _Static_assert(offsetof(struct car, f348) == 0x348, "car.f348");
@@ -186,14 +228,17 @@ _Static_assert(offsetof(struct car, f364) == 0x364, "car.f364");
 _Static_assert(offsetof(struct car, f368) == 0x368, "car.f368");
 _Static_assert(offsetof(struct car, f36c) == 0x36c, "car.f36c");
 _Static_assert(offsetof(struct car, f370) == 0x370, "car.f370");
+_Static_assert(offsetof(struct car, laps) == 0x374, "car.laps");
 _Static_assert(offsetof(struct car, f378) == 0x378, "car.f378");
 _Static_assert(offsetof(struct car, grid) == 0x39c, "car.grid");
 _Static_assert(offsetof(struct car, f3a0) == 0x3a0, "car.f3a0");
 _Static_assert(offsetof(struct car, f3a4) == 0x3a4, "car.f3a4");
+_Static_assert(offsetof(struct car, lap_time) == 0x3ac, "car.lap_time");
 _Static_assert(offsetof(struct car, f3b4) == 0x3b4, "car.f3b4");
 _Static_assert(offsetof(struct car, f3bc) == 0x3bc, "car.f3bc");
 _Static_assert(offsetof(struct car, f3c4) == 0x3c4, "car.f3c4");
 _Static_assert(offsetof(struct car, f3cc) == 0x3cc, "car.f3cc");
+_Static_assert(offsetof(struct car, lap_start) == 0x3d4, "car.lap_start");
 _Static_assert(offsetof(struct car, f3dc) == 0x3dc, "car.f3dc");
 _Static_assert(offsetof(struct car, f51c) == 0x51c, "car.f51c");
 _Static_assert(offsetof(struct car, f520) == 0x520, "car.f520");
@@ -210,14 +255,18 @@ _Static_assert(offsetof(struct car, f54c) == 0x54c, "car.f54c");
 _Static_assert(offsetof(struct car, f550) == 0x550, "car.f550");
 _Static_assert(offsetof(struct car, f554) == 0x554, "car.f554");
 _Static_assert(offsetof(struct car, f558) == 0x558, "car.f558");
+_Static_assert(offsetof(struct car, f55c) == 0x55c, "car.f55c");
+_Static_assert(offsetof(struct car, f560) == 0x560, "car.f560");
 _Static_assert(offsetof(struct car, f564) == 0x564, "car.f564");
 _Static_assert(offsetof(struct car, f568) == 0x568, "car.f568");
-_Static_assert(offsetof(struct car, f580) == 0x580, "car.f580");
+_Static_assert(offsetof(struct car, wall_contact) == 0x57c, "car.wall_contact");
+_Static_assert(offsetof(struct car, wrong_way) == 0x580, "car.wrong_way");
 _Static_assert(offsetof(struct car, f584) == 0x584, "car.f584");
 _Static_assert(offsetof(struct car, f58c) == 0x58c, "car.f58c");
 _Static_assert(offsetof(struct car, f594) == 0x594, "car.f594");
 _Static_assert(offsetof(struct car, f59c) == 0x59c, "car.f59c");
 _Static_assert(offsetof(struct car, look_back) == 0x5a4, "car.look_back");
+_Static_assert(offsetof(struct car, throttle_on) == 0x5a8, "car.throttle_on");
 _Static_assert(offsetof(struct car, front_axle) == 0x5ac, "car.front_axle");
 _Static_assert(offsetof(struct car, rear_axle) == 0x5b0, "car.rear_axle");
 _Static_assert(offsetof(struct car, max_x) == 0x5b4, "car.max_x");
@@ -225,7 +274,13 @@ _Static_assert(offsetof(struct car, min_x) == 0x5b8, "car.min_x");
 _Static_assert(offsetof(struct car, max_z) == 0x5bc, "car.max_z");
 _Static_assert(offsetof(struct car, min_z) == 0x5c0, "car.min_z");
 _Static_assert(offsetof(struct car, f5c4) == 0x5c4, "car.f5c4");
+_Static_assert(offsetof(struct car, off_track) == 0x5c8, "car.off_track");
+_Static_assert(offsetof(struct car, probe_scale) == 0x5cc, "car.probe_scale");
+_Static_assert(offsetof(struct car, wall_surface) == 0x5d8, "car.wall_surface");
+_Static_assert(offsetof(struct car, narrow) == 0x5fc, "car.narrow");
+_Static_assert(offsetof(struct car, last_narrow) == 0x600, "car.last_narrow");
 _Static_assert(offsetof(struct car, f604) == 0x604, "car.f604");
+_Static_assert(offsetof(struct car, seg_frames) == 0x608, "car.seg_frames");
 _Static_assert(offsetof(struct car, f60c) == 0x60c, "car.f60c");
 _Static_assert(offsetof(struct car, clock) == 0x614, "car.clock");
 _Static_assert(offsetof(struct car, f61c) == 0x61c, "car.f61c");
@@ -233,11 +288,16 @@ _Static_assert(offsetof(struct car, f624) == 0x624, "car.f624");
 _Static_assert(offsetof(struct car, f62c) == 0x62c, "car.f62c");
 _Static_assert(offsetof(struct car, f634) == 0x634, "car.f634");
 _Static_assert(offsetof(struct car, f638) == 0x638, "car.f638");
+_Static_assert(offsetof(struct car, center_dx) == 0x640, "car.center_dx");
+_Static_assert(offsetof(struct car, center_dz) == 0x648, "car.center_dz");
 _Static_assert(offsetof(struct car, steer_pull) == 0x9a4, "car.steer_pull");
 _Static_assert(offsetof(struct car, steer_heading) == 0x9a8, "car.steer_heading");
-_Static_assert(offsetof(struct car, f431c) == 0x431c, "car.f431c");
+_Static_assert(offsetof(struct car, wall_segs) == 0x9b0, "car.wall_segs");
+_Static_assert(offsetof(struct car, wall_count) == 0x4830, "car.wall_count");
 _Static_assert(offsetof(struct car, f4834) == 0x4834, "car.f4834");
 _Static_assert(offsetof(struct car, f483c) == 0x483c, "car.f483c");
+_Static_assert(offsetof(struct car, net_event) == 0x4844, "car.net_event");
+_Static_assert(offsetof(struct car, net_fresh) == 0x4848, "car.net_fresh");
 _Static_assert(sizeof(struct car) == 0x484c, "car");
 
 #endif /* IGN_STRUCT_CAR_H */

@@ -23,6 +23,31 @@ TABLES = [
     ("g_car_codes", 0x497200, "char4", 11, True),
     # Nine doubles a car, the first written at load (0x41988f).
     ("g_car_493988", 0x493988, "double", 11 * 9, False),
+    # The controls (0x442030..0x444e20), by car; the twelfth entry is
+    # the computer's.
+    ("g_boost_force", 0x4923E8, "s32", 12, True),
+    ("g_steer_speed", 0x492418, "double", 12, True),
+    ("g_steer_range", 0x492478, "double", 12, True),
+    ("g_steer_rate", 0x4924D8, "s32", 12, True),
+    ("g_boost_refill", 0x492508, "double", 12, True),
+    # The gears' speed scale, by difficulty.
+    ("g_gear_scale", 0x4929E8, "double", 4, True),
+    # The grid cells 0x448c30 gathers: a disc as its first row and
+    # column, then a count of cells and a step to the next row, until
+    # -5000; and where the disc sits ahead of the camera, a dx, dz in
+    # cells by the camera's pitch (36 rows) and yaw (36).
+    ("g_cells_disc", 0x499FA0, "s32", 43, True),
+    ("g_cells_ahead", 0x49A058, "s32", 36 * 36 * 2, True),
+    # Ground contact (0x424570): grip by surface type 0..29; a car's
+    # traction by car, the twelfth the computer's; the grip's scale by
+    # difficulty; the computer's grip, eleven a difficulty, indexed
+    # through g_car_499a90.
+    ("g_surface_grip", 0x4972D0, "double", 30, True),
+    ("g_car_traction", 0x492358, "double", 12, True),
+    ("g_grip_scale", 0x492A08, "double", 4, True),
+    ("g_ai_grip", 0x499930, "double", 44, True),
+    # A smoke puff's frames on its page: u0, v0, u1, v1 for nine.
+    ("g_smoke_frames", 0x497FF8, "s32", 36, True),
 ]
 
 

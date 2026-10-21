@@ -92,6 +92,11 @@ int scene_obj_set_mesh(struct scene_desc *desc, const s32 *mesh, int tex, int kl
                        int f20, int radius, int group);
 void scene_look_at(struct scene *sc);
 int scene_gather(const struct scene *sc, int radius, struct scene_obj **out, int max);
+/* 0x448c30: the cells ahead of g_scene's camera into g_scene_visible. */
+int scene_gather_view(void);
+extern s32 g_scene_group;                   /* 0x63c5d8, 0 all groups */
+int scene_obj_index(const struct scene_obj *o);
+struct scene_obj *scene_obj_at(int index);
 
 /* Texture slots (0x63c5c8): each the first of the slot's 256 x 256
  * pages of 8 bit texels, which follow at 64 KB steps. */

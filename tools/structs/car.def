@@ -4,6 +4,12 @@ struct car 0x484c 0x5daffc
 0x000 double x                  world position
 0x008 double y                  up; 30 - the start piece's y
 0x010 double z
+0x018 double dx                 the move in the last step
+0x020 double vy                 down; 0.2 of gravity a step
+0x028 double dz
+0x030 double prev_dx            the step before's
+0x038 double f038               0 on a respawn
+0x040 double prev_dz
 0x048 double rear_x             the position less the rear axle
 0x050 double rear_z
 0x058 double f058
@@ -12,7 +18,12 @@ struct car 0x484c 0x5daffc
 0x070 double front_z
 0x078 double f078
 0x080 double f080
+0x088 double rear_dir           the rear axle's direction of travel
+0x090 double slip               fmod(rear_dir - heading, 2 pi): forward within pi / 2
+0x098 double front_dir
+0x0a0 double front_slip         front_dir - heading - steer, 0..2 pi
 0x0a8 double f0a8               10.0
+0x0b0 double steer_shown        the steering wheel's angle, easing to f0a8 * steer
 0x0b8 double f0b8
 0x0c0 double f0c0
 0x0c8 double f0c8               0.97
@@ -30,14 +41,22 @@ struct car 0x484c 0x5daffc
 0x128 double f128               y
 0x130 double f130               0.01
 0x148 double f148               0.4
-0x150 double f150
-0x158 double f158
+0x150 s32 surface[4]            each corner's surface type, -1 none: front two, rear two
+0x160 s32 last_surface[4]
+0x170 s32 srf_cache[64]         each corner's last SRF record with a surface (0x40 bytes)
 0x270 s32 f270
+0x274 s32 deck                  on an upper deck (surfaces 10..19)
+0x278 s32 landing             1..4 after touching down, 0 none
 0x27c s32 gear                  1 at the start
 0x280 double f280               gear * 5 - 5
+0x288 double rpm                0..100
 0x290 double f290
+0x298 s32 f298
+0x29c s32 f29c                 0 on a respawn
+0x2f8 s32 skid                  frames of tyre screech left
 0x2fc double corner_x[4]        the body's corners, 1.1 times
 0x31c double corner_z[4]
+0x33c s32 f33c                 0 on a respawn
 0x340 s32 f340
 0x344 s32 steer                 -100 left .. 100 right
 0x348 s32 f348
@@ -50,14 +69,17 @@ struct car 0x484c 0x5daffc
 0x368 s32 f368
 0x36c s32 f36c
 0x370 s32 f370
+0x374 s32 laps                  laps done
 0x378 s32 f378
 0x39c s32 grid                  the place on the grid
 0x3a0 s32 f3a0
 0x3a4 double f3a4               lap timing, cleared by 0x41f8f0
+0x3ac double lap_time            the lap so far
 0x3b4 double f3b4
 0x3bc double f3bc
 0x3c4 double f3c4
 0x3cc double f3cc
+0x3d4 double lap_start
 0x3dc s32 f3dc[8] 0x28
 0x51c s32 f51c
 0x520 s32 f520
@@ -74,14 +96,18 @@ struct car 0x484c 0x5daffc
 0x550 s32 f550
 0x554 s32 f554
 0x558 s32 f558
+0x55c s32 f55c                 squashed
+0x560 s32 f560                 squashed here, not over the network
 0x564 s32 f564
 0x568 s32 f568
-0x580 s32 f580
+0x57c s32 wall_contact         touched a wall: run the wall collision
+0x580 s32 wrong_way            ticks facing back down the road, 0..120 (0x43edf0)
 0x584 double f584
 0x58c double f58c
 0x594 double f594               1.0
 0x59c double f59c
 0x5a4 s32 look_back             the look back key is held
+0x5a8 s32 throttle_on           the throttle is past 50
 0x5ac s32 front_axle            the front wheels' distance
 0x5b0 s32 rear_axle
 0x5b4 s32 max_x                 the body's extent
@@ -89,16 +115,27 @@ struct car 0x484c 0x5daffc
 0x5bc s32 max_z
 0x5c0 s32 min_z
 0x5c4 s32 f5c4
+0x5c8 s32 off_track             frames with all corners off the track
+0x5cc double probe_scale       1 + km/h / 220
+0x5d8 s32 wall_surface[4]       each corner's surface, full-size probe
+0x5fc s32 narrow                the corners were probed at half size
+0x600 s32 last_narrow
 0x604 s32 f604
+0x608 s32 seg_frames           frames in the current segment, 0..29
 0x60c double f60c
 0x614 double clock              the race's time, set each frame
 0x61c double f61c
 0x624 double f624
 0x62c double f62c
+0x640 double center_dx          the middle of the axles' moves (0x427d70)
+0x648 double center_dz
 0x634 float f634                10.0
 0x638 float f638                4000.0
-0x431c s32 f431c
+0x4830 s32 wall_count            segments in wall_segs
+0x4844 s32 net_event            10 the race started; -1 exploded, -2 in water
+0x4848 s32 net_fresh            a packet came this frame
 0x9a4 s32 steer_pull            50 left, -50 right, easing to 0
 0x9a8 double steer_heading     the road's heading at the car, less pi / 2
+0x9b0 double wall_segs[2000]    500 of x1, z1, x2, z2 near the car (0x428b90)
 0x4834 double f4834
 0x483c double f483c

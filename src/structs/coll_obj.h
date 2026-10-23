@@ -19,7 +19,7 @@ struct coll_obj {
     double f24[12];  /* +0x24 */
     float f84;  /* +0x84 */
     float f88;  /* +0x88 */
-    u8 pad_08c[0x4];
+    float impulse;  /* +0x8c, the last knock's (0x4292c0) */
     float f90;  /* +0x90 */
     s32 f94;  /* +0x94 */
 };
@@ -34,6 +34,7 @@ _Static_assert(offsetof(struct coll_obj, z) == 0x1c, "coll_obj.z");
 _Static_assert(offsetof(struct coll_obj, f24) == 0x24, "coll_obj.f24");
 _Static_assert(offsetof(struct coll_obj, f84) == 0x84, "coll_obj.f84");
 _Static_assert(offsetof(struct coll_obj, f88) == 0x88, "coll_obj.f88");
+_Static_assert(offsetof(struct coll_obj, impulse) == 0x8c, "coll_obj.impulse");
 _Static_assert(offsetof(struct coll_obj, f90) == 0x90, "coll_obj.f90");
 _Static_assert(offsetof(struct coll_obj, f94) == 0x94, "coll_obj.f94");
 _Static_assert(sizeof(struct coll_obj) == 0x98, "coll_obj");

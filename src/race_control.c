@@ -9,6 +9,7 @@
 #include <math.h>
 #include <stdlib.h>
 
+#include "race_sound.h"
 #include "race.h"
 #include "race_cars.h"
 #include "race_control.h"
@@ -91,10 +92,10 @@ void race_control(int accel, int brake, int steer, int action)
     }
     race_boost();
     if (d->car == 8) {
-        STUB(0x444450, "race_exhaust");
+        race_exhaust();
     }
-    STUB(0x444fa0, "race_tyre_sound");
-    STUB(0x4452c0, "race_engine_sound");
+    race_tyre_sound();
+    race_engine_sound();
     if (d->f0c == 0) {
         race_brake(brake);
     } else {

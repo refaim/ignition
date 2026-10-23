@@ -71,6 +71,10 @@ struct car 0x484c 0x5daffc
 0x370 s32 f370
 0x374 s32 laps                  laps done
 0x378 s32 f378
+0x37c double saved_heading     where a wreck started (0x42ed60)
+0x384 double saved_x
+0x38c double saved_y
+0x394 double saved_z
 0x39c s32 grid                  the place on the grid
 0x3a0 s32 f3a0
 0x3a4 double f3a4               lap timing, cleared by 0x41f8f0
@@ -119,6 +123,7 @@ struct car 0x484c 0x5daffc
 0x5cc double probe_scale       1 + km/h / 220
 0x5d4 s32 f5d4                 ticks after finishing, to 25
 0x5d8 s32 wall_surface[4]       each corner's surface, full-size probe
+0x5e8 s32 scrape_corner[4]      wall_surface when the scrape began (0x432f20)
 0x5f8 s32 sign_ticks            ticks the road's hint sign has shown
 0x5fc s32 narrow               the corners were probed at half size
 0x600 s32 last_narrow
@@ -131,12 +136,21 @@ struct car 0x484c 0x5daffc
 0x62c double f62c
 0x640 double center_dx          the middle of the axles' moves (0x427d70)
 0x648 double center_dz
+0x650 s32 engine_voice[2]       the engine's two loops (0x41f9b0)
+0x658 s8 engine_pitch0[200]     ENGINE.INF by revs * 2: voice 0's pitch,
+0x720 s8 engine_loud0[200]      its loudness (read one entry early),
+0x7e8 s8 engine_pitch1[200]     voice 1's pitch
+0x8b0 s8 engine_loud1[200]      and loudness
+0x978 s32 tyre_voice[2]         the tyres' loops, ROLL 0 and 1
 0x634 float f634                10.0
 0x638 float f638                4000.0
+0x63c float knock               the last knock against an object (0x4292c0)
 0x4830 s32 wall_count            segments in wall_segs
 0x4844 s32 net_event            10 the race started; -1 exploded, -2 in water
 0x4848 s32 net_fresh            a packet came this frame
-0x9a4 s32 steer_pull            50 left, -50 right, easing to 0
+0x99c s32 skid_voice_rear      the skid sounds, by axle
+0x9a0 s32 skid_voice_front
+0x9a4 s32 steer_pull           50 left, -50 right, easing to 0
 0x9a8 double steer_heading     the road's heading at the car, less pi / 2
 0x9b0 double wall_segs[2000]    500 of x1, z1, x2, z2 near the car (0x428b90)
 0x4834 double f4834

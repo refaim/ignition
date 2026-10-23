@@ -21,9 +21,11 @@
 #include "race_cars.h"
 #include "race_control.h"
 #include "race_frame.h"
+#include "race_misc.h"
 #include "race_init.h"
 #include "race_phys.h"
 #include "race_respawn.h"
+#include "race_sound.h"
 #include "race_view.h"
 #include "startup.h"
 #include "stubs.h"
@@ -143,7 +145,7 @@ static void race_step(double dt)
     }
     if (r_552f10 != 2) {
         if (r_54f97c) {
-            race_f_417d20();
+            race_net_messages();
         }
         g_cars[0].clock = g_race_clock;
         if (r_552f10 == 3) {
@@ -155,7 +157,7 @@ static void race_step(double dt)
         }
         /* Network play: 0x40e0a0 and 0x40d7a0 exchange the cars. */
         if (r_54f97c) {
-            race_f_417d20();
+            race_net_messages();
         }
     }
     for (finished = 0, i = 0; i < g_driver_count; i++) {
@@ -188,17 +190,17 @@ static void race_step(double dt)
             }
         }
         race_chase_camera();
-        race_f_42bc20();
+        race_ground_effects();
         if (r_5daff8 == 1) {
             sound_tick_race();
         }
         if (r_5285c0 == 0 || (r_5285c0 == 1 && g_two_players == 1)) {
-            race_f_434580();
+            race_weather_zone();
             race_wrong_way(r_5285c0, dt);
         }
     }
     if (g_race_mode == 2 && r_552e48 == -1.0 && r_553068 == 1 && r_5530b8 == 0) {
-        race_f_445940();
+        race_play_ghost();
     }
     present_back_buffer();
 
@@ -206,7 +208,7 @@ static void race_step(double dt)
     for (r_54f9a0_acc += dt; r_54f9a0_acc >= 1.0; r_54f9a0_acc -= 1.0) {
         race_car_visuals();
         if (!r_563da0 && !r_5daff0) {
-            race_f_420eb0();
+            race_hot_keys();
         }
         for (r_5285c0 = 0; r_5285c0 < g_driver_count; r_5285c0++) {
             const struct car *c = &g_cars[r_5285c0];
@@ -218,7 +220,7 @@ static void race_step(double dt)
             if (control == 2 && r_5285c0 != 0) {
                 race_boost();
                 if (g_drivers[r_5285c0].car == 8) {
-                    race_f_444450();
+                    race_exhaust();
                 }
             }
             if (c->f350 == 1) {
@@ -229,7 +231,7 @@ static void race_step(double dt)
     }
     r_563bd0_acc += (s32)(g_frame_time - r_525e48) * 0.036 - r_563d48_last;
     for (; r_563bd0_acc >= 1.0; r_563bd0_acc -= 1.0) {
-        race_f_4357a0();
+        race_animate_objects();
     }
     r_563d48_last = (s32)(g_frame_time - r_525e48) * 0.036;
     race_view(dt);
@@ -246,9 +248,9 @@ void race_frame(void)
     if (!(r_494990 && r_552f10 == 2) && dt >= 1.0 && r_552f18 == 4) {
         race_step(dt);
     } else if (!r_563da0 && !r_5daff0) {
-        race_f_420eb0();
+        race_hot_keys();
         if (r_494990 == 1 && g_drivers[0].f08 > 0) {
-            race_f_441390();
+            race_joystick();
         }
     }
     /* Every 5 s, the CD music goes on again if it stopped. */
@@ -262,15 +264,15 @@ void race_frame(void)
     if (r_494990 == 1) {
         if (r_5532b0 != 1) {
             if (r_601674 == 0) {
-                race_f_4383b0();
+                race_pause_menu();
             } else {
-                race_f_438880();
+                race_ask_box();
             }
             present_back_buffer();
         }
     }
     if (r_601674 == 1) {
-        race_f_438880();
+        race_ask_box();
     }
     if (r_563d88) {
         g_race_load_stage = 0;

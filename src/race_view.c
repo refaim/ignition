@@ -19,6 +19,8 @@
 #include "race_frame.h"
 #include "race_hud.h"
 #include "race_init.h"
+#include "race_results.h"
+#include "race_misc.h"
 #include "race_view.h"
 #include "scene.h"
 #include "startup.h"
@@ -318,25 +320,6 @@ static void corners(void)
     sprite_draw(g_position_icons[3], &pos, NULL);
 }
 
-/* 0x438210: the iris, open by `step` of 100. Not ported yet. */
-static void iris(int step)
-{
-    (void)step;
-    STUB(0x438210, "race_iris");
-}
-
-/* 0x4222b0: the race's results saved before leaving. Not ported yet. */
-static void race_save_results(void)
-{
-    STUB(0x4222b0, "race_save_results");
-}
-
-/* 0x438a60: the results screens. Not ported yet. */
-static void race_results(void)
-{
-    STUB(0x438a60, "race_results");
-}
-
 /* 0x436990 */
 void race_view(double dt)
 {
@@ -462,7 +445,7 @@ void race_view(double dt)
     }
     replay_numbers();
     if (0.0 <= r_552e48 && r_552e48 < 100.0) {
-        iris((s32)r_552e48);
+        race_iris((s32)r_552e48);
     }
     if (players_finished() && !(r_54f980 < 120.0) && r_563c60 == 0 && r_5532b0 == 0) {
         race_results();
@@ -476,7 +459,7 @@ void race_view(double dt)
             race_save_results();
             r_563d88 = 2;
         }
-        iris(r_552f4c);
+        race_iris(r_552f4c);
     }
     if (split) {
         int x;

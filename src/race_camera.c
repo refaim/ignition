@@ -7,6 +7,7 @@
 
 #include "race.h"
 #include "race_camera.h"
+#include "race_fx.h"
 #include "race_cars.h"
 #include "race_init.h"
 #include "stubs.h"
@@ -141,19 +142,6 @@ void race_chase_camera(void)
         cam->height = cam->y + 200.0;
     }
     cam->dist = (s32)((double)cam->dist + ((swing * -2.0 + 400.0) - (double)cam->dist) * 0.1);
-}
-
-/* 0x432f20: sparks where the car scrapes a wall. Not ported yet (it
- * needs the particle spawner 0x434380). */
-static void race_scrape_sparks(void)
-{
-    STUB(0x432f20, "race_scrape_sparks");
-}
-
-/* 0x434840: the weather's drops and flakes. Not ported yet. */
-static void race_weather(void)
-{
-    STUB(0x434840, "race_weather");
 }
 
 /* 0x435350

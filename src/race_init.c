@@ -20,7 +20,9 @@
 #include "race_cars.h"
 #include "race_hud.h"
 #include "race_ai.h"
+#include "race_fx.h"
 #include "race_init.h"
+#include "race_misc.h"
 #include "scene.h"
 #include "net.h"
 #include "stubs.h"
@@ -34,7 +36,6 @@ struct srf g_srf;                           /* 0x4937bc, 0x4c53a4.. */
 struct scene_desc *g_particle_objs;         /* 0x563cec, 700 */
 struct scene_desc *g_part_objs;             /* 0x54f994, 200 */
 s32 g_part_meshes[200][200];                /* 0x528800 */
-s32 g_part_state[200][25];                  /* 0x5db040, 0x64 bytes each */
 s32 g_particle_mesh[2] = { 0, 0 };          /* 0x5dfe70: empty until used */
 s32 g_weather;                              /* 0x553774: 1 rain, 2 snow, 3 */
 s32 *g_weather_meshes[2];                   /* 0x563c34, 0x563c30 */
@@ -213,7 +214,7 @@ static void make_weather(void)
         r_563d28 = r_563d2c = r_563d38 = r_563d3c = 0;
         r_552f30 = r_552f34 = 0;
         r_525e30 = 0;
-        r_525e38 = r_525e3c = 0;
+        r_525e38 = 0;
     }
     if (g_weather == 1 || g_weather == 2 || g_weather == 3) {
         for (v = 0; v < g_views; v++) {
@@ -235,7 +236,7 @@ void race_make_effects(void)
     make_particles();
     g_part_objs = pool_calloc(200 * sizeof(*g_part_objs));
     for (i = 0; i < 200; i++) {
-        g_part_state[i][0] = 0;
+        g_effects[i].type = 0;
         if (scene_obj_create(&g_part_objs[i], g_part_meshes[i], 1, 0, 0, -1, 0) == -1) {
             log_printf("Error while creating the world");
             exit(1);
@@ -268,7 +269,7 @@ double r_5532b8;                            /* the replay camera's y */
 double r_553288, r_5532c0, r_6192f8, r_619318;
 s32 r_563d28, r_563d2c, r_563d38, r_563d3c, r_552f30, r_552f34;
 double r_525e30;
-s32 r_525e38, r_525e3c;
+double r_525e38;                            /* the second view's snow sway */
 s32 r_525e48;
 
 double g_race_clock;                        /* 0x5285d8 */
@@ -369,7 +370,7 @@ void race_load_world(void)
     race_progress(0x54);
     STUB(0x420090, "race_animated_textures");
     race_progress(0x5a);
-    STUB(0x420240, "race_load_ghost");
+    race_load_ghost();
     race_progress(0x5f);
     snprintf(name, sizeof(name), "LEVELS\\%s%s.SRF", g_track_dir, g_track_name);
     race_srf_load(name);
@@ -409,7 +410,7 @@ static const double s_view_scale[4][2] = {
 
 /* 0x43e2a0: each driver's view: the screen's middle, or with two
  * players the right half for the first and the left for the second. */
-static void race_layout_views(void)
+void race_layout_views(void)
 {
     int w = g_screen_width, h = g_screen_height, split = g_two_players && !r_552f58;
     int i;

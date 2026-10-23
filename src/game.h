@@ -20,6 +20,7 @@ extern int g_language;
 extern s32 g_net_state;
 
 extern int g_race_load_stage;   /* 0x553290 */
+extern s32 g_race_tries;        /* 0x552f28, restarts left */
 extern int g_race_running;      /* 0x525e5c */
 extern int g_race_ending;       /* 0x563bf4 */
 extern int g_race_again;        /* 0x527f70 */

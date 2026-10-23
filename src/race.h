@@ -174,9 +174,10 @@ extern struct scene_desc *g_shadow_objs;        /* 0x552f20 */
 extern struct scene_desc *g_arrow_objs;         /* 0x553788 */
 extern s32 r_54f954, r_563cf0, r_563d78, r_552f78, r_54f9b8, r_54f930, r_563d98;
 
-/* 0x43e710: a sound at a place, louder nearer the camera's car. Not
- * ported yet: returns 0. */
-s32 race_sound_3d(int a, int b, int sample, int c, int d, int e, int f, float x, float z);
+/* 0x43e710 (race_sound.c): sample `sample` of bank a, group b at a
+ * place, louder nearer the camera's car. Returns the voice's handle. */
+s32 race_sound_3d(int bank, int group, int sample, int loops, int volume, int rate, int pan,
+                  float x, float z);
 
 void race_make_world(void);
 void race_place_car(int car);

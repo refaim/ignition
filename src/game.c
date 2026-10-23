@@ -31,7 +31,7 @@ int g_race_running;             /* 0x525e5c */
 int g_race_ending;              /* 0x563bf4 */
 int g_cd_ready;                 /* 0x5530dc */
 int g_race_again;               /* 0x527f70 */
-s32 g_race_mode;                /* 0x552f28 */
+s32 g_race_tries;               /* 0x552f28, restarts left in a championship race */
 s32 g_back_from_race;           /* 0x54f9c8 */
 s32 g_race_5285c8;              /* 0x5285c8 */
 s32 g_race_4949b8;              /* 0x4949b8 */
@@ -170,7 +170,7 @@ int game_frame(void)
     if (g_menu_leaving == 1 && menu_exit()) {
         if (result == 2) {
             g_race_load_stage = 1;
-            g_race_mode = 3;
+            g_race_tries = 3;
             g_game_mode = GAME_MODE_PLAY;
             g_menu_active = 0;
             g_menu_leaving = 0;

@@ -7,6 +7,7 @@
 #include "race_cars.h"
 #include "race_control.h"
 #include "race_frame.h"
+#include "race_misc.h"
 #include "race_init.h"
 
 /* 0x4461d0 */
@@ -123,7 +124,7 @@ void race_f_420e60(void)
 {
     if (r_494990 == 0) {
         if (g_drivers[r_5285c0].f08 > 0) {
-            race_f_441390();
+            race_joystick();
         }
         race_keyboard();
     } else {

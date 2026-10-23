@@ -22,6 +22,12 @@ void gl3d_draw(const struct scene *sc, struct scene_obj *const *objs, int count,
 /* Starts the view: a frame of w x h pixels kept on the GPU that spans
  * vw x vh of the original's pixels, as video_set_layer shows it. */
 void gl3d_view_begin(int w, int h, double vw, double vh);
+/* The tables faces go through: the .SHD (sprites of type 7, faces 19
+ * and 23) and type 8 sprites'. */
+void gl3d_set_tables(const u8 *shd, const u8 *fixed);
+/* Meshes from begin to end change each frame and are never cached;
+ * up to eight such runs, each named by its begin. */
+void gl3d_set_dynamic(const s32 *begin, const s32 *end);
 void gl3d_view_fill(double y0, double y1, int index);
 void gl3d_view_end(void);
 /* The view's colour indices: a GL texture, R, row 0 at the top. */

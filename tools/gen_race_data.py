@@ -3,7 +3,7 @@
 image of IGN_WIN.EXE (.ida-mcp/image.bin, from VA 0x479000).
 
 Each table is (name, address, C type, count[, const]); s16, s32 and
-double tables are read as such, char4 as 4 byte strings.
+double tables are read as such, charN as N byte strings.
 """
 
 import pathlib
@@ -52,6 +52,20 @@ TABLES = [
     ("g_finish_cams", 0x498538, "float", 7 * 3 * 5, True),
     # The sky's colour by track.
     ("g_sky_colour", 0x497ED8, "s32", 7, True),
+    # The pause menu's words, seven a language: CONTINUE, RESTART, QUIT,
+    # CD TRACK, an unused one, DEFAULT, RANDOM.
+    ("g_pause_text", 0x494D58, "char30", 6 * 7, True),
+    # The Y/N questions, by language.
+    ("g_ask_restart", 0x495300, "char30", 6, True),
+    ("g_ask_quit", 0x495248, "char30", 6, True),
+    # The network's messages, by language.
+    ("g_net_player_quit", 0x495BE8, "char150", 6, True),
+    ("g_net_host_quit", 0x495C1A, "char150", 6, True),
+    ("g_net_host_restart", 0x495C4C, "char150", 6, True),
+    # The CD track each track plays by default.
+    ("g_track_cd", 0x497EB8, "s32", 7, True),
+    # Championship points by finishing place.
+    ("g_place_points", 0x492A24, "s32", 12, True),
     ("g_cells_ahead", 0x49A058, "s32", 36 * 36 * 2, True),
     # Ground contact (0x424570): grip by surface type 0..29; a car's
     # traction by car, the twelfth the computer's; the grip's scale by
@@ -63,6 +77,12 @@ TABLES = [
     ("g_ai_grip", 0x499930, "double", 44, True),
     # A smoke puff's frames on its page: u0, v0, u1, v1 for nine.
     ("g_smoke_frames", 0x497FF8, "s32", 36, True),
+    # The exhaust's puffs, the same way (0x444450).
+    ("g_exhaust_frames", 0x498118, "s32", 36, True),
+    # The race's sounds: each car's folder under CARS\, and the tyre
+    # sound's base pitch and loudness by surface (0x444fa0, 0..8).
+    ("g_car_dirs", 0x494A70, "char9", 11, True),
+    ("g_tyre_pitch", 0x4974D0, "s32", 9, True),
     # The HUD by layout (small, large, high resolution): where its
     # sprites are cut from the panel pictures (x, y, w, h, 36 a layout),
     # the text rows and columns (8 a layout) and the sprites' places
@@ -72,7 +92,64 @@ TABLES = [
     ("g_hud_text", 0x497BC8, "s32", 3 * 8, True),
     ("g_hud_places", 0x497C28, "s32", 3 * 28, True),
     ("g_hud_signs", 0x497D74, "s32", 80, True),
+    # The results screens' texts (0x438a60), one a language. Some sit
+    # inside a longer record, so the stride is the record's.
+    ("g_res_track_results", 0x495470, "char30", 6, True),
+    ("g_res_track_score", 0x495528, "char30", 6, True),
+    ("g_res_total_score", 0x4955E0, "char30", 6, True),
+    ("g_res_play_again", 0x495698, "char45", 6, True),
+    ("g_res_waiting", 0x4957A8, "char30", 6, True),
+    ("g_res_press_return", 0x495860, "char50", 6, True),
+    ("g_res_level_done", 0x495F70, "char100", 6, True),
+    ("g_res_well_done", 0x4961C8, "char100", 6, True),
+    ("g_res_sorry", 0x496420, "char100", 6, True),
+    ("g_res_or_better", 0x496452, "char100", 6, True),
+    ("g_res_quit", 0x494D94, "char210", 6, True),
+    ("g_res_retry", 0x494DD0, "char210", 6, True),
+    ("g_res_congrats", 0x4969A8, "char245", 6, True),
+    ("g_res_completed", 0x4969CB, "char245", 6, True),
+    ("g_res_championship", 0x4969EE, "char245", 6, True),
+    ("g_res_first", 0x496A11, "char245", 6, True),
+    ("g_res_second", 0x496A34, "char245", 6, True),
+    ("g_res_third", 0x496A57, "char245", 6, True),
+    ("g_res_score_of", 0x496A7A, "char245", 6, True),
+    # The leagues, four a language (NOVICE .. ), and one more: the next
+    # league is read one entry on.
+    ("g_res_leagues", 0x496678, "char30", 25, True),
+    ("g_res_pts", 0x496948, "char15", 6, True),
+    ("g_res_must_achieve", 0x497058, "char70", 6, True),
+    ("g_res_gold_statue", 0x49707B, "char70", 6, True),
+    ("g_res_now_try", 0x496F68, "char40", 6, True),
+    # The effects (0x434190): their frames, u0, v0, u1, v1 in texels, as
+    # one run of tables (0x497ef8 flashes, 0x497f48 splash, 0x497ff8
+    # smoke, 0x498118, 0x4981a8 fireball, 0x4982a8 fire, 0x4983a8,
+    # 0x498428 halo), which an animation may run on from one into the
+    # next.
+    ("g_fx_frames", 0x497EF8, "s32", 340, True),
+    # Which effect a full pool gives way to, by type.
+    ("g_fx_priority", 0x4986E0, "s32", 12, True),
+    # The lightning bolt's mesh (0x430300).
+    ("g_lightning_mesh", 0x493CF0, "s32", 163, True),
+    # An ease from 0 to 1 in 200 steps, times 200 (0x4358e0).
+    ("g_ease", 0x4944E0, "s32", 201, True),
+    # Ticks between the animated textures' frames, by track (0x434190).
+    ("g_anim_ticks", 0x498480, "s32", 7, True),
 ]
+
+
+def c_string(raw):
+    """The bytes as a C string body: the game's own code page, so bytes
+    outside printable ASCII are written as octal escapes."""
+    out = []
+    for b in raw:
+        if b in (0x22, 0x5C):
+            out.append("\\" + chr(b))
+        elif 0x20 <= b < 0x7F and b != 0x3F:
+            out.append(chr(b))
+        else:
+            # '?' too, so no trigraph can form.
+            out.append(f"\\{b:03o}")
+    return "".join(out)
 
 
 def main():
@@ -103,10 +180,11 @@ def main():
             body = ", ".join(repr(v) + "f" for v in vals)
             decl = f"{q}float {name}[{count}]"
         else:
-            vals = [img[off + 4 * i:off + 4 * i + 4].split(b"\0")[0].decode("latin1")
-                    for i in range(count)]
-            body = ", ".join(f'"{v}"' for v in vals)
-            decl = f"{q}char {name}[{count}][4]"
+            # charN: strings N bytes apart.
+            n = int(typ[4:])
+            vals = [img[off + n * i:off + n * i + n].split(b"\0")[0] for i in range(count)]
+            body = ", ".join(f'"{c_string(v)}"' for v in vals)
+            decl = f"{q}char {name}[{count}][{n}]"
         out.append(f"/* {addr:#x} */")
         out.append(f"{decl} = {{ {body} }};")
         out.append("")

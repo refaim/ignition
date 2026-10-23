@@ -17,6 +17,7 @@
 #include <GL/glcorearb.h>
 #endif
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -34,13 +35,15 @@ enum {
 enum {
     MODE_TEXTURE = 0,   /* the texel */
     MODE_KEYED = 1,     /* the texel, colour 0 left out */
-    MODE_FLAT = 2       /* the face's colour */
+    MODE_FLAT = 2,      /* the face's colour */
+    MODE_GRADIENT = 3   /* a colour from u, across a line */
 };
 
 struct mesh_entry {
     const s32 *mesh;
     GLint first;
     GLsizei count;
+    int deferred;               /* has faces through a table */
 };
 
 struct texture_entry {
@@ -70,6 +73,32 @@ static struct texture_entry s_textures[MAX_TEXTURES];
 static int s_texture_count;
 static u8 *s_readback;
 static size_t s_readback_size;
+
+/* Faces drawn after the rest, each frame anew: points and sprites
+ * (0x44b5e0, 0x44d0f0, 0x44d230), whose meshes change as the effects
+ * move, and faces through a table (19, 23: the .SHD; 0x44cb20), which
+ * read the pixels under them. Kept as clip space vertices. */
+enum { DYN_FLOATS = 9, MAX_DYN = 4096 };    /* x, y, z, w, u, v, page, colour, mode */
+
+struct dyn {
+    float v[6][DYN_FLOATS];
+    int count;                  /* 3 or 6 vertices */
+    float depth;                /* w of the middle, for the order */
+    GLuint tex;
+    const u8 *table;            /* NULL: drawn as it is */
+};
+
+static struct dyn s_dyns[MAX_DYN];
+static int s_dyn_count;
+static const u8 *s_tables_shd, *s_tables_fixed;     /* 0x63b5f0, 0x63c5f4 */
+static struct { const s32 *begin, *end; } s_dyn_ranges[8];    /* meshes always drawn anew */
+static int s_dyn_range_count;
+static GLuint s_dyn_program, s_dyn_vao, s_dyn_vbo, s_dyn_dst;
+static GLint s_du_pages, s_du_table, s_du_dst, s_du_use_table;
+static int s_dyn_dst_w, s_dyn_dst_h;
+
+static GLuint table_get(const u8 *table);
+static GLuint texture_get(int slot);
 
 /* The raster path. */
 enum { MAX_TABLES = 16, RASTER_FLOATS = 8 };     /* x, y, u, v, page, colour, mode, - */
@@ -218,7 +247,7 @@ static struct mesh_entry *mesh_get(const s32 *mesh)
     struct mesh_entry *e;
     const u8 *f;
     float *verts;
-    int i, n = 0;
+    int i, n = 0, deferred = 0;
 
     for (i = 0; i < s_mesh_count; i++) {
         if (s_meshes[i].mesh == mesh) {
@@ -239,9 +268,12 @@ static struct mesh_entry *mesh_get(const s32 *mesh)
         if (size == 0) {
             break;
         }
-        if (size == 44 && type != 19 && type != 22 && type != 23) {
+        if (type == 19 || type == 23 || type == 1 || type == 2 || type == 7 || type == 8
+            || type == 13) {
+            deferred = 1;
+        } else if (size == 44 && type != 19 && type != 23) {
             float page = (float)((u32)w[10] >> 16);
-            float mode = type == 18 ? MODE_KEYED : MODE_TEXTURE;
+            float mode = type == 18 || type == 22 ? MODE_KEYED : MODE_TEXTURE;
             int k;
 
             for (k = 0; k < 3; k++) {
@@ -273,6 +305,7 @@ static struct mesh_entry *mesh_get(const s32 *mesh)
     e->mesh = mesh;
     e->first = s_vbo_used;
     e->count = n;
+    e->deferred = deferred;
     s_vbo_used += n;
     return e;
 }
@@ -474,6 +507,407 @@ static void object_matrix(const struct scene *sc, const struct scene_obj *o, dou
     }
 }
 
+/* Deferred faces: the texel through the table with the pixel under it
+ * (a copy in u_dst), or as the main pass draws them. */
+static const char *s_dyn_vs =
+    "#version 150\n"
+    "in vec4 a_pos;\n"
+    "in vec2 a_uv;\n"
+    "in vec3 a_info;\n"
+    "out vec2 v_uv;\n"
+    "flat out vec3 v_info;\n"
+    "void main() {\n"
+    "    v_uv = a_uv;\n"
+    "    v_info = a_info;\n"
+    "    gl_Position = a_pos;\n"
+    "}\n";
+
+static const char *s_dyn_fs =
+    "#version 150\n"
+    "uniform sampler2DArray u_pages;\n"
+    "uniform sampler2D u_table;\n"
+    "uniform sampler2D u_dst;\n"
+    "uniform int u_use_table;\n"
+    "in vec2 v_uv;\n"
+    "flat in vec3 v_info;\n"
+    "out vec2 o_index;\n"
+    "void main() {\n"
+    "    float c = v_info.z > 2.5 ? floor(v_uv.x) : v_info.y;\n"
+    "    if (v_info.z < 1.5) {\n"
+    "        c = texture(u_pages, vec3(v_uv, v_info.x)).r * 255.0;\n"
+    "        if (u_use_table == 1) {\n"
+    "            float d = texelFetch(u_dst, ivec2(gl_FragCoord.xy), 0).r * 255.0;\n"
+    "            c = texelFetch(u_table, ivec2(int(d + 0.5), int(c + 0.5)), 0).r * 255.0;\n"
+    "        } else if (v_info.z > 0.5 && c < 0.5) {\n"
+    "            discard;\n"
+    "        }\n"
+    "    } else if (u_use_table == 1) {\n"
+    "        float d = texelFetch(u_dst, ivec2(gl_FragCoord.xy), 0).r * 255.0;\n"
+    "        c = texelFetch(u_table, ivec2(int(d + 0.5), int(c + 0.5)), 0).r * 255.0;\n"
+    "    }\n"
+    "    o_index = vec2(c / 255.0, 1.0);\n"
+    "}\n";
+
+static void dyn_init(void)
+{
+    GLuint vs = compile(GL_VERTEX_SHADER, s_dyn_vs);
+    GLuint fs = compile(GL_FRAGMENT_SHADER, s_dyn_fs);
+
+    s_dyn_program = glCreateProgram();
+    glAttachShader(s_dyn_program, vs);
+    glAttachShader(s_dyn_program, fs);
+    glBindAttribLocation(s_dyn_program, 0, "a_pos");
+    glBindAttribLocation(s_dyn_program, 1, "a_uv");
+    glBindAttribLocation(s_dyn_program, 2, "a_info");
+    glBindFragDataLocation(s_dyn_program, 0, "o_index");
+    glLinkProgram(s_dyn_program);
+    glDeleteShader(vs);
+    glDeleteShader(fs);
+    s_du_pages = glGetUniformLocation(s_dyn_program, "u_pages");
+    s_du_table = glGetUniformLocation(s_dyn_program, "u_table");
+    s_du_dst = glGetUniformLocation(s_dyn_program, "u_dst");
+    s_du_use_table = glGetUniformLocation(s_dyn_program, "u_use_table");
+    glGenVertexArrays(1, &s_dyn_vao);
+    glBindVertexArray(s_dyn_vao);
+    glGenBuffers(1, &s_dyn_vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, s_dyn_vbo);
+    glBufferData(GL_ARRAY_BUFFER, 6 * DYN_FLOATS * sizeof(float), NULL, GL_STREAM_DRAW);
+    glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(1);
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, DYN_FLOATS * sizeof(float), (void *)0);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, DYN_FLOATS * sizeof(float),
+                          (void *)(4 * sizeof(float)));
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, DYN_FLOATS * sizeof(float),
+                          (void *)(6 * sizeof(float)));
+}
+
+void gl3d_set_tables(const u8 *shd, const u8 *fixed)
+{
+    s_tables_shd = shd;
+    s_tables_fixed = fixed;
+}
+
+void gl3d_set_dynamic(const s32 *begin, const s32 *end)
+{
+    int i;
+
+    for (i = 0; i < s_dyn_range_count; i++) {
+        if (s_dyn_ranges[i].begin == begin) {
+            s_dyn_ranges[i].end = end;
+            return;
+        }
+    }
+    if (s_dyn_range_count < 8) {
+        s_dyn_ranges[s_dyn_range_count].begin = begin;
+        s_dyn_ranges[s_dyn_range_count].end = end;
+        s_dyn_range_count++;
+    }
+}
+
+static int is_dynamic(const s32 *mesh)
+{
+    int i;
+
+    for (i = 0; i < s_dyn_range_count; i++) {
+        if (mesh >= s_dyn_ranges[i].begin && mesh < s_dyn_ranges[i].end) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static void clip_of(const float m[16], const s32 *v, float c[4])
+{
+    int k;
+
+    for (k = 0; k < 4; k++) {
+        c[k] = m[k] * v[0] + m[4 + k] * v[1] + m[8 + k] * v[2] + m[12 + k];
+    }
+}
+
+static void dyn_vertex(float *o, const float c[4], float u, float v, float page, float colour,
+                       float mode)
+{
+    o[0] = c[0];
+    o[1] = c[1];
+    o[2] = c[2];
+    o[3] = c[3];
+    o[4] = u;
+    o[5] = v;
+    o[6] = page;
+    o[7] = colour;
+    o[8] = mode;
+}
+
+/* A screen box around clip point c, half hx, hy in NDC, kept at c's
+ * depth: two triangles. */
+static void dyn_box(struct dyn *d, const float c[4], float hx, float hy, const float uv[4],
+                    float page, float colour, float mode)
+{
+    float x0 = c[0] / c[3] - hx, x1 = c[0] / c[3] + hx, y0 = c[1] / c[3] - hy, y1 = c[1] / c[3] + hy;
+    float z = c[2] / c[3];
+    float p[4][4] = { { x0, y0, z, 1 }, { x1, y0, z, 1 }, { x0, y1, z, 1 }, { x1, y1, z, 1 } };
+
+    dyn_vertex(d->v[0], p[0], uv[0], uv[1], page, colour, mode);
+    dyn_vertex(d->v[1], p[1], uv[2], uv[1], page, colour, mode);
+    dyn_vertex(d->v[2], p[2], uv[0], uv[3], page, colour, mode);
+    dyn_vertex(d->v[3], p[1], uv[2], uv[1], page, colour, mode);
+    dyn_vertex(d->v[4], p[3], uv[2], uv[3], page, colour, mode);
+    dyn_vertex(d->v[5], p[2], uv[0], uv[3], page, colour, mode);
+    d->count = 6;
+}
+
+/* An object's faces for the deferred pass: all of a dynamic mesh's, or
+ * a static mesh's table faces. Points and sprites are placed as the
+ * rasteriser places them on the screen (8.8 sprite sizes of 0x44d0f0
+ * and 0x44d230 through 0x455648's box). */
+static void collect(const struct scene *sc, const struct scene_obj *o, const float m[16],
+                    int all)
+{
+    const s32 *mesh = o->mesh;
+    const u8 *f = (const u8 *)(mesh + 2 + 3 * mesh[0]);
+    GLuint tex = 0;
+    int i, have_tex = 0;
+
+    for (i = 0; i < mesh[1] && s_dyn_count < MAX_DYN; i++) {
+        const s32 *w = (const s32 *)f;
+        int type = (s8)f[0], size = face_size(type);
+        struct dyn *d = &s_dyns[s_dyn_count];
+        float c[3][4];
+        int k;
+
+        if (size == 0) {
+            break;
+        }
+        f += size;
+        if (!all && type != 19 && type != 23 && type != 1 && type != 2 && type != 7 && type != 8
+            && type != 13) {
+            continue;
+        }
+        if (!have_tex) {
+            tex = texture_get(o->tex);
+            have_tex = 1;
+        }
+        d->tex = tex;
+        d->table = NULL;
+        if (type == 1 || type == 2) {
+            float h = type == 1 ? 0.5f : 1.0f, uv[4] = { 0, 0, 0, 0 };
+
+            clip_of(m, mesh + 2 + 3 * w[1], c[0]);
+            /* The original leaves out what is within 200 of the eye. */
+            if (c[0][3] <= 200.0f) {
+                continue;
+            }
+            dyn_box(d, c[0], h * 2.0f / (float)s_vw, h * 2.0f / (float)s_vh, uv, 0,
+                    (float)(w[2] & 0xff), MODE_FLAT);
+            d->depth = c[0][3];
+        } else if (type == 7 || type == 8) {
+            double hot_x = (double)(w[4] + w[2]) / 2 - w[2], hot_y = (double)(w[5] + w[3]) / 2 - w[3];
+            float uv[4] = { w[2] / 65536.0f, w[3] / 65536.0f, w[4] / 65536.0f, w[5] / 65536.0f };
+            s32 sx, sy;
+
+            clip_of(m, mesh + 2 + 3 * w[1], c[0]);
+            if (c[0][3] <= 200.0f || tex == 0) {
+                continue;
+            }
+            if (type == 7) {
+                double k4 = 4.0 / (s32)c[0][3];
+
+                sx = (s32)(w[7] * k4);
+                sy = (s32)(w[8] * k4);
+                d->table = s_tables_shd;
+            } else {
+                double px, py;
+
+                sx = (s32)(0.003952569328248501 * sc->focal_y * w[7]);
+                sy = (s32)(sc->focal_y * 0.004820206304829848 * w[8]);
+                d->table = s_tables_fixed;
+                /* Type 8 sits on a whole pixel. */
+                px = floor((c[0][0] / c[0][3] + 1.0) * s_vw / 2);
+                py = floor((c[0][1] / c[0][3] + 1.0) * s_vh / 2);
+                c[0][0] = (float)((px * 2 / s_vw - 1.0) * c[0][3]);
+                c[0][1] = (float)((py * 2 / s_vh - 1.0) * c[0][3]);
+            }
+            /* hot (8.8 texels) * scale >> 16 is 8.8 pixels. */
+            dyn_box(d, c[0], (float)(hot_x * sx / 16777216.0 * 2.0 / s_vw),
+                    (float)(hot_y * sy / 16777216.0 * 2.0 / s_vh), uv, (float)((u32)w[6] >> 16), 0,
+                    MODE_KEYED);
+            d->depth = c[0][3];
+        } else if (type == 13) {
+            /* A line a pixel wide (0x44d470), its colour running from w[3]
+             * to w[4] (8.8), through the .SHD when w[5] is set (the
+             * original keeps the table's address there). */
+            float a[3], b[3], dx, dy, len, nx, ny;
+            float p[4][4];
+
+            clip_of(m, mesh + 2 + 3 * w[1], c[0]);
+            clip_of(m, mesh + 2 + 3 * w[2], c[1]);
+            if (c[0][3] + c[1][3] <= 400.0f || c[0][3] <= 1.0f || c[1][3] <= 1.0f) {
+                continue;
+            }
+            for (k = 0; k < 3; k++) {
+                a[k] = c[0][k] / c[0][3];
+                b[k] = c[1][k] / c[1][3];
+            }
+            dx = (b[0] - a[0]) * (float)s_vw;
+            dy = (b[1] - a[1]) * (float)s_vh;
+            len = sqrtf(dx * dx + dy * dy);
+            if (len < 1e-6f) {
+                nx = 1.0f / (float)s_vw;
+                ny = 0;
+            } else {
+                nx = -dy / len / (float)s_vw;
+                ny = dx / len / (float)s_vh;
+            }
+            p[0][0] = a[0] - nx; p[0][1] = a[1] - ny; p[0][2] = a[2]; p[0][3] = 1;
+            p[1][0] = a[0] + nx; p[1][1] = a[1] + ny; p[1][2] = a[2]; p[1][3] = 1;
+            p[2][0] = b[0] - nx; p[2][1] = b[1] - ny; p[2][2] = b[2]; p[2][3] = 1;
+            p[3][0] = b[0] + nx; p[3][1] = b[1] + ny; p[3][2] = b[2]; p[3][3] = 1;
+            dyn_vertex(d->v[0], p[0], w[3] / 256.0f, 0, 0, 0, MODE_GRADIENT);
+            dyn_vertex(d->v[1], p[1], w[3] / 256.0f, 0, 0, 0, MODE_GRADIENT);
+            dyn_vertex(d->v[2], p[2], w[4] / 256.0f, 0, 0, 0, MODE_GRADIENT);
+            dyn_vertex(d->v[3], p[1], w[3] / 256.0f, 0, 0, 0, MODE_GRADIENT);
+            dyn_vertex(d->v[4], p[3], w[4] / 256.0f, 0, 0, 0, MODE_GRADIENT);
+            dyn_vertex(d->v[5], p[2], w[4] / 256.0f, 0, 0, 0, MODE_GRADIENT);
+            d->count = 6;
+            d->depth = (c[0][3] + c[1][3]) * 0.5f;
+            d->table = w[5] != 0 ? s_tables_shd : NULL;
+        } else if (size == 44 || type == 15 || type == 16) {
+            int flat = type == 15 || type == 16 || type == 20 || type == 21;
+            float page = flat ? 0 : (float)((u32)w[10] >> 16);
+            float mode = flat ? MODE_FLAT : (type == 18 || type == 22) ? MODE_KEYED : MODE_TEXTURE;
+            float colour = flat ? (float)(w[4] & 0xff) : 0;
+
+            for (k = 0; k < 3; k++) {
+                clip_of(m, mesh + 2 + 3 * w[1 + k], c[k]);
+            }
+            if (c[0][3] <= 1.0f && c[1][3] <= 1.0f && c[2][3] <= 1.0f) {
+                continue;
+            }
+            if (!flat && tex == 0) {
+                continue;
+            }
+            for (k = 0; k < 3; k++) {
+                dyn_vertex(d->v[k], c[k], flat ? 0 : w[4 + 2 * k] / 65536.0f,
+                           flat ? 0 : w[5 + 2 * k] / 65536.0f, page, colour, mode);
+            }
+            d->count = 3;
+            d->depth = (c[0][3] + c[1][3] + c[2][3]) / 3.0f;
+            if (type == 19 || type == 23) {
+                d->table = s_tables_shd;
+            }
+        } else {
+            warn_once(type);
+            continue;
+        }
+        s_dyn_count++;
+    }
+}
+
+static int dyn_far_first(const void *a, const void *b)
+{
+    const struct dyn *p = a, *q = b;
+
+    return p->depth < q->depth ? 1 : p->depth > q->depth ? -1 : 0;
+}
+
+/* The pixels a face covers, from its clip space vertices. */
+static int dyn_rect(const struct dyn *d, int r[4])
+{
+    float x0 = 1e9f, y0 = 1e9f, x1 = -1e9f, y1 = -1e9f;
+    int k;
+
+    for (k = 0; k < d->count; k++) {
+        float w = d->v[k][3], x, y;
+
+        if (w <= 0.0f) {
+            /* Behind the eye: take the whole frame. */
+            x0 = y0 = -1;
+            x1 = y1 = 1;
+            break;
+        }
+        x = d->v[k][0] / w;
+        y = d->v[k][1] / w;
+        x0 = x < x0 ? x : x0;
+        x1 = x > x1 ? x : x1;
+        y0 = y < y0 ? y : y0;
+        y1 = y > y1 ? y : y1;
+    }
+    r[0] = (int)floor((x0 + 1.0f) * 0.5f * s_w) - 1;
+    r[1] = (int)floor((y0 + 1.0f) * 0.5f * s_h) - 1;
+    r[2] = (int)ceil((x1 + 1.0f) * 0.5f * s_w) + 1;
+    r[3] = (int)ceil((y1 + 1.0f) * 0.5f * s_h) + 1;
+    r[0] = r[0] < 0 ? 0 : r[0];
+    r[1] = r[1] < 0 ? 0 : r[1];
+    r[2] = r[2] > s_w ? s_w : r[2];
+    r[3] = r[3] > s_h ? s_h : r[3];
+    return r[2] > r[0] && r[3] > r[1];
+}
+
+/* Back to front, each through its table over a copy of what is under
+ * it. */
+static void draw_dyns(void)
+{
+    int i;
+
+    if (s_dyn_count == 0) {
+        return;
+    }
+    if (s_dyn_program == 0) {
+        dyn_init();
+    }
+    if (s_dyn_dst == 0 || s_dyn_dst_w != s_w || s_dyn_dst_h != s_h) {
+        if (s_dyn_dst != 0) {
+            glDeleteTextures(1, &s_dyn_dst);
+        }
+        glGenTextures(1, &s_dyn_dst);
+        glBindTexture(GL_TEXTURE_2D, s_dyn_dst);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RG8, s_w, s_h, 0, GL_RG, GL_UNSIGNED_BYTE, NULL);
+        s_dyn_dst_w = s_w;
+        s_dyn_dst_h = s_h;
+    }
+    qsort(s_dyns, (size_t)s_dyn_count, sizeof(s_dyns[0]), dyn_far_first);
+    glUseProgram(s_dyn_program);
+    glBindVertexArray(s_dyn_vao);
+    glBindBuffer(GL_ARRAY_BUFFER, s_dyn_vbo);
+    glUniform1i(s_du_pages, 0);
+    glUniform1i(s_du_table, 1);
+    glUniform1i(s_du_dst, 2);
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LEQUAL);
+    glDisable(GL_CULL_FACE);
+    for (i = 0; i < s_dyn_count; i++) {
+        const struct dyn *d = &s_dyns[i];
+        int use_table = d->table != NULL, r[4];
+
+        if (use_table) {
+            if (!dyn_rect(d, r)) {
+                continue;
+            }
+            glActiveTexture(GL_TEXTURE2);
+            glBindTexture(GL_TEXTURE_2D, s_dyn_dst);
+            glCopyTexSubImage2D(GL_TEXTURE_2D, 0, r[0], r[1], r[0], r[1], r[2] - r[0], r[3] - r[1]);
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, table_get(d->table));
+        }
+        /* Through a table nothing writes the depth, as the faces show what
+         * is behind them. */
+        glDepthMask(use_table ? GL_FALSE : GL_TRUE);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D_ARRAY, d->tex);
+        glUniform1i(s_du_use_table, use_table);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, (GLsizeiptr)d->count * DYN_FLOATS * sizeof(float), d->v);
+        glDrawArrays(GL_TRIANGLES, 0, d->count);
+    }
+    glDepthMask(GL_TRUE);
+    glDisable(GL_DEPTH_TEST);
+    glActiveTexture(GL_TEXTURE0);
+    s_dyn_count = 0;
+}
+
 void gl3d_draw(const struct scene *sc, struct scene_obj *const *objs, int count, double ox,
                double oy)
 {
@@ -490,19 +924,34 @@ void gl3d_draw(const struct scene *sc, struct scene_obj *const *objs, int count,
     glActiveTexture(GL_TEXTURE0);
     for (i = 0; i < count; i++) {
         const struct scene_obj *o = objs[i];
-        struct mesh_entry *e = mesh_get(o->mesh);
+        struct mesh_entry *e;
         float m[16];
 
-        if (e == NULL || e->count == 0) {
+        if (is_dynamic(o->mesh)) {
+            object_matrix(sc, o, ox, oy, m);
+            collect(sc, o, m, 1);
             continue;
         }
-        glBindTexture(GL_TEXTURE_2D_ARRAY, texture_get(o->tex));
+        e = mesh_get(o->mesh);
+        if (e == NULL) {
+            continue;
+        }
         object_matrix(sc, o, ox, oy, m);
+        if (e->deferred) {
+            collect(sc, o, m, 0);
+        }
+        if (e->count == 0) {
+            continue;
+        }
+        glUseProgram(s_program);
+        glBindVertexArray(s_vao);
+        glBindTexture(GL_TEXTURE_2D_ARRAY, texture_get(o->tex));
         glUniformMatrix4fv(s_u_matrix, 1, GL_FALSE, m);
         glDrawArrays(GL_TRIANGLES, e->first, e->count);
     }
     glDisable(GL_CULL_FACE);
     glDisable(GL_DEPTH_TEST);
+    draw_dyns();
 }
 
 void gl3d_end(u8 *screen, int pitch)

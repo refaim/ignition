@@ -495,13 +495,6 @@ void race_debug_view(void)
     present_back_buffer();
 }
 
-s32 race_sound_3d(int a, int b, int sample, int c, int d, int e, int f, float x, float z)
-{
-    (void)a; (void)b; (void)sample; (void)c; (void)d; (void)e; (void)f; (void)x; (void)z;
-    STUB(0x43e710, "race_sound_3d");
-    return 0;
-}
-
 /* An object at the car's place, with angles in tenths of a degree. */
 static void place_at(struct scene_desc *d, const struct car *c, s32 ax, s32 az)
 {

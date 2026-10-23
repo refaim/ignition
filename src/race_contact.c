@@ -74,13 +74,6 @@ float race_rand(void)
     return r;
 }
 
-/* 0x434380 */
-void race_effect(struct race_effect *e)
-{
-    (void)e;
-    STUB(0x434380, "race_effect");
-}
-
 /* 0x441170 */
 int race_message(const char *text, int a, int b, int view)
 {

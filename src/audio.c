@@ -66,6 +66,24 @@ static float sample_at(const struct sound_sample *s, s32 pos)
                         : ((const s16 *)s->data)[pos] * (1.0f / 32768.0f);
 }
 
+/* A voice past the channels plays on unheard (0x465d90): it moves on by
+ * the frames' worth at its rate, loops, and stops at its end. */
+static void skip(struct sound_voice *v, s32 frames)
+{
+    const struct sound_sample *s = v->sample;
+    u64 step = ((u64)(u32)v->rate << 16) / AUDIO_RATE * (u64)frames + v->frac;
+
+    v->pos += (s32)(step >> 16);
+    v->frac = (u32)(step & 0xffff);
+    while (v->loops != 0 && s->loop_length > 0 && v->pos >= s->loop_start + s->loop_length) {
+        v->pos -= s->loop_length;
+        v->loops--;
+    }
+    if (v->pos >= s->length) {
+        v->rate = 0;
+    }
+}
+
 /* Adds the loudest voices into `out`, stepping each at its rate and
  * looping as many times as asked (0x467180). */
 static void mix_voices(float *out, s32 frames)
@@ -88,6 +106,7 @@ static void mix_voices(float *out, s32 frames)
                 quiet = k;
             }
         }
+        skip(&s_voices[chosen[quiet]], frames);
         chosen[quiet] = chosen[--n];
     }
     for (k = 0; k < n; k++) {

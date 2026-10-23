@@ -9,5 +9,6 @@ struct coll_obj 0x98 0x54f904
 0x024 double f24[12]
 0x084 float f84
 0x088 float f88
+0x08c float impulse             the last knock's (0x4292c0)
 0x090 float f90
 0x094 s32 f94

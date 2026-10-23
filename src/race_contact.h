@@ -20,8 +20,8 @@ struct race_effect {
         s32 i;
         const s32 *frames;  /* smoke: its frames (0x497ff8) */
     } f38;                  /* +0x38 */
-    s32 f3c, f40, f44, f48, f4c, f50, f54, f58;
-};
+    s32 f3c, f40, f44, f48, f4c, f50, f54, f58, f5c, f60;
+};  /* 0x64 bytes in the original */
 
 extern struct race_effect g_effect;         /* 0x639330 */
 extern s32 r_563d20, r_4949a8;              /* set when a player finishes */
@@ -31,7 +31,8 @@ extern s32 g_squash_meshes[11][2000];       /* 0x603ae0, 8000 bytes a car */
 /* 0x446180: a random number, 0 <= r < 1. */
 float race_rand(void);
 
-/* 0x434380: starts an effect. Not ported yet. */
+/* 0x434380: starts an effect (race_fx.c; race_effect_start returns its
+ * slot). */
 void race_effect(struct race_effect *e);
 
 /* A message on the screen (0x552f24, five of them). */

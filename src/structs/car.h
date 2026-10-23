@@ -83,7 +83,10 @@ struct car {
     s32 f370;  /* +0x370 */
     s32 laps;  /* +0x374, laps done */
     s32 f378;  /* +0x378 */
-    u8 pad_37c[0x20];
+    double saved_heading;  /* +0x37c, where a wreck started (0x42ed60) */
+    double saved_x;  /* +0x384 */
+    double saved_y;  /* +0x38c */
+    double saved_z;  /* +0x394 */
     s32 grid;  /* +0x39c, the place on the grid */
     s32 f3a0;  /* +0x3a0 */
     double f3a4;  /* +0x3a4, lap timing, cleared by 0x41f8f0 */
@@ -133,7 +136,7 @@ struct car {
     double probe_scale;  /* +0x5cc, 1 + km/h / 220 */
     s32 f5d4;  /* +0x5d4, ticks after finishing, to 25 */
     s32 wall_surface[4];  /* +0x5d8, each corner's surface, full-size probe */
-    u8 pad_5e8[0x10];
+    s32 scrape_corner[4];  /* +0x5e8, wall_surface when the scrape began (0x432f20) */
     s32 sign_ticks;  /* +0x5f8, ticks the road's hint sign has shown */
     s32 narrow;  /* +0x5fc, the corners were probed at half size */
     s32 last_narrow;  /* +0x600 */
@@ -146,10 +149,18 @@ struct car {
     double f62c;  /* +0x62c */
     float f634;  /* +0x634, 10.0 */
     float f638;  /* +0x638, 4000.0 */
-    u8 pad_63c[0x4];
+    float knock;  /* +0x63c, the last knock against an object (0x4292c0) */
     double center_dx;  /* +0x640, the middle of the axles' moves (0x427d70) */
     double center_dz;  /* +0x648 */
-    u8 pad_650[0x354];
+    s32 engine_voice[2];  /* +0x650, the engine's two loops (0x41f9b0) */
+    s8 engine_pitch0[200];  /* +0x658, ENGINE.INF by revs * 2: voice 0's pitch, */
+    s8 engine_loud0[200];  /* +0x720, its loudness (read one entry early), */
+    s8 engine_pitch1[200];  /* +0x7e8, voice 1's pitch */
+    s8 engine_loud1[200];  /* +0x8b0, and loudness */
+    s32 tyre_voice[2];  /* +0x978, the tyres' loops, ROLL 0 and 1 */
+    u8 pad_980[0x1c];
+    s32 skid_voice_rear;  /* +0x99c, the skid sounds, by axle */
+    s32 skid_voice_front;  /* +0x9a0 */
     s32 steer_pull;  /* +0x9a4, 50 left, -50 right, easing to 0 */
     double steer_heading;  /* +0x9a8, the road's heading at the car, less pi / 2 */
     double wall_segs[2000];  /* +0x9b0, 500 of x1, z1, x2, z2 near the car (0x428b90) */
@@ -231,6 +242,10 @@ _Static_assert(offsetof(struct car, f36c) == 0x36c, "car.f36c");
 _Static_assert(offsetof(struct car, f370) == 0x370, "car.f370");
 _Static_assert(offsetof(struct car, laps) == 0x374, "car.laps");
 _Static_assert(offsetof(struct car, f378) == 0x378, "car.f378");
+_Static_assert(offsetof(struct car, saved_heading) == 0x37c, "car.saved_heading");
+_Static_assert(offsetof(struct car, saved_x) == 0x384, "car.saved_x");
+_Static_assert(offsetof(struct car, saved_y) == 0x38c, "car.saved_y");
+_Static_assert(offsetof(struct car, saved_z) == 0x394, "car.saved_z");
 _Static_assert(offsetof(struct car, grid) == 0x39c, "car.grid");
 _Static_assert(offsetof(struct car, f3a0) == 0x3a0, "car.f3a0");
 _Static_assert(offsetof(struct car, f3a4) == 0x3a4, "car.f3a4");
@@ -279,6 +294,7 @@ _Static_assert(offsetof(struct car, off_track) == 0x5c8, "car.off_track");
 _Static_assert(offsetof(struct car, probe_scale) == 0x5cc, "car.probe_scale");
 _Static_assert(offsetof(struct car, f5d4) == 0x5d4, "car.f5d4");
 _Static_assert(offsetof(struct car, wall_surface) == 0x5d8, "car.wall_surface");
+_Static_assert(offsetof(struct car, scrape_corner) == 0x5e8, "car.scrape_corner");
 _Static_assert(offsetof(struct car, sign_ticks) == 0x5f8, "car.sign_ticks");
 _Static_assert(offsetof(struct car, narrow) == 0x5fc, "car.narrow");
 _Static_assert(offsetof(struct car, last_narrow) == 0x600, "car.last_narrow");
@@ -291,8 +307,17 @@ _Static_assert(offsetof(struct car, f624) == 0x624, "car.f624");
 _Static_assert(offsetof(struct car, f62c) == 0x62c, "car.f62c");
 _Static_assert(offsetof(struct car, f634) == 0x634, "car.f634");
 _Static_assert(offsetof(struct car, f638) == 0x638, "car.f638");
+_Static_assert(offsetof(struct car, knock) == 0x63c, "car.knock");
 _Static_assert(offsetof(struct car, center_dx) == 0x640, "car.center_dx");
 _Static_assert(offsetof(struct car, center_dz) == 0x648, "car.center_dz");
+_Static_assert(offsetof(struct car, engine_voice) == 0x650, "car.engine_voice");
+_Static_assert(offsetof(struct car, engine_pitch0) == 0x658, "car.engine_pitch0");
+_Static_assert(offsetof(struct car, engine_loud0) == 0x720, "car.engine_loud0");
+_Static_assert(offsetof(struct car, engine_pitch1) == 0x7e8, "car.engine_pitch1");
+_Static_assert(offsetof(struct car, engine_loud1) == 0x8b0, "car.engine_loud1");
+_Static_assert(offsetof(struct car, tyre_voice) == 0x978, "car.tyre_voice");
+_Static_assert(offsetof(struct car, skid_voice_rear) == 0x99c, "car.skid_voice_rear");
+_Static_assert(offsetof(struct car, skid_voice_front) == 0x9a0, "car.skid_voice_front");
 _Static_assert(offsetof(struct car, steer_pull) == 0x9a4, "car.steer_pull");
 _Static_assert(offsetof(struct car, steer_heading) == 0x9a8, "car.steer_heading");
 _Static_assert(offsetof(struct car, wall_segs) == 0x9b0, "car.wall_segs");

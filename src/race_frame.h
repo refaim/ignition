@@ -8,18 +8,8 @@
 
 #include "types.h"
 
-void race_f_417d20(void);
-void race_f_42bc20(void);
-void race_f_434580(void);
-void race_f_445940(void);
-void race_f_420eb0(void);
 void race_f_420e60(void);
-void race_f_444450(void);
 void race_f_434190(void);
-void race_f_4357a0(void);
-void race_f_441390(void);
-void race_f_4383b0(void);
-void race_f_438880(void);
 
 double race_frame_time(void);
 void race_frame(void);

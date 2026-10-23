@@ -38,7 +38,7 @@ extern double r_5532b8;
 extern double r_553288, r_5532c0, r_6192f8, r_619318;
 extern s32 r_563d28, r_563d2c, r_563d38, r_563d3c, r_552f30, r_552f34;
 extern double r_525e30;
-extern s32 r_525e38, r_525e3c;
+extern double r_525e38;
 extern s32 r_525e48;
 
 /* The race's state (0x41fe60 resets it). */
@@ -68,6 +68,7 @@ void race_make_effects(void);
 void race_clear_laps(void);
 void race_reset_state(void);
 void race_init_hud(void);
+void race_layout_views(void);           /* 0x43e2a0 */
 extern s32 g_view_w, g_view_h;
 
 #endif /* IGN_RACE_INIT_H */

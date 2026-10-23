@@ -22,6 +22,7 @@
 #include "menu_pages.h"
 #include "menu_panels.h"
 #include "race.h"
+#include "race_fx.h"
 #include "race_camera.h"
 #include "race_cars.h"
 #include "race_contact.h"
@@ -79,8 +80,7 @@ static int mesh_dwords(const s32 *m)
     return m[0] * 3 + m[1] * 11 + 2;
 }
 
-/* 0x42bc20: the ground effects under car r_5285c0. Each is the
- * effects' to port. */
+/* 0x42bc20: the ground effects under car r_5285c0 (race_fx.c). */
 void race_ground_effects(void)
 {
     const struct car *c = &g_cars[r_5285c0];
@@ -88,10 +88,10 @@ void race_ground_effects(void)
     if (c->f354 != 0 || c->f358 != 0 || c->f35c != 0) {
         return;
     }
-    STUB(0x42bc80, "race_skids");
-    STUB(0x4333e0, "race_spray");
-    STUB(0x4338d0, "race_landing_dust");
-    STUB(0x433f90, "race_dust_trail");
+    race_skids();
+    race_spray();
+    race_landing_dust();
+    race_dust_trail();
 }
 
 /* 0x417d20: what the network says: the host quit (0x64) or restarts

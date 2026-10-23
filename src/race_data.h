@@ -76,5 +76,8 @@ extern const s32 g_lightning_mesh[163];  /* 0x493cf0 */
 extern const s32 g_ease[201];  /* 0x4944e0 */
 extern const s32 g_anim_ticks[7];  /* 0x498480 */
 extern const u8 g_dusty[40];  /* 0x497438 */
+extern const s32 g_skid_colour[40];  /* 0x4973c0 */
+extern const s32 g_skid_rate[10];  /* 0x497458 */
+extern const s32 g_skid_volume[10];  /* 0x497480 */
 
 #endif /* IGN_RACE_DATA_H */

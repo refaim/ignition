@@ -9,7 +9,6 @@
 #include "types.h"
 
 void race_f_420e60(void);
-void race_f_434190(void);
 
 double race_frame_time(void);
 void race_frame(void);

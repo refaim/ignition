@@ -134,6 +134,13 @@ TABLES = [
     ("g_ease", 0x4944E0, "s32", 201, True),
     # Ticks between the animated textures' frames, by track (0x434190).
     ("g_anim_ticks", 0x498480, "s32", 7, True),
+    # The surfaces a landing raises dust from, by type 0..39 (0x4338d0).
+    ("g_dusty", 0x497438, "u8", 40, True),
+    # The skid marks' colour by surface 0..39, -1 none, and the skid
+    # sound's base rate and volume by material 0..9 (0x42bc80).
+    ("g_skid_colour", 0x4973C0, "s32", 40, True),
+    ("g_skid_rate", 0x497458, "s32", 10, True),
+    ("g_skid_volume", 0x497480, "s32", 10, True),
 ]
 
 
@@ -175,6 +182,10 @@ def main():
             vals = struct.unpack_from(f"<{count}d", img, off)
             body = ", ".join(repr(v) for v in vals)
             decl = f"{q}double {name}[{count}]"
+        elif typ == "u8":
+            vals = img[off:off + count]
+            body = ", ".join(str(v) for v in vals)
+            decl = f"{q}u8 {name}[{count}]"
         elif typ == "float":
             vals = struct.unpack_from(f"<{count}f", img, off)
             body = ", ".join(repr(v) + "f" for v in vals)

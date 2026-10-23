@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "anim_tex.h"
 #include "app.h"
 #include "canvas.h"
 #include "cd.h"
@@ -246,6 +247,22 @@ void race_make_effects(void)
     make_weather();
 }
 
+/* 0x420090: an animation for each placement of type 250, over the
+ * track's texture slot 0. */
+static void race_animated_textures(void)
+{
+    int i;
+
+    anim_tex_free();
+    for (i = 0; i < g_level_plc[0]; i++) {
+        const struct plc_entry *e = plc_at(g_level_plc, i);
+
+        if (e->type == 250) {
+            anim_tex_add(g_level_msh + e->mesh, 0);
+        }
+    }
+}
+
 /* 0x41f8f0: the cars' lap timing cleared, the track's best lap from
  * the settings. */
 void race_clear_laps(void)
@@ -369,7 +386,7 @@ void race_load_world(void)
     race_progress(0x51);
     race_reset_state();
     race_progress(0x54);
-    STUB(0x420090, "race_animated_textures");
+    race_animated_textures();
     race_progress(0x5a);
     race_load_ghost();
     race_progress(0x5f);

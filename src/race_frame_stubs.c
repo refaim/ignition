@@ -10,12 +10,6 @@
 #include "stubs.h"
 
 
-/* 0x434190 */
-void race_f_434190(void)
-{
-    extern void race_effects_tick(void);
-    race_effects_tick();
-}
 
 void sound_tick_race(void)
 {

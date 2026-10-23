@@ -63,7 +63,16 @@ struct car {
     double f290;  /* +0x290 */
     s32 f298;  /* +0x298 */
     s32 f29c;  /* +0x29c, 0 on a respawn */
-    u8 pad_2a0[0x58];
+    s32 rear_mark_x[4];  /* +0x2a0, the rear skid marks' last edge (0x42bc80) */
+    s32 rear_mark_y;  /* +0x2b0 */
+    s32 rear_mark_z[4];  /* +0x2b4 */
+    s32 rear_last_x;  /* +0x2c4, where the last rear mark ended */
+    s32 rear_last_z;  /* +0x2c8 */
+    s32 front_mark_x[4];  /* +0x2cc */
+    s32 front_mark_y;  /* +0x2dc */
+    s32 front_mark_z[4];  /* +0x2e0 */
+    s32 front_last_x;  /* +0x2f0 */
+    s32 front_last_z;  /* +0x2f4 */
     s32 skid;  /* +0x2f8, frames of tyre screech left */
     double corner_x[4];  /* +0x2fc, the body's corners, 1.1 times */
     double corner_z[4];  /* +0x31c */
@@ -76,7 +85,7 @@ struct car {
     s32 f354;  /* +0x354 */
     s32 f358;  /* +0x358 */
     s32 f35c;  /* +0x35c */
-    u8 pad_360[0x4];
+    s32 spraying;  /* +0x360, a wheel threw water or mud this step (0x4333e0) */
     s32 f364;  /* +0x364 */
     s32 f368;  /* +0x368 */
     s32 f36c;  /* +0x36c */
@@ -224,6 +233,16 @@ _Static_assert(offsetof(struct car, rpm) == 0x288, "car.rpm");
 _Static_assert(offsetof(struct car, f290) == 0x290, "car.f290");
 _Static_assert(offsetof(struct car, f298) == 0x298, "car.f298");
 _Static_assert(offsetof(struct car, f29c) == 0x29c, "car.f29c");
+_Static_assert(offsetof(struct car, rear_mark_x) == 0x2a0, "car.rear_mark_x");
+_Static_assert(offsetof(struct car, rear_mark_y) == 0x2b0, "car.rear_mark_y");
+_Static_assert(offsetof(struct car, rear_mark_z) == 0x2b4, "car.rear_mark_z");
+_Static_assert(offsetof(struct car, rear_last_x) == 0x2c4, "car.rear_last_x");
+_Static_assert(offsetof(struct car, rear_last_z) == 0x2c8, "car.rear_last_z");
+_Static_assert(offsetof(struct car, front_mark_x) == 0x2cc, "car.front_mark_x");
+_Static_assert(offsetof(struct car, front_mark_y) == 0x2dc, "car.front_mark_y");
+_Static_assert(offsetof(struct car, front_mark_z) == 0x2e0, "car.front_mark_z");
+_Static_assert(offsetof(struct car, front_last_x) == 0x2f0, "car.front_last_x");
+_Static_assert(offsetof(struct car, front_last_z) == 0x2f4, "car.front_last_z");
 _Static_assert(offsetof(struct car, skid) == 0x2f8, "car.skid");
 _Static_assert(offsetof(struct car, corner_x) == 0x2fc, "car.corner_x");
 _Static_assert(offsetof(struct car, corner_z) == 0x31c, "car.corner_z");
@@ -236,6 +255,7 @@ _Static_assert(offsetof(struct car, f350) == 0x350, "car.f350");
 _Static_assert(offsetof(struct car, f354) == 0x354, "car.f354");
 _Static_assert(offsetof(struct car, f358) == 0x358, "car.f358");
 _Static_assert(offsetof(struct car, f35c) == 0x35c, "car.f35c");
+_Static_assert(offsetof(struct car, spraying) == 0x360, "car.spraying");
 _Static_assert(offsetof(struct car, f364) == 0x364, "car.f364");
 _Static_assert(offsetof(struct car, f368) == 0x368, "car.f368");
 _Static_assert(offsetof(struct car, f36c) == 0x36c, "car.f36c");

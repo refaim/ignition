@@ -97,6 +97,7 @@ int scene_gather_view(void);
 extern s32 g_scene_group;                   /* 0x63c5d8, 0 all groups */
 int scene_obj_index(const struct scene_obj *o);
 struct scene_obj *scene_obj_at(int index);
+struct scene_obj *scene_obj_pool(int *count);
 
 /* Texture slots (0x63c5c8): each the first of the slot's 256 x 256
  * pages of 8 bit texels, which follow at 64 KB steps. */

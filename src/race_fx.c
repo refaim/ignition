@@ -12,7 +12,6 @@
  */
 
 #include <math.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -22,6 +21,7 @@
 #include "race_cars.h"
 #include "race_contact.h"
 #include "race_data.h"
+#include "anim_tex.h"
 #include "race_fx.h"
 #include "race_hud.h"
 #include "race_init.h"
@@ -1798,10 +1798,10 @@ void race_effect(struct race_effect *e)
     race_effect_start(e);
 }
 
-/* 0x401f00: the animated textures' next frame. Not ported yet. */
+/* 0x401f00: the animated textures' next frame (anim_tex.c). */
 static void anim_textures(void)
 {
-    STUB(0x401f00, "anim_textures");
+    anim_tex_step();
 }
 
 /* 0x434190
@@ -1871,10 +1871,6 @@ void race_effects_tick(void)
         }
     }
     race_age_messages();
-    { static int done; if (!done && g_race_clock > 300.0 && getenv("FXTEST")) { struct car *c = &g_cars[0]; done = 1; c->f354 = 1;
-        g_effect.type = 3; g_effect.x = (s32)(c->rear_x * 1024.0); g_effect.y = (s32)(c->y * 1024.0); g_effect.z = (s32)(c->rear_z * 1024.0);
-        g_effect.f10 = 0; g_effect.f14 = 0; g_effect.f18 = 80; g_effect.f1c = 1; race_effect_start(&g_effect); } }
-    { static int t; int n[12] = {0}; if (++t % 36 == 0) { for (i = 0; i < FX_SLOTS; i++) n[g_effects[i].type]++; fprintf(stderr, "FXTRACE %d %d %d %d %d %d %d %d %d %d %d\n", n[1],n[2],n[3],n[4],n[5],n[6],n[7],n[8],n[9],n[10],n[11]); } }
 }
 
 /* 0x432f20
@@ -2018,7 +2014,6 @@ void race_weather(void)
     s32 *const drift_y[2] = { &r_563d38, &r_563d3c };
     int v, j, k;
 
-    if (getenv("FXRAIN")) { r_552f30 = 1; }
     if (g_weather == 1 || g_weather == 2) {
         gl3d_set_dynamic(g_weather_meshes[0], g_weather_meshes[0] + WEATHER_MESH_DWORDS);
         gl3d_set_dynamic(g_weather_meshes[1], g_weather_meshes[1] + WEATHER_MESH_DWORDS);
@@ -2192,5 +2187,570 @@ void race_weather(void)
                 }
             }
         }
+    }
+}
+
+/* The surface under the car's rear wheels, for the dust: the first of
+ * them that is a road (0..39), else 0. */
+static s32 rear_surface(const struct car *c)
+{
+    if (c->surface[2] >= 0 && c->surface[2] <= 39) {
+        return c->surface[2];
+    }
+    if (c->surface[3] >= 0 && c->surface[3] <= 39) {
+        return c->surface[3];
+    }
+    return 0;
+}
+
+/* 0x433f90: dust behind car 0x5285c0 on dirt (4, 14, 24) above 20 km/h,
+ * more the faster it goes. */
+void race_dust_trail(void)
+{
+    const struct car *c = &g_cars[r_5285c0];
+    s32 surf = rear_surface(c);
+    double q;
+
+    if ((surf != 4 && surf != 14 && surf != 24) || c->f118 <= 20.0 || c->f270 != 0) {
+        return;
+    }
+    q = c->f118 * c->f118 * 0.001;
+    if (!(race_rand() * 70.0 < q)) {
+        return;
+    }
+    {
+        s32 vy = (s32)((race_rand() * 0.5 - 1.0) * 1024.0);
+        s32 size = (s32)((race_rand() * 150.0 + 150.0) * 1024.0);
+        s32 grow = (s32)((race_rand() * 2.0 + q * 0.125) * 1024.0);
+
+        emit((s32)(c->rear_x * 1024.0), (s32)(c->y * 1024.0), (s32)(c->rear_z * 1024.0), 0, vy, 0,
+             0x3f5, 0, 4, 0x800, 0x3d, size, grow, 0x497ff8, 100);
+    }
+}
+
+/* 0x4338d0: as car 0x5285c0 touches down on a dusty surface, a puff at
+ * each side of each axle. */
+void race_landing_dust(void)
+{
+    const struct car *c = &g_cars[r_5285c0];
+    double side;
+    int k;
+
+    if (c->landing != 1 || g_dusty[rear_surface(c)] != 1) {
+        return;
+    }
+    side = (double)g_wheel_info[4 * g_drivers[r_5285c0].car].dz;
+    for (k = 0; k < 4; k++) {
+        double a = c->heading + 1.5707963267949;
+        double ax = k < 2 ? c->front_x : c->rear_x, az = k < 2 ? c->front_z : c->rear_z;
+        double sg = (k & 1) ? -1.0 : 1.0;
+        s32 x, z, vx, vz, size, grow;
+
+        /* The original works each out in full; the same maths. */
+        if (sg > 0) {
+            x = (s32)((cos(a) * side + ax) * 1024.0);
+            z = (s32)((side * sin(a) + az) * 1024.0);
+        } else {
+            x = (s32)((ax - cos(a) * side) * 1024.0);
+            z = (s32)((az - side * sin(a)) * 1024.0);
+        }
+        vx = (s32)((race_rand() * 2.0 - 1.0) * 1024.0);
+        vz = (s32)((race_rand() * 2.0 - 1.0) * 1024.0);
+        size = (s32)((race_rand() * 50.0 + 50.0) * 1024.0);
+        grow = (s32)((race_rand() * 2.0 + 2.0) * 1024.0);
+        emit(x, (s32)(c->y * 1024.0), z, vx, -1024, vz, 0x400, 0, 4, 0, 0xcc, size, grow, 0x497ff8,
+             0x28);
+    }
+}
+
+s32 r_4949b0;                                   /* every surface sprays (a debug switch) */
+
+/* 0x4333e0
+ * Water or mud (surfaces 6, 16, 26) thrown up by car 0x5285c0's wheels
+ * on the ground above 5 km/h: two drops a wheel, with a share of the
+ * car's move. The corners run front left, front right, rear left, rear
+ * right; their wheels the other way round. */
+void race_spray(void)
+{
+    struct car *c = &g_cars[r_5285c0];
+    int model = g_drivers[r_5285c0].car, k, n;
+    double ox = 0.0, oz = 0.0;
+
+    if (c->f118 <= 5.0 || c->f270 != 0) {
+        return;
+    }
+    for (k = 0; k < 4; k++) {
+        s32 surf = c->surface[k];
+
+        c->spraying = 0;
+        if (surf == 6 || surf == 16 || surf == 26 || r_4949b0 == 1) {
+            double cs = cos(c->heading), sn = sin(c->heading);
+            double wx = g_wheel_dx[4 * model + 3 - k], wz = g_wheel_dz[4 * model + 3 - k];
+
+            ox = cs * wx - sn * wz;
+            oz = wz * cs + sn * wx;
+            c->spraying = 1;
+        }
+        if (c->spraying != 1) {
+            continue;
+        }
+        {
+            double vx0 = c->dx * 0.2857142857142857, vz0 = c->dz * 0.2857142857142857;
+            s32 vy = (s32)((c->f118 * 0.06666666666666667 + 1.0) * 1024.0);
+
+            for (n = 0; n < 2; n++) {
+                double r1 = race_rand() * 4.0 - 2.0, r2 = race_rand();
+
+                g_effect.type = 8;
+                g_effect.x = (s32)((c->x + ox) * 1024.0);
+                g_effect.y = (s32)(c->y * 1024.0);
+                g_effect.z = (s32)((c->z + oz) * 1024.0);
+                g_effect.f10 = (s32)((r1 + vx0) * 1024.0);
+                g_effect.f14 = vy;
+                g_effect.f18 = (s32)((r2 * 4.0 - 2.0 + vz0) * 1024.0);
+                g_effect.f30 = 0;
+                g_effect.f34 = 0;
+                g_effect.f38.i = 0;
+                g_effect.f1c = 0x3d7;
+                g_effect.f20 = -0x99;
+                g_effect.f24 = 0x1ec00;
+                g_effect.f28 = -0x20;
+                g_effect.f2c = 1;
+                g_effect.f3c = (s32)(race_rand() * 100.0);
+                g_effect.f40 = (s32)(race_rand() * 100.0);
+                g_effect.f44 = (s32)(race_rand() * 100.0);
+                g_effect.f48 = 0;
+                g_effect.f4c = 0x3c;
+                race_effect_start(&g_effect);
+            }
+        }
+    }
+}
+
+/* A puff out of car 0x5285c0's exhaust at its back, the angles its
+ * body's times `turn` (the boost's start has 1024 where the flames
+ * have tenths of a degree). */
+static void exhaust_puff(const struct car *c, double turn)
+{
+    s32 vx = (s32)((race_rand() * 4.0 - 2.0) * 1024.0);
+    s32 vy = (s32)(race_rand() * 1024.0);
+    s32 vz = (s32)((race_rand() * 4.0 - 2.0) * 1024.0);
+
+    g_effect.type = 1;
+    g_effect.x = (s32)(c->x * 1024.0);
+    g_effect.y = (s32)(c->y * 1024.0);
+    g_effect.z = (s32)(c->z * 1024.0);
+    g_effect.f10 = vx;
+    g_effect.f14 = vy;
+    g_effect.f18 = vz;
+    g_effect.f20 = 0;
+    g_effect.f1c = 0x400;
+    g_effect.f24 = 4;
+    g_effect.f2c = 0x99;
+    g_effect.f30 = 0x32000;
+    g_effect.f34 = 0x800;
+    g_effect.f38.frames = fx_frames(0x498088);
+    g_effect.f28 = 0;
+    g_effect.f3c = (s32)(race_rand() * 20.0 + (double)c->min_x);
+    g_effect.f40 = 0;
+    g_effect.f44 = (s32)(race_rand() * 60.0 - 30.0);
+    g_effect.f48 = (s32)(c->f108 * turn);
+    g_effect.f4c = (s32)(c->heading * turn);
+    g_effect.f50 = (s32)(c->f110 * turn);
+    g_effect.f58 = 0x32;
+    g_effect.f54 = 0;
+    race_effect_start(&g_effect);
+}
+
+/* 0x443320's puffs: ten out of the exhaust as the boost starts. */
+void race_boost_puffs(void)
+{
+    const struct car *c = &g_cars[r_5285c0];
+    int k;
+
+    for (k = 0; k < 10; k++) {
+        exhaust_puff(c, 1024.0);
+    }
+}
+
+/* One of car 8's smoke puffs, as likely as its boost is full. */
+static void boost_smoke(const struct car *c, s32 spread)
+{
+    if (!(race_rand() * 100.0 < c->f534)) {
+        return;
+    }
+    {
+        s32 vx = (s32)(race_rand() * 1024.0 - 512.0 + c->dx * 921.6);
+        s32 vz = (s32)(race_rand() * 1024.0 - 512.0 + c->dz * 921.6);
+
+        g_effect.type = 1;
+        g_effect.x = (s32)(c->x * 1024.0);
+        g_effect.y = (s32)(c->y * 1024.0);
+        g_effect.z = (s32)(c->z * 1024.0);
+        g_effect.f10 = vx;
+        g_effect.f14 = 0x400;
+        g_effect.f18 = vz;
+        g_effect.f1c = 0x400;
+        g_effect.f20 = 0;
+        g_effect.f28 = 0x1000;
+        g_effect.f34 = 0x1000;
+        g_effect.f24 = 5;
+        g_effect.f2c = 0x3d;
+        g_effect.f30 = 0x19000;
+        g_effect.f38.frames = fx_frames(0x498118);
+        g_effect.f3c = -25;
+        g_effect.f40 = -50;
+        g_effect.f44 = spread;
+        g_effect.f48 = (s32)(c->f108 * 572.957795130822);
+        g_effect.f4c = (s32)(c->heading * 572.957795130822);
+        g_effect.f50 = (s32)(c->f110 * 572.957795130822);
+        g_effect.f58 = 0x32;
+        g_effect.f54 = 0;
+        race_effect_start(&g_effect);
+    }
+}
+
+/* 0x443640
+ * The boost burning on car 0x5285c0: two flames at its back each step;
+ * in a standing start, ten puffs whenever the count's bits 1 and 3 are
+ * set; car 3 a jet that flickers between two runs of frames; car 8
+ * smoke as thick as the boost is full. */
+void race_boost_flames(void)
+{
+    struct car *c = &g_cars[r_5285c0];
+    int k;
+
+    for (k = 0; k < 2; k++) {
+        s32 vx = (s32)(c->dx * 512.0 + (race_rand() * 1024.0 - 512.0));
+        s32 vz = (s32)((race_rand() * 1024.0 - 512.0) + c->dz * 512.0);
+
+        g_effect.type = 1;
+        g_effect.x = (s32)(c->x * 1024.0);
+        g_effect.y = (s32)(c->y * 1024.0);
+        g_effect.z = (s32)(c->z * 1024.0);
+        g_effect.f10 = vx;
+        g_effect.f14 = 0x400;
+        g_effect.f18 = vz;
+        g_effect.f1c = 0x400;
+        g_effect.f20 = 0;
+        g_effect.f28 = 0;
+        g_effect.f2c = 0;
+        g_effect.f34 = 0x400;
+        g_effect.f24 = 2;
+        g_effect.f30 = 0x25800;
+        g_effect.f38.frames = fx_frames(0x498438);
+        g_effect.f3c = (s32)(race_rand() * 10.0 + (double)c->min_x);
+        g_effect.f40 = 0;
+        g_effect.f44 = (s32)(race_rand() * 30.0 - 15.0);
+        g_effect.f48 = (s32)(c->f108 * 572.957795130822);
+        g_effect.f4c = (s32)(c->heading * 572.957795130822);
+        g_effect.f50 = (s32)(c->f110 * 572.957795130822);
+        g_effect.f58 = 0x1a;
+        g_effect.f54 = 0;
+        race_effect_start(&g_effect);
+    }
+    c->f54c++;
+    if (c->f53c == 2 && (c->f54c & 0xa) == 0xa) {
+        for (k = 0; k < 10; k++) {
+            exhaust_puff(c, 572.957795130822);
+        }
+    }
+    if (g_drivers[r_5285c0].car == 3) {
+        s32 frame = (s32)(fmod((double)c->f54c, 8.0) * 0.5);
+        int lit = (c->f54c & 8) != 0;
+
+        g_effect.type = 1;
+        g_effect.x = (s32)(c->x * 1024.0);
+        g_effect.y = (s32)(c->y * 1024.0);
+        g_effect.z = (s32)(c->z * 1024.0);
+        g_effect.f10 = g_effect.f14 = g_effect.f18 = 0;
+        g_effect.f20 = 0;
+        g_effect.f24 = 2;
+        g_effect.f28 = 0;
+        g_effect.f2c = 0;
+        g_effect.f34 = 0;
+        g_effect.f38.frames = fx_frames((lit ? 0x4983e8 : 0x4983a8) + 16 * frame);
+        g_effect.f1c = 0x400;
+        g_effect.f30 = 0x4b000;
+        g_effect.f40 = -25;
+        g_effect.f44 = lit ? 12 : -12;
+        g_effect.f3c = 0;
+        g_effect.f48 = (s32)(c->f108 * 572.957795130822);
+        g_effect.f4c = (s32)(c->heading * 572.957795130822);
+        g_effect.f50 = (s32)(c->f110 * 572.957795130822);
+        g_effect.f54 = 0;
+        g_effect.f58 = 2;
+        race_effect_start(&g_effect);
+    }
+    if (g_drivers[r_5285c0].car == 8) {
+        boost_smoke(c, 22);
+        boost_smoke(c, -22);
+        boost_smoke(c, 22);
+        boost_smoke(c, -22);
+    }
+}
+
+extern struct scene_desc *g_particle_objs;      /* 0x563cec, 700 skid marks */
+extern s32 r_5532f0;                            /* the next of them */
+
+enum { SKID_MARKS = 700, SKID_MESH_DWORDS = 49 };
+
+static s32 s_skid_meshes[SKID_MARKS][SKID_MESH_DWORDS];    /* 0x5dfe70 */
+
+/* An axle's skid state: its marks' last edge, where the last mark
+ * ended, its flag and its sound. */
+struct skid_axle {
+    double ax, az, slip;
+    s32 *mark_x, *mark_y, *mark_z, *last_x, *last_z, *flag;
+    s32 s0, s1;                 /* the surfaces of its two wheels */
+};
+
+/* Smoke off a skidding axle: a puff each side, of the wheel's width
+ * from the middle. */
+static void skid_smoke(const struct car *c, const struct skid_axle *x, double side)
+{
+    int k;
+
+    for (k = 0; k < 2; k++) {
+        double a = c->heading + (k == 0 ? 1.5707963267949 : -1.5707963267949);
+        double ox = cos(a) * side, oz = side * sin(a);
+        double s = race_rand() * 0.4 + 0.2;
+
+        g_effect.type = 1;
+        g_effect.x = (s32)((x->ax + ox) * 1024.0);
+        g_effect.y = (s32)(c->y * 1024.0);
+        g_effect.z = (s32)((x->az + oz) * 1024.0);
+        g_effect.f10 = (s32)(race_rand() * 2048.0);
+        g_effect.f14 = 0x400;
+        g_effect.f18 = (s32)(race_rand() * 2048.0);
+        g_effect.f20 = 0;
+        g_effect.f1c = 0x200;
+        g_effect.f24 = 4;
+        g_effect.f28 = 0;
+        g_effect.f2c = (s32)(s * 1024.0);
+        g_effect.f30 = (s32)((race_rand() * 100.0 + 50.0) * 1024.0);
+        g_effect.f34 = (s32)((race_rand() * 4.0 + 4.0) * 1024.0);
+        g_effect.f3c = g_effect.f40 = g_effect.f44 = g_effect.f48 = 0;
+        g_effect.f4c = g_effect.f54 = g_effect.f50 = 0;
+        g_effect.f38.frames = fx_frames(0x497ff8);
+        g_effect.f58 = (s32)(8.0 / s);
+        race_effect_start(&g_effect);
+    }
+}
+
+/* The four ends of a new edge across the axle: the wheels' marks, each
+ * the wheel's width across the way the axle went (angle e), about each
+ * wheel. */
+static void skid_edge(s32 out_x[4], s32 out_z[4], double e, double width, s32 ox, s32 oz, s32 mox,
+                      s32 moz, s32 base_x, s32 base_z)
+{
+    double ce = cos(e), se = sin(e);
+
+    out_x[0] = (s32)(width * ce + ox) + base_x;
+    out_z[0] = (s32)(width * se + oz) + base_z;
+    out_x[1] = (s32)(ox - width * ce) + base_x;
+    out_z[1] = (s32)(oz - width * se) + base_z;
+    out_x[2] = (s32)(width * ce + mox) + base_x;
+    out_z[2] = (s32)(width * se + moz) + base_z;
+    out_x[3] = (s32)(mox - width * ce) + base_x;
+    out_z[3] = (s32)(moz - width * se) + base_z;
+}
+
+/* A skid mark from the axle's last edge to here: two quads (a wheel
+ * each) of flat faces through the .SHD in the surface's colour, on the
+ * next of the 700 marks. Then this is the last edge. */
+static void skid_mark(struct car *c, struct skid_axle *x, s32 colour, int model)
+{
+    double cs, sn, w = (double)g_wheel_info[4 * model].dz, width = (double)g_wheel_info[4 * model].top;
+    double dx = x->ax - (double)*x->last_x, dz = x->az - (double)*x->last_z, e;
+    s32 ox, oz, mox, moz, y0, rx = (s32)x->ax, rz = (s32)x->az, nx[4], nz[4];
+    s32 *m;
+    struct scene_desc *d;
+    int k;
+
+    if (sqrt(dx * dx + dz * dz) <= 30.0 || r_552e58 != 1) {
+        return;
+    }
+    cs = cos(c->heading + 1.5707963267949);
+    sn = sin(c->heading + 1.5707963267949);
+    ox = (s32)(cs * w);
+    oz = (s32)(sn * w);
+    mox = (s32)-(cs * w);
+    moz = (s32)-(sn * w);
+    e = atan2(dz, dx) + 1.5707963267949;
+    y0 = (s32)(sin(c->f110) * 20.0 + c->y) - *x->mark_y;
+    m = s_skid_meshes[r_5532f0];
+    m[0] = 8;
+    m[1] = 4;
+    skid_edge(nx, nz, e, width, ox, oz, mox, moz, 0, 0);
+    /* The new edge about here, the last one about it too. */
+    m[2] = nx[0];
+    m[3] = 0;
+    m[4] = nz[0];
+    m[5] = nx[1];
+    m[6] = 0;
+    m[7] = nz[1];
+    m[8] = x->mark_x[0] - rx;
+    m[9] = y0;
+    m[10] = x->mark_z[0] - rz;
+    m[11] = x->mark_x[1] - rx;
+    m[12] = y0;
+    m[13] = x->mark_z[1] - rz;
+    m[14] = nx[2];
+    m[15] = 0;
+    m[16] = nz[2];
+    m[17] = nx[3];
+    m[18] = 0;
+    m[19] = nz[3];
+    m[20] = x->mark_x[2] - rx;
+    m[21] = y0;
+    m[22] = x->mark_z[2] - rz;
+    m[23] = x->mark_x[3] - rx;
+    m[24] = y0;
+    m[25] = x->mark_z[3] - rz;
+    {
+        static const s32 faces[4][3] = { { 0, 1, 2 }, { 2, 1, 3 }, { 4, 5, 6 }, { 6, 5, 7 } };
+
+        for (k = 0; k < 4; k++) {
+            m[26 + 5 * k] = 20;
+            m[27 + 5 * k] = faces[k][0];
+            m[28 + 5 * k] = faces[k][1];
+            m[29 + 5 * k] = faces[k][2];
+            m[30 + 5 * k] = colour;
+        }
+    }
+    d = &g_particle_objs[r_5532f0];
+    scene_obj_set_mesh(d, m, 0, 200, 0, 20, 0);
+    d->x = rx;
+    d->y = (s32)(sin(c->f110) * 20.0 + (double)(s32)c->y);
+    d->z = rz;
+    d->ax = d->ay = d->az = 0;
+    if (d->in_grid) {
+        if (scene_obj_move(d) != 0) {
+            log_printf("FEL VID LI_MOVEOBJECT SLADD OBJ 1\n");
+        }
+    } else {
+        scene_obj_link(d);
+    }
+    if (++r_5532f0 >= SKID_MARKS) {
+        r_5532f0 = 0;
+    }
+    *x->mark_y = (s32)(sin(c->f110) * 20.0 + c->y);
+    skid_edge(x->mark_x, x->mark_z, e, width, ox, oz, mox, moz, rx, rz);
+    *x->last_x = rx;
+    *x->last_z = rz;
+}
+
+/* A skid starting: the edge where the axle is, across the way it came
+ * from the last mark. */
+static void skid_start(struct car *c, struct skid_axle *x, int model)
+{
+    double cs, sn, w = (double)g_wheel_info[4 * model].dz, width = (double)g_wheel_info[4 * model].top;
+    s32 ox, oz, mox, moz;
+    double e;
+
+    cs = cos(c->heading + 1.5707963267949);
+    sn = sin(c->heading + 1.5707963267949);
+    ox = (s32)(cs * w);
+    oz = (s32)(sn * w);
+    mox = (s32)-(cs * w);
+    moz = (s32)-(sn * w);
+    e = atan2(x->az - (double)*x->last_z, x->ax - (double)*x->last_x);
+    *x->flag = 1;
+    *x->mark_y = (s32)(sin(c->f110) * 20.0 + c->y);
+    e += 1.5707963267949;
+    skid_edge(x->mark_x, x->mark_z, e, width, ox, oz, mox, moz, (s32)x->ax, (s32)x->az);
+    *x->last_x = (s32)x->ax;
+    *x->last_z = (s32)x->az;
+}
+
+static int skid_angle(double slip)
+{
+    return (!(slip <= 0.392699081698725) && slip < 2.748893571891075)
+           || (!(slip <= 3.5342917352885252) && slip < 5.890486225480876);
+}
+
+/* The rear skid's sound: the surface's (its material, by 9 to go on
+ * and by 10 to start), faster with speed. */
+static void skid_sound_start(struct car *c, int surf_mod)
+{
+    s32 s = surf_mod;
+
+    c->skid_voice_rear = race_sound_3d(0, 1, s, -1, g_skid_volume[s],
+                                       (s32)(c->f118 * 100.0 + (double)g_skid_rate[s]), 0,
+                                       (float)(s32)c->rear_x, (float)(s32)c->rear_z);
+}
+
+/* 0x42bc80
+ * Skids under car 0x5285c0: an axle sliding (its wheels' travel 22.5
+ * to 157.5 degrees off the heading) above 8 km/h, for the rear also
+ * while the screech counts down (f2f8), and above 10 for the front, on
+ * the ground on a surface that marks: smoke but on sand (5, 15, 25),
+ * marks every 30 and, for the rear, the skid sound. */
+void race_skids(void)
+{
+    struct car *c = &g_cars[r_5285c0];
+    int model = g_drivers[r_5285c0].car;
+    double side = (double)g_wheel_info[4 * model].dz;
+    struct skid_axle rear = { c->rear_x, c->rear_z, c->slip, c->rear_mark_x, &c->rear_mark_y,
+                              c->rear_mark_z, &c->rear_last_x, &c->rear_last_z, &c->f298,
+                              c->surface[2], c->surface[3] };
+    struct skid_axle front = { c->front_x, c->front_z, c->front_slip, c->front_mark_x,
+                               &c->front_mark_y, c->front_mark_z, &c->front_last_x,
+                               &c->front_last_z, &c->f29c, c->surface[0], c->surface[1] };
+    s32 colour;
+
+    gl3d_set_dynamic(&s_skid_meshes[0][0], &s_skid_meshes[SKID_MARKS - 1][SKID_MESH_DWORDS]);
+
+    colour = rear.s0 >= 0 && rear.s0 < 40 ? g_skid_colour[rear.s0] : -1;
+    if (((skid_angle(c->slip) && !(c->f118 <= 8.0)) || c->skid != 0) && c->f270 == 0
+        && colour != -1) {
+        if (c->f298 == 1) {
+            s32 now, before;
+
+            if (rear.s0 != 5 && rear.s1 != 5 && rear.s0 != 15 && rear.s1 != 15 && rear.s0 != 25
+                && rear.s1 != 25 && r_563be0 == 1) {
+                skid_smoke(c, &rear, side);
+            }
+            skid_mark(c, &rear, colour, model);
+            now = (s32)fmod((double)c->surface[2], 9.0);
+            before = (s32)fmod((double)c->last_surface[2], 9.0);
+            if (now == before) {
+                struct sound_voice *v = sound_voice_of(c->skid_voice_rear);
+
+                if (v != NULL) {
+                    v->rate = (s32)((double)g_skid_rate[now] + c->f118 * 25.0);
+                }
+            } else {
+                stop_voice(c->skid_voice_rear);
+                skid_sound_start(c, now);
+            }
+        } else {
+            s32 s;
+
+            skid_start(c, &rear, model);
+            s = (s32)fmod((double)c->surface[2], 10.0);
+            skid_sound_start(c, s == 9 ? 4 : s);
+        }
+    } else {
+        if (c->f298 == 1) {
+            stop_voice(c->skid_voice_rear);
+        }
+        c->f298 = 0;
+    }
+
+    colour = front.s0 >= 0 && front.s0 < 40 ? g_skid_colour[front.s0] : -1;
+    if (skid_angle(c->front_slip) && !(c->f118 <= 10.0) && c->f270 == 0 && colour != -1) {
+        if (c->f29c == 1) {
+            if (front.s0 != 5 && front.s1 != 5 && front.s0 != 15 && front.s1 != 15 && front.s0 != 25
+                && front.s1 != 25 && r_563be0 == 1) {
+                skid_smoke(c, &front, side);
+            }
+            skid_mark(c, &front, colour, model);
+        } else {
+            skid_start(c, &front, model);
+        }
+    } else {
+        c->f29c = 0;
     }
 }

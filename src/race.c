@@ -21,6 +21,7 @@
 #include "race_cars.h"
 #include "race_control.h"
 #include "race_frame.h"
+#include "race_fx.h"
 #include "race_misc.h"
 #include "race_init.h"
 #include "race_phys.h"
@@ -227,7 +228,7 @@ static void race_step(double dt)
                 race_respawn();
             }
         }
-        race_f_434190();
+        race_effects_tick();
     }
     r_563bd0_acc += (s32)(g_frame_time - r_525e48) * 0.036 - r_563d48_last;
     for (; r_563bd0_acc >= 1.0; r_563bd0_acc -= 1.0) {

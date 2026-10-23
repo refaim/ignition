@@ -29,6 +29,7 @@ void gl3d_set_tables(const u8 *shd, const u8 *fixed);
  * up to eight such runs, each named by its begin. */
 void gl3d_set_dynamic(const s32 *begin, const s32 *end);
 void gl3d_view_fill(double y0, double y1, int index);
+void gl3d_mesh_changed(const s32 *mesh);
 void gl3d_view_resume(void);
 void gl3d_view_columns(double x0, double x1);
 void gl3d_view_end(void);

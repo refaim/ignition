@@ -19,6 +19,7 @@ static struct scene_obj **s_grid;           /* 0x63b5ec */
 static int s_grid_w;                        /* 0x63c5b8, in cells */
 static int s_world_w, s_world_h;            /* 0x63c608, 0x63c60c */
 static struct scene_obj *s_objs;            /* 0x63c5dc */
+static int s_obj_total;
 static struct scene_obj **s_free_list;           /* 0x63c5c0, ended by -1 */
 static struct scene_obj **s_free_at;      /* 0x63c5e8 */
 
@@ -87,6 +88,7 @@ void scene_free(void)
     s_grid = NULL;
     s_free_list = NULL;
     s_objs = NULL;
+    s_obj_total = 0;
 }
 
 /* 0x446ca0: a world of w x h units in cells of 256, and room for
@@ -112,6 +114,7 @@ int raster_set_grid(int w, int h, int count)
         s_free_list[i] = &s_objs[i];
     }
     s_free_list[count] = FREE_END;
+    s_obj_total = count;
     return 0;
 }
 
@@ -405,6 +408,13 @@ s32 g_scene_group;                          /* 0x63c5d8 */
 int scene_obj_index(const struct scene_obj *o)
 {
     return (int)(o - s_objs);
+}
+
+/* The pool, as 0x63c5c0 walks it: the objects in use have a mesh. */
+struct scene_obj *scene_obj_pool(int *count)
+{
+    *count = s_obj_total;
+    return s_objs;
 }
 
 struct scene_obj *scene_obj_at(int index)

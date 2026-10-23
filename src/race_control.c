@@ -13,6 +13,7 @@
 #include "race.h"
 #include "race_cars.h"
 #include "race_control.h"
+#include "race_fx.h"
 #include "race_data.h"
 #include "race_init.h"
 #include "sound.h"
@@ -373,13 +374,13 @@ void race_boost(void)
         c->f534 = 100.0;
     }
     if (c->f53c > 0) {
-        STUB(0x443640, "race_boost_flames");
+        race_boost_flames();
     }
 }
 
 /* 0x443320
  * The boost starting: a sound by car, car 3's own loop if it is not
- * playing, and ten sparks (0x434380, not ported). */
+ * playing, and ten puffs out of the exhaust. */
 void race_boost_start(void)
 {
     int i = r_5285c0;
@@ -390,5 +391,5 @@ void race_boost_start(void)
     if (d->car == 3 && sound_voice_of(c->f5c4) == NULL) {
         c->f5c4 = race_sound_3d(0, 3, 3, 1, 0xe000, 0, 0, (float)(s32)c->x, (float)(s32)c->z);
     }
-    STUB(0x434380, "race_boost_start sparks");
+    race_boost_puffs();
 }

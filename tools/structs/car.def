@@ -53,6 +53,16 @@ struct car 0x484c 0x5daffc
 0x290 double f290
 0x298 s32 f298
 0x29c s32 f29c                 0 on a respawn
+0x2a0 s32 rear_mark_x[4]        the rear skid marks' last edge (0x42bc80)
+0x2b0 s32 rear_mark_y
+0x2b4 s32 rear_mark_z[4]
+0x2c4 s32 rear_last_x           where the last rear mark ended
+0x2c8 s32 rear_last_z
+0x2cc s32 front_mark_x[4]
+0x2dc s32 front_mark_y
+0x2e0 s32 front_mark_z[4]
+0x2f0 s32 front_last_x
+0x2f4 s32 front_last_z
 0x2f8 s32 skid                  frames of tyre screech left
 0x2fc double corner_x[4]        the body's corners, 1.1 times
 0x31c double corner_z[4]
@@ -65,6 +75,7 @@ struct car 0x484c 0x5daffc
 0x354 s32 f354
 0x358 s32 f358
 0x35c s32 f35c
+0x360 s32 spraying              a wheel threw water or mud this step (0x4333e0)
 0x364 s32 f364
 0x368 s32 f368
 0x36c s32 f36c

@@ -242,23 +242,12 @@ static void warn_once(int type)
     }
 }
 
-/* Turns a mesh's faces into triangles, cached by the mesh's address. */
-static struct mesh_entry *mesh_get(const s32 *mesh)
+/* A mesh's faces as triangles into `verts`; returns their vertices. */
+static int mesh_build(const s32 *mesh, float *verts, int *deferred_out)
 {
-    struct mesh_entry *e;
     const u8 *f;
-    float *verts;
     int i, n = 0, deferred = 0;
 
-    for (i = 0; i < s_mesh_count; i++) {
-        if (s_meshes[i].mesh == mesh) {
-            return &s_meshes[i];
-        }
-    }
-    if (s_mesh_count == MAX_MESHES) {
-        return NULL;
-    }
-    verts = malloc((size_t)mesh[1] * 3 * FLOATS * sizeof(float));
     f = (const u8 *)(mesh + 2 + 3 * mesh[0]);
     for (i = 0; i < mesh[1]; i++) {
         const s32 *w = (const s32 *)f;
@@ -270,7 +259,7 @@ static struct mesh_entry *mesh_get(const s32 *mesh)
             break;
         }
         if (type == 19 || type == 23 || type == 1 || type == 2 || type == 7 || type == 8
-            || type == 13) {
+            || type == 13 || type == 20) {
             deferred = 1;
         } else if (size == 44 && type != 19 && type != 23) {
             float page = (float)((u32)w[10] >> 16);
@@ -294,6 +283,27 @@ static struct mesh_entry *mesh_get(const s32 *mesh)
         }
         f += size;
     }
+    *deferred_out = deferred;
+    return n;
+}
+
+/* Turns a mesh's faces into triangles, cached by the mesh's address. */
+static struct mesh_entry *mesh_get(const s32 *mesh)
+{
+    struct mesh_entry *e;
+    float *verts;
+    int i, n, deferred;
+
+    for (i = 0; i < s_mesh_count; i++) {
+        if (s_meshes[i].mesh == mesh) {
+            return &s_meshes[i];
+        }
+    }
+    if (s_mesh_count == MAX_MESHES) {
+        return NULL;
+    }
+    verts = malloc((size_t)mesh[1] * 3 * FLOATS * sizeof(float));
+    n = mesh_build(mesh, verts, &deferred);
     if (s_vbo_used + n > s_vbo_size) {
         free(verts);
         return NULL;
@@ -309,6 +319,31 @@ static struct mesh_entry *mesh_get(const s32 *mesh)
     e->deferred = deferred;
     s_vbo_used += n;
     return e;
+}
+
+/* A cached mesh's faces changed (the animated textures move their
+ * coordinates): its triangles are built again in place. */
+void gl3d_mesh_changed(const s32 *mesh)
+{
+    float *verts;
+    int i, n, deferred;
+
+    for (i = 0; i < s_mesh_count; i++) {
+        if (s_meshes[i].mesh == mesh) {
+            break;
+        }
+    }
+    if (i == s_mesh_count) {
+        return;
+    }
+    verts = malloc((size_t)mesh[1] * 3 * FLOATS * sizeof(float));
+    n = mesh_build(mesh, verts, &deferred);
+    if (n == s_meshes[i].count) {
+        glBindBuffer(GL_ARRAY_BUFFER, s_vbo);
+        glBufferSubData(GL_ARRAY_BUFFER, (GLintptr)s_meshes[i].first * FLOATS * sizeof(float),
+                        (GLsizeiptr)n * FLOATS * sizeof(float), verts);
+    }
+    free(verts);
 }
 
 /* A texture slot's pages as a texture array. */
@@ -542,7 +577,8 @@ static void object_matrix(const struct scene *sc, const struct scene_obj *o, dou
 }
 
 /* Deferred faces: the texel through the table with the pixel under it
- * (a copy in u_dst), or as the main pass draws them. */
+ * (a copy in u_dst), or as the main pass draws them. A keyed face
+ * leaves colour 0 out either way. */
 static const char *s_dyn_vs =
     "#version 150\n"
     "in vec4 a_pos;\n"
@@ -569,11 +605,12 @@ static const char *s_dyn_fs =
     "    float c = v_info.z > 2.5 ? floor(v_uv.x) : v_info.y;\n"
     "    if (v_info.z < 1.5) {\n"
     "        c = texture(u_pages, vec3(v_uv, v_info.x)).r * 255.0;\n"
+    "        if (v_info.z > 0.5 && c < 0.5) {\n"
+    "            discard;\n"
+    "        }\n"
     "        if (u_use_table == 1) {\n"
     "            float d = texelFetch(u_dst, ivec2(gl_FragCoord.xy), 0).r * 255.0;\n"
     "            c = texelFetch(u_table, ivec2(int(d + 0.5), int(c + 0.5)), 0).r * 255.0;\n"
-    "        } else if (v_info.z > 0.5 && c < 0.5) {\n"
-    "            discard;\n"
     "        }\n"
     "    } else if (u_use_table == 1) {\n"
     "        float d = texelFetch(u_dst, ivec2(gl_FragCoord.xy), 0).r * 255.0;\n"
@@ -716,7 +753,7 @@ static void collect(const struct scene *sc, const struct scene_obj *o, const flo
         }
         f += size;
         if (!all && type != 19 && type != 23 && type != 1 && type != 2 && type != 7 && type != 8
-            && type != 13) {
+            && type != 13 && type != 20) {
             continue;
         }
         if (!have_tex) {
@@ -807,7 +844,7 @@ static void collect(const struct scene *sc, const struct scene_obj *o, const flo
             d->count = 6;
             d->depth = (c[0][3] + c[1][3]) * 0.5f;
             d->table = w[5] != 0 ? s_tables_shd : NULL;
-        } else if (size == 44 || type == 15 || type == 16) {
+        } else if (size == 44 || type == 15 || type == 16 || type == 20) {
             int flat = type == 15 || type == 16 || type == 20 || type == 21;
             float page = flat ? 0 : (float)((u32)w[10] >> 16);
             float mode = flat ? MODE_FLAT : (type == 18 || type == 22) ? MODE_KEYED : MODE_TEXTURE;
@@ -819,6 +856,11 @@ static void collect(const struct scene *sc, const struct scene_obj *o, const flo
             if (c[0][3] <= 1.0f && c[1][3] <= 1.0f && c[2][3] <= 1.0f) {
                 continue;
             }
+            /* Type 20 (0x44cf00): a flat face through the .SHD, left out
+             * near the eye (its three depths up to 600). */
+            if (type == 20 && c[0][3] + c[1][3] + c[2][3] <= 600.0f) {
+                continue;
+            }
             if (!flat && tex == 0) {
                 continue;
             }
@@ -828,7 +870,7 @@ static void collect(const struct scene *sc, const struct scene_obj *o, const flo
             }
             d->count = 3;
             d->depth = (c[0][3] + c[1][3] + c[2][3]) / 3.0f;
-            if (type == 19 || type == 23) {
+            if (type == 19 || type == 23 || type == 20) {
                 d->table = s_tables_shd;
             }
         } else {

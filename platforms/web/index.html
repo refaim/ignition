@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ignition</title>
+<style>
+  :root { color-scheme: dark; }
+  html, body { margin: 0; height: 100%; background: #000; color: #eee;
+               font: 15px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  #canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block;
+            touch-action: none; outline: none; }
+  #panel { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+           padding: 16px; background: #111; }
+  #panel[hidden] { display: none; }
+  .card { max-width: 34rem; }
+  h1 { margin: 0 0 .5rem; font-size: 1.6rem; }
+  p { margin: .5rem 0; color: #bbb; }
+  .row { display: flex; flex-wrap: wrap; gap: .5rem; margin: 1rem 0; }
+  button, label.button { font: inherit; padding: .55rem 1rem; border-radius: 6px; border: 1px solid #555;
+                         background: #222; color: #eee; cursor: pointer; }
+  button.primary { background: #c8102e; border-color: #c8102e; }
+  button:disabled { opacity: .45; cursor: default; }
+  input[type=file] { display: none; }
+  #status { min-height: 1.4em; color: #fc6; }
+  code { color: #fff; }
+</style>
+</head>
+<body>
+<canvas id="canvas" tabindex="-1" oncontextmenu="event.preventDefault()"></canvas>
+<div id="panel">
+  <div class="card">
+    <h1>Ignition</h1>
+    <p>A reimplementation of the 1997 racer, running in your browser. It needs the files
+       from your own copy of the game: pick the root of the CD (or of a copy of it, the folder
+       with <code>BALTAZAR</code> and <code>LEVELS</code> in it).</p>
+    <p>The files stay in this browser's storage and are never uploaded. CD music is not
+       played in the browser.</p>
+    <div class="row">
+      <label class="button" for="folder">Import game folder…</label>
+      <input id="folder" type="file" webkitdirectory multiple>
+      <button id="play" class="primary" disabled>Play</button>
+      <button id="remove" disabled>Remove game</button>
+    </div>
+    <p id="status">Loading…</p>
+    <p>Keyboard: arrows to steer and pick, Enter to choose, Escape to go back.
+       Gamepads and touch screens also work.</p>
+  </div>
+</div>
+<script>
+'use strict';
+const ROOT = '/ignition';
+const DISC = ROOT + '/disc';
+const panel = document.getElementById('panel');
+const status = document.getElementById('status');
+const play = document.getElementById('play');
+const remove = document.getElementById('remove');
+const folder = document.getElementById('folder');
+const canvas = document.getElementById('canvas');
+
+/* Folders and files the game never reads: installers, DirectX, the
+ * manual, and audio tracks copied out by cd_extract. */
+const SKIP_DIRS = ['audio', 'directx', 'ereg', 'manual'];
+const SKIP_EXT = ['.exe', '.dll', '.bin', '.cue', '.wav', '.iso'];
+
+function setStatus(text) { status.textContent = text; }
+
+function sync(populate) {
+  return new Promise((resolve, reject) =>
+    FS.syncfs(populate, err => err ? reject(err) : resolve()));
+}
+
+function exists(path) {
+  try { FS.stat(path); return true; } catch (e) { return false; }
+}
+
+function hasGame() {
+  try {
+    return FS.readdir(DISC).some(n => n.toLowerCase() === 'baltazar');
+  } catch (e) { return false; }
+}
+
+function refresh() {
+  const ok = hasGame();
+  play.disabled = !ok;
+  remove.disabled = !ok;
+  setStatus(ok ? 'Game found. Press Play.' : 'No game imported yet.');
+}
+
+function removeTree(path) {
+  for (const name of FS.readdir(path)) {
+    if (name === '.' || name === '..') continue;
+    const p = path + '/' + name;
+    if (FS.isDir(FS.stat(p).mode)) removeTree(p); else FS.unlink(p);
+  }
+  FS.rmdir(path);
+}
+
+/* The disc root is the folder that holds BALTAZAR, at any depth of the
+ * picked folder (the CD itself, or a copy with disc/ inside). */
+function discRoot(files) {
+  let best = null;
+  for (const f of files) {
+    const parts = f.webkitRelativePath.split('/');
+    const i = parts.findIndex(p => p.toLowerCase() === 'baltazar');
+    if (i >= 0 && (best === null || i < best.length)) best = parts.slice(0, i);
+  }
+  return best;
+}
+
+async function importFolder(fileList) {
+  const files = Array.from(fileList);
+  const root = discRoot(files);
+  if (root === null) {
+    setStatus('That folder has no BALTAZAR folder in it. Pick the root of the game CD.');
+    return;
+  }
+  if (exists(DISC)) removeTree(DISC);
+  FS.mkdirTree(DISC);
+  let done = 0;
+  for (const f of files) {
+    const parts = f.webkitRelativePath.split('/');
+    if (parts.length <= root.length || root.some((p, i) => parts[i] !== p)) continue;
+    const rel = parts.slice(root.length);
+    const lower = rel.map(p => p.toLowerCase());
+    if (SKIP_DIRS.includes(lower[0])) continue;
+    if (SKIP_EXT.some(ext => lower[lower.length - 1].endsWith(ext))) continue;
+    const dir = DISC + (rel.length > 1 ? '/' + rel.slice(0, -1).join('/') : '');
+    FS.mkdirTree(dir);
+    FS.writeFile(DISC + '/' + rel.join('/'), new Uint8Array(await f.arrayBuffer()));
+    if (++done % 25 === 0) setStatus('Importing… ' + done + ' files');
+  }
+  setStatus('Saving…');
+  await sync(false);
+  refresh();
+}
+
+function resumeAudio() {
+  const ctx = window.ignitionAudio;
+  if (ctx && ctx.state === 'suspended') ctx.resume();
+}
+
+var Module = {
+  canvas: canvas,
+  print: text => console.log(text),
+  printErr: text => console.warn(text),
+  preRun: [() => {
+    FS.mkdir(ROOT);
+    FS.mount(IDBFS, {}, ROOT);
+    addRunDependency('idbfs');
+    FS.syncfs(true, err => {
+      if (err) setStatus('Browser storage is not available: ' + err);
+      removeRunDependency('idbfs');
+    });
+  }],
+  onRuntimeInitialized: () => refresh(),
+};
+
+folder.addEventListener('change', () => {
+  setStatus('Importing…');
+  importFolder(folder.files).catch(e => setStatus('Import failed: ' + e));
+});
+
+remove.addEventListener('click', async () => {
+  if (exists(DISC)) removeTree(DISC);
+  await sync(false);
+  refresh();
+});
+
+play.addEventListener('click', () => {
+  panel.hidden = true;
+  canvas.focus();
+  /* Saved settings and records live in the game folder. */
+  setInterval(() => sync(false).catch(() => {}), 10000);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') sync(false).catch(() => {});
+  });
+  Module.callMain([]);
+});
+
+for (const ev of ['keydown', 'pointerdown', 'touchstart']) {
+  window.addEventListener(ev, resumeAudio, { passive: true });
+}
+</script>
+<script async src="ignition.js"></script>
+</body>
+</html>

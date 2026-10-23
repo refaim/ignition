@@ -14,7 +14,7 @@ ida/*.id2
 ida/*.nam
 ida/*.til
 .ida-mcp/
-ignition
+/ignition
 test_lisa
 *.dSYM/
 Default.fil
@@ -22,3 +22,6 @@ test_menu
 test_settings
 test_sound
 build-vita/
+build-linux/
+build-windows/
+build-web/

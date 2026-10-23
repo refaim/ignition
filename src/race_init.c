@@ -417,7 +417,15 @@ void race_load_world(void)
     }
     race_frame_time();
     race_clear_laps();
+    /* A port's test switch: the computer drives the player's car. Not
+     * through the original's autopilot (f604), which it turns on after
+     * the finish and which counts no laps, but as one of its drivers. */
+    if (g_race_autopilot) {
+        g_drivers[0].control = 1;
+    }
 }
+
+int g_race_autopilot;
 
 s32 g_view_w, g_view_h;                     /* 0x5285c4, 0x552f50 */
 

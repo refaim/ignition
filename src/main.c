@@ -37,6 +37,7 @@
 #include "platform.h"
 #include "startup.h"
 #include "vfs.h"
+#include "race_init.h"
 #include "video.h"
 
 #define DEFAULT_DATA "data/Ignition (USA) (En,Es,It,Sv) (Rerelease)/disc"
@@ -136,6 +137,8 @@ int main(int argc, char **argv)
             canvas_set_hardware(0);
         } else if (strcmp(argv[i], "--res") == 0 && i + 1 < argc) {
             canvas_force_resolution(atoi(argv[++i]));
+        } else if (strcmp(argv[i], "--autopilot") == 0) {
+            g_race_autopilot = 1;
         } else if (strcmp(argv[i], "--background") == 0) {
             g_plat_run_inactive = 1;
         } else if (strcmp(argv[i], "--press") == 0 && i + 1 < argc) {

@@ -61,6 +61,9 @@ extern s32 r_552f4c;                    /* the exit fade, from 100 */
 extern double r_552e48;
 extern s32 r_5285c0;                    /* the car being updated */
 
+/* --autopilot: the computer drives the player's car (a test switch). */
+extern int g_race_autopilot;
+
 void race_pos_deltas(void);
 int race_srf_load(const char *name);
 void race_init_cameras(void);

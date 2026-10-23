@@ -234,6 +234,8 @@ static int parse_cue(const char *cue_path)
 
 /* ---- ISO 9660 ---------------------------------------------------------- */
 
+static FILE *s_sector_fp;
+
 static int read_sector(u32 lba, u8 *out)
 {
     const struct cue_file *f = &s_files[s_data->file];
@@ -246,12 +248,16 @@ static int read_sector(u32 lba, u8 *out)
     }
     at = f->data_start + (s_data->start + (long)lba) * s_data->sector_size
        + s_data->user_offset;
-    fp = fopen(f->path, "rb");
+    /* The data track's file stays open until cdimage_close: extracting
+     * the disc reads it a sector at a time. */
+    if (s_sector_fp == NULL) {
+        s_sector_fp = fopen(f->path, "rb");
+    }
+    fp = s_sector_fp;
     if (fp == NULL) {
         return 0;
     }
     ok = fseek(fp, at, SEEK_SET) == 0 && fread(out, 1, SECTOR_DATA, fp) == SECTOR_DATA;
-    fclose(fp);
     return ok;
 }
 
@@ -368,6 +374,10 @@ int cdimage_open(const char *cue_path, const char *cache_dir)
 
 void cdimage_close(void)
 {
+    if (s_sector_fp != NULL) {
+        fclose(s_sector_fp);
+        s_sector_fp = NULL;
+    }
     free(s_entries);
     s_entries = NULL;
     s_entry_count = 0;

@@ -435,12 +435,15 @@ void race_view_fill(double y0, double y1, int index)
 /* Draws the 3D at the drawable's size, its field of view widened to
  * the drawable's shape; the back buffer is left clear for the HUD, and
  * presenting shows it over the 3D where it is not 0. */
-void race_draw_view(const struct scene *sc, struct scene_obj *const *objs, int n)
+void race_draw_view(const struct scene *sc, struct scene_obj *const *objs, int n, int x0, int x1,
+                    int first)
 {
     int w, h;
-    double vw;
+    double vw, ox;
 
-    memset(g_back_buffer, 0, (size_t)g_screen_width * g_screen_height);
+    if (first) {
+        memset(g_back_buffer, 0, (size_t)g_screen_width * g_screen_height);
+    }
     video_drawable_size(&w, &h);
     if (w <= 0 || h <= 0) {
         return;
@@ -459,12 +462,24 @@ void race_draw_view(const struct scene *sc, struct scene_obj *const *objs, int n
         w = (int)((double)ih * w / h + 0.5);
         h = ih;
     }
-    gl3d_view_begin(w, h, vw, g_screen_height);
+    ox = (vw - g_screen_width) / 2;
+    if (first) {
+        gl3d_view_begin(w, h, vw, g_screen_height);
+    } else {
+        gl3d_view_resume();
+    }
+    /* The fills queued for the frame (both views'), then the view's
+     * columns of the screen; one at an edge takes in the drawable past
+     * it. */
     for (int i = 0; i < s_fill_count; i++) {
         gl3d_view_fill(s_fills[i].y0, s_fills[i].y1, s_fills[i].index);
     }
     s_fill_count = 0;
-    gl3d_draw(sc, objs, n, (vw - g_screen_width) / 2, 0);
+    if (x0 > 0 || x1 < g_screen_width) {
+        gl3d_view_columns(x0 <= 0 ? -1e9 : x0 + ox, x1 >= g_screen_width ? 1e9 : x1 + ox);
+    }
+    gl3d_draw(sc, objs, n, ox, 0);
+    gl3d_view_columns(0, 0);
     gl3d_view_end();
     video_set_layer(gl3d_view_texture(), s_clear);
 }
@@ -493,7 +508,7 @@ void race_debug_view(void)
     sc->yaw = c->look_back ? cam->back_yaw : cam->yaw;
     sc->roll = 0.0;
     n = scene_gather(sc, 24, objs, 3000);
-    race_draw_view(sc, objs, n);
+    race_draw_view(sc, objs, n, 0, g_screen_width, 1);
     video_set_palette(g_level_col + 8);
     present_back_buffer();
 }

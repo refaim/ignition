@@ -189,10 +189,10 @@ static int lights_on(void)
 
 /* The 3D through g_scene: the visible cells' objects, at the GPU's
  * resolution. */
-static void draw_3d(void)
+static void draw_3d(int x0, int x1, int first)
 {
     scene_gather_view();
-    race_draw_view(g_scene, g_scene_visible, g_scene->obj_count);
+    race_draw_view(g_scene, g_scene_visible, g_scene->obj_count, x0, x1, first);
 }
 
 /* The view's place on the screen: the 3D is drawn over the whole
@@ -417,7 +417,8 @@ void race_view(double dt)
         scene_obj_link(lights);
     }
     g_scene_group = r_54f980 < 120.0 ? group_at(g_view_car) : 0;
-    draw_3d();
+    /* Split, the first player has the right half. */
+    draw_3d(split ? g_screen_width / 2 : 0, g_screen_width, 1);
     if (lights->in_grid == 1) {
         scene_obj_unlink(lights);
     }
@@ -426,16 +427,14 @@ void race_view(double dt)
     }
 
     if (split) {
-        /* The second player's view. The port draws the 3D over the whole
-         * screen, so this view replaces the first's until the views are
-         * drawn into their own rectangles. */
+        /* The second player's view, in the left half. */
         put_scene(&two, 1);
         g_scene->center_x = g_screen_width / 4;
         if (lights_on() && lights[1].in_grid == 0) {
             scene_obj_link(&lights[1]);
         }
         g_scene_group = group_at(1);
-        draw_3d();
+        draw_3d(0, g_screen_width / 2, 0);
         if (lights[1].in_grid == 1) {
             scene_obj_unlink(&lights[1]);
         }

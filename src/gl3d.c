@@ -445,6 +445,38 @@ void gl3d_view_fill(double y0, double y1, int index)
     glDisable(GL_SCISSOR_TEST);
 }
 
+/* Binds the view again, keeping what is drawn (a second view in the
+ * same frame). */
+void gl3d_view_resume(void)
+{
+    struct target *t = &s_targets[1];
+
+    glBindFramebuffer(GL_FRAMEBUFFER, t->fbo);
+    glViewport(0, 0, t->w, t->h);
+    s_target = t;
+    s_w = t->w;
+    s_h = t->h;
+    s_ox = s_oy = 0;
+}
+
+/* Limits drawing to the view's columns x0..x1 (its virtual columns);
+ * x0 >= x1 lifts the limit. */
+void gl3d_view_columns(double x0, double x1)
+{
+    int c0, c1;
+
+    if (x0 >= x1) {
+        glDisable(GL_SCISSOR_TEST);
+        return;
+    }
+    c0 = (int)(x0 * s_w / s_vw + 0.5);
+    c1 = (int)(x1 * s_w / s_vw + 0.5);
+    c0 = c0 < 0 ? 0 : c0;
+    c1 = c1 > s_w ? s_w : c1;
+    glEnable(GL_SCISSOR_TEST);
+    glScissor(c0, 0, c1 > c0 ? c1 - c0 : 0, s_h);
+}
+
 void gl3d_view_end(void)
 {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);

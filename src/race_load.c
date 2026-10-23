@@ -252,16 +252,34 @@ static int native_loading(void)
 
 static void draw_loading(int percent);
 
+/* The race buffer's pitch for the loading panels: 320 as the original,
+ * where a panel past the right edge wraps into the next row's start;
+ * NATIVE's screen has room for it, so the panels get 640. */
+static int panel_pitch(void)
+{
+    return canvas_is_gpu(g_back_buffer) ? 640 : 0x140;
+}
+
+/* How wide the panels are blended in: the screen, and NATIVE's right
+ * margin. */
+static int panel_width(void)
+{
+    float mx, my;
+
+    canvas_extent(g_back_buffer, &mx, &my);
+    return g_screen_width + (int)mx < panel_pitch() ? g_screen_width + (int)mx : panel_pitch();
+}
+
 static void progress_bar(int percent)
 {
-    int w = g_screen_width, third = w / 3, len;
+    int w = g_screen_width, third = w / 3, len, pitch = panel_pitch();
 
     len = (int)((text_width(s_loading[language() % 6], g_fonts_menu[1]) + 20) * percent
                 * 0.011899999999999999);
     blend_rect(g_race_buffer, 0, 0x32, third + len, 0x4b, g_back_buffer, 0, 4, g_level_pan,
-               0x140, w);
-    blend_rect(g_race_buffer, third + len, 0x64, 0x140, 0x7d, g_back_buffer, third + len, 4,
-               g_level_pan, 0x140, w);
+               pitch, w);
+    blend_rect(g_race_buffer, third + len, 0x64, pitch == 0x140 ? 0x140 : panel_width(), 0x7d,
+               g_back_buffer, third + len, 4, g_level_pan, pitch, w);
 }
 
 /* 0x418a60: the loading bar, `percent` of the way. */
@@ -331,27 +349,28 @@ static void draw_loading(int percent)
     title_w = text_width(title, g_fonts_menu[1]);
     panels_clear();
     panel_add(third, 0, title_w, 0x12, 0);
-    panels_draw(g_race_buffer, 0x140);
+    panels_draw(g_race_buffer, panel_pitch());
     panels_clear();
-    set_target(g_race_buffer, 0x140, 0x140, 0x1e0, 8);
+    set_target(g_race_buffer, panel_pitch(), panel_pitch(), 0x1e0, 8);
     text_draw(title, g_fonts_menu[1], third + 13, 0x1e);
     if (gpu) {
-        canvas_blend_rect(g_race_buffer, 0, 0, w, h, g_back_buffer, 0, 0, g_level_pan, 0x140);
+        canvas_blend_rect(g_race_buffer, 0, 0, panel_width(), h, g_back_buffer, 0, 0, g_level_pan,
+                          panel_pitch());
     } else {
         for (i = 0; i < w * h; i++) {
             g_back_buffer[i] = g_level_pan[g_race_buffer[i] << 8 | g_back_buffer[i]];
         }
     }
-    memset(g_race_buffer, 0, (size_t)w * h);
+    memset(g_race_buffer, 0, (size_t)panel_pitch() * h);
 
     loading_w = text_width(loading, g_fonts_menu[1]);
     panel_add(third, 0, loading_w, 0x2d, 1);
     panel_add(third, 1, title_w, 0x2d, 1);
-    panels_draw(g_race_buffer, 0x140);
+    panels_draw(g_race_buffer, panel_pitch());
     panels_clear();
     panel_add(third, 0, loading_w, 0x5f, 0);
     panel_add(third, 1, title_w, 0x5f, 0);
-    panels_draw(g_race_buffer, 0x140);
+    panels_draw(g_race_buffer, panel_pitch());
     panels_clear();
     g_gfx_color_table = g_identity_table;
     text_draw(loading, g_fonts_menu[3], third + 13, 0x39);

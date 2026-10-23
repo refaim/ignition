@@ -5,9 +5,14 @@
 # `make vita` builds the PlayStation Vita package (src/platform_vita.c,
 # src/rnd_gxm.c, docs/vita.md).
 
+.DEFAULT_GOAL := all
+
 TARGET := ignition
 SRCDIR := src
 BUILD  := build
+
+VERSION ?= $(shell cat VERSION)
+IGN_VERSION := $(patsubst v%,%,$(VERSION))
 
 CORE_SRC := $(SRCDIR)/app.c $(SRCDIR)/game.c $(SRCDIR)/stubs.c $(SRCDIR)/net.c $(SRCDIR)/canvas.c $(SRCDIR)/scene.c $(SRCDIR)/gl3d.c $(SRCDIR)/menucar.c $(SRCDIR)/menubg.c $(SRCDIR)/race_load.c $(SRCDIR)/race_track.c $(SRCDIR)/race_world.c $(SRCDIR)/race_cars.c $(SRCDIR)/phys.c $(SRCDIR)/race_phys.c $(SRCDIR)/anim_tex.c $(SRCDIR)/race_ai.c $(SRCDIR)/srf.c $(SRCDIR)/race_contact.c $(SRCDIR)/race_fx.c $(SRCDIR)/race_respawn.c $(SRCDIR)/race_camera.c $(SRCDIR)/race_view.c $(SRCDIR)/race_misc.c $(SRCDIR)/race_hud.c $(SRCDIR)/race_results.c $(SRCDIR)/race_sound.c $(SRCDIR)/race_control.c $(SRCDIR)/race_init.c $(SRCDIR)/race.c $(SRCDIR)/race_frame_stubs.c $(SRCDIR)/race_input.c $(SRCDIR)/race_data.c \
             $(SRCDIR)/lisa/lisa.c $(SRCDIR)/lisa/log.c $(SRCDIR)/lisa/mem.c $(SRCDIR)/lisa/file.c \
@@ -18,14 +23,19 @@ CORE_SRC := $(SRCDIR)/app.c $(SRCDIR)/game.c $(SRCDIR)/stubs.c $(SRCDIR)/net.c $
             $(SRCDIR)/video.c $(SRCDIR)/gfx.c $(SRCDIR)/rnd_gl.c $(SRCDIR)/vfs.c $(SRCDIR)/main.c \
             $(SRCDIR)/cdimage.c
 MAC_SRC  := $(SRCDIR)/platform_macos.m
+HOST_C   := $(SRCDIR)/platform_common.c
 
 CORE_OBJ := $(patsubst $(SRCDIR)/%.c,$(BUILD)/%.o,$(CORE_SRC))
-HOST_OBJ := $(patsubst $(SRCDIR)/%.m,$(BUILD)/%.o,$(MAC_SRC))
+HOST_OBJ := $(patsubst $(SRCDIR)/%.m,$(BUILD)/%.o,$(MAC_SRC)) $(patsubst $(SRCDIR)/%.c,$(BUILD)/%.o,$(HOST_C))
 
 CC        := clang
 CFLAGS    := -std=c99 -D_POSIX_C_SOURCE=200809L -D_DARWIN_C_SOURCE -Wall -Wextra -Wno-unused-parameter -g -O1 -I$(SRCDIR)
 OBJCFLAGS := -fobjc-arc -DGL_SILENCE_DEPRECATION -Wno-deprecated-declarations -Wall -Wextra -Wno-unused-parameter -g -O1 -I$(SRCDIR)
 LDFLAGS   := -framework Cocoa -framework OpenGL -framework AudioUnit -framework AudioToolbox
+
+# The version only reaches the files that print it.
+$(BUILD)/main.o $(BUILD)/startup.o: CFLAGS += -DIGN_VERSION='"$(IGN_VERSION)"'
+$(BUILD)/main.o $(BUILD)/startup.o: VERSION
 
 .PHONY: all clean extract test run vita vita-deploy vita-clean
 

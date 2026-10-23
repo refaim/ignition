@@ -23,6 +23,7 @@
 #include <sys/stat.h>
 
 #include "cdimage.h"
+#include "compat.h"
 
 enum {
     MAX_FILES = 99,

@@ -11,6 +11,8 @@
 #                        cross-built with MinGW-w64: build-windows/
 #   make web             WebAssembly and WebGL 2 with Emscripten
 #                        (src/platform_web.c): build-web/dist/
+#   make android         Android APK (src/platform_android.c, NDK, no Gradle)
+#   make ios / ios-sim   iOS and iPadOS (src/platform_ios.m, Xcode)
 #   make vita            PlayStation Vita (src/platform_vita.c,
 #                        src/rnd_gxm.c, docs/vita.md)
 #
@@ -92,7 +94,8 @@ $(BUILD)/main.o $(BUILD)/startup.o: CFLAGS += -DIGN_VERSION='"$(IGN_VERSION)"'
 $(BUILD)/main.o $(BUILD)/startup.o: VERSION
 
 .PHONY: all clean extract test run vita vita-deploy vita-clean linux linux-clean windows \
-        windows-clean web web-serve web-clean
+        windows-clean web web-serve web-clean android android-install android-clean \
+        ios-configure ios ios-sim ios-clean
 
 all: $(TARGET) $(CD_EXTRACT)
 
@@ -143,7 +146,8 @@ run: $(TARGET)
 # ---------------------------------------------------------------- other hosts
 #
 # Linux, Windows and the web run this Makefile again with their HOST and
-# build folder. docs/platforms.md has the details.
+# build folder; Android and iOS have their own build files under
+# platforms/. docs/platforms.md has the details.
 
 NPROC ?= $(shell sysctl -n hw.ncpu 2>/dev/null || nproc 2>/dev/null || echo 4)
 
@@ -190,6 +194,42 @@ web-serve: web
 
 web-clean:
 	rm -rf build-web
+
+# Android: build-android/ignition.apk (arm64-v8a and x86_64). Needs
+# ANDROID_HOME with an NDK, build-tools and a platform, and a JDK; see
+# platforms/android/README.md.
+android:
+	sh platforms/android/build.sh $(VERSION)
+
+android-install: android
+	adb install -r build-android/ignition.apk
+
+android-clean:
+	rm -rf build-android
+
+# iOS and iPadOS: an Xcode project from platforms/ios/CMakeLists.txt.
+# `make ios` builds an unsigned build-ios/ignition.ipa for sideloading,
+# `make ios-sim` a build for the simulator.
+IOS_BUILD := build-ios
+
+ios-configure:
+	@command -v xcodebuild >/dev/null || { echo "Xcode not found."; exit 1; }
+	cmake -S platforms/ios -B $(IOS_BUILD) -G Xcode -DCMAKE_SYSTEM_NAME=iOS \
+		-DIGN_VERSION=$(IGN_VERSION)
+
+ios-sim: ios-configure
+	cmake --build $(IOS_BUILD) --config Release -- -sdk iphonesimulator CODE_SIGNING_ALLOWED=NO
+
+ios: ios-configure
+	cmake --build $(IOS_BUILD) --config Release -- -sdk iphoneos CODE_SIGNING_ALLOWED=NO
+	rm -rf $(IOS_BUILD)/Payload $(IOS_BUILD)/ignition.ipa
+	mkdir -p $(IOS_BUILD)/Payload
+	cp -R $(IOS_BUILD)/Release-iphoneos/Ignition.app $(IOS_BUILD)/Payload/
+	cd $(IOS_BUILD) && zip -qr ignition.ipa Payload
+	@echo "ignition: $(IOS_BUILD)/ignition.ipa (unsigned)"
+
+ios-clean:
+	rm -rf $(IOS_BUILD)
 
 # PlayStation Vita: build-vita/ignition.vpk. Needs VitaSDK ($VITASDK, or
 # ~/vitasdk), nothing else. The renderer is src/rnd_gxm.c.

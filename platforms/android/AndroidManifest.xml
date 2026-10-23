@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- versionCode and versionName are set by build.sh from the version.
+     No Java: the system's NativeActivity loads libignition.so. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="io.github.xesf.ignition"
+    android:installLocation="auto">
+
+    <uses-feature android:glEsVersion="0x00030000" android:required="true" />
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+    <uses-feature android:name="android.hardware.gamepad" android:required="false" />
+
+    <application
+        android:label="Ignition"
+        android:icon="@mipmap/ic_launcher"
+        android:hasCode="false"
+        android:isGame="true"
+        android:appCategory="game"
+        android:allowBackup="false">
+
+        <!-- The game data goes in the app's folder on shared storage,
+             Android/data/io.github.xesf.ignition/files/. -->
+        <activity
+            android:name="android.app.NativeActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:screenOrientation="sensorLandscape"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden|navigation|uiMode|density"
+            android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen">
+            <meta-data android:name="android.app.lib_name" android:value="ignition" />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

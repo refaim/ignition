@@ -25,3 +25,5 @@ build-vita/
 build-linux/
 build-windows/
 build-web/
+build-android/
+build-ios/

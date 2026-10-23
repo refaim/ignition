@@ -17,7 +17,10 @@
  * without it the .cue next to the data folder plays. --res sets the
  * internal resolution: 0 320 x 200, 1 640 x 480, 2 800 x 600, 3 the
  * window's. --software starts with the 2D drawn on the CPU, as the
- * original did (Alt+R switches).
+ * original did (Alt+R switches). --version prints this port's version.
+ *
+ * Without --data the host looks for the game (plat_find_data in
+ * platform_common.h).
  */
 
 #include <stdio.h>
@@ -35,9 +38,13 @@
 #include "lisa/mem.h"
 #include "pic.h"
 #include "platform.h"
+#ifndef __vita__
+#include "platform_common.h"
+#endif
 #include "startup.h"
 #include "vfs.h"
 #include "race_init.h"
+#include "version.h"
 #include "video.h"
 
 #ifdef __vita__
@@ -119,7 +126,7 @@ static int text(const char *s)
 
 int main(int argc, char **argv)
 {
-    const char *data = DEFAULT_DATA;
+    const char *data = NULL;
     const char *view_name = NULL;
     const char *text_arg = NULL;
     int i;
@@ -155,11 +162,22 @@ int main(int argc, char **argv)
             }
         } else if (strcmp(argv[i], "--text") == 0 && i + 1 < argc) {
             text_arg = argv[++i];
+        } else if (strcmp(argv[i], "--version") == 0) {
+            printf("ignition %s\n", IGN_VERSION);
+            return 0;
         } else {
             fprintf(stderr, "usage: %s [--data DIR] [--view FILE.PIC] [--text TEXT]\n", argv[0]);
             return 1;
         }
     }
+    if (data == NULL) {
+#ifdef __vita__
+        data = DEFAULT_DATA;
+#else
+        data = plat_find_data(DEFAULT_DATA);
+#endif
+    }
+    fprintf(stderr, "ignition %s, data: %s\n", IGN_VERSION, data);
     vfs_set_root(data);
     if (view_name != NULL) {
         return view(view_name);

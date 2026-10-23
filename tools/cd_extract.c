@@ -13,6 +13,7 @@
 #include <sys/stat.h>
 
 #include "cdimage.h"
+#include "compat.h"
 
 static void put16(FILE *f, unsigned v)
 {

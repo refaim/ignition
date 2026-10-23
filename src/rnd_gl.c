@@ -1,18 +1,40 @@
 /*
- * rnd_gl.c - rnd.h on OpenGL 3.2 core (macOS).
+ * rnd_gl.c - rnd.h on OpenGL 3.2 core (macOS, Linux, Windows) and
+ * OpenGL ES 3.0 (the web, Android, iOS); see rnd_gl.h.
  *
  * Textures and targets are GL names: a texture's name, a target's
  * framebuffer. Units 0 to 3 hold what the programs read; making and
  * filling textures goes through unit 7, so it never disturbs them.
+ *
+ * The shaders are GLSL 1.50. On ES each one's "#version 150" becomes
+ * "#version 300 es" with default precisions; ES has no
+ * glBindFragDataLocation (a shader's one output goes to attachment 0)
+ * and reads pixels back only as RGBA.
  */
 
-#ifdef __APPLE__
+#if defined(IGN_GLES)
+#if defined(__APPLE__)
+#ifndef GLES_SILENCE_DEPRECATION
+#define GLES_SILENCE_DEPRECATION
+#endif
+#include <OpenGLES/ES3/gl.h>
+#else
+#include <GLES3/gl3.h>
+#endif
+#elif defined(__APPLE__)
 #ifndef GL_SILENCE_DEPRECATION
 #define GL_SILENCE_DEPRECATION
 #endif
 #include <OpenGL/gl3.h>
 #else
-#include <GL/glcorearb.h>
+/* Linux and Windows: Khronos' declarations (third_party/), and every
+ * entry point through a pointer that rnd_gl_load fills in. With
+ * APIENTRY set, glcorearb.h does not pull in <windows.h>. */
+#if defined(_WIN32) && !defined(APIENTRY)
+#define APIENTRY __stdcall
+#endif
+#include "third_party/GL/glcorearb.h"
+#define IGN_GL_LOAD 1
 #endif
 
 #include <stdio.h>
@@ -20,6 +42,173 @@
 #include <string.h>
 
 #include "rnd.h"
+#include "rnd_gl.h"
+
+unsigned rnd_gl_screen_fbo;
+
+#if defined(IGN_GL_LOAD)
+
+#define IGN_GL_FUNCS(X) \
+    X(PFNGLACTIVETEXTUREPROC, glActiveTexture) \
+    X(PFNGLATTACHSHADERPROC, glAttachShader) \
+    X(PFNGLBINDATTRIBLOCATIONPROC, glBindAttribLocation) \
+    X(PFNGLBINDBUFFERPROC, glBindBuffer) \
+    X(PFNGLBINDFRAGDATALOCATIONPROC, glBindFragDataLocation) \
+    X(PFNGLBINDFRAMEBUFFERPROC, glBindFramebuffer) \
+    X(PFNGLBINDRENDERBUFFERPROC, glBindRenderbuffer) \
+    X(PFNGLBINDTEXTUREPROC, glBindTexture) \
+    X(PFNGLBINDVERTEXARRAYPROC, glBindVertexArray) \
+    X(PFNGLBLITFRAMEBUFFERPROC, glBlitFramebuffer) \
+    X(PFNGLBUFFERDATAPROC, glBufferData) \
+    X(PFNGLBUFFERSUBDATAPROC, glBufferSubData) \
+    X(PFNGLCLEARPROC, glClear) \
+    X(PFNGLCLEARCOLORPROC, glClearColor) \
+    X(PFNGLCLEARDEPTHPROC, glClearDepth) \
+    X(PFNGLCOMPILESHADERPROC, glCompileShader) \
+    X(PFNGLCOPYTEXSUBIMAGE2DPROC, glCopyTexSubImage2D) \
+    X(PFNGLCREATEPROGRAMPROC, glCreateProgram) \
+    X(PFNGLCREATESHADERPROC, glCreateShader) \
+    X(PFNGLCULLFACEPROC, glCullFace) \
+    X(PFNGLDELETEBUFFERSPROC, glDeleteBuffers) \
+    X(PFNGLDELETEFRAMEBUFFERSPROC, glDeleteFramebuffers) \
+    X(PFNGLDELETEPROGRAMPROC, glDeleteProgram) \
+    X(PFNGLDELETERENDERBUFFERSPROC, glDeleteRenderbuffers) \
+    X(PFNGLDELETESHADERPROC, glDeleteShader) \
+    X(PFNGLDELETETEXTURESPROC, glDeleteTextures) \
+    X(PFNGLDELETEVERTEXARRAYSPROC, glDeleteVertexArrays) \
+    X(PFNGLDEPTHFUNCPROC, glDepthFunc) \
+    X(PFNGLDEPTHMASKPROC, glDepthMask) \
+    X(PFNGLDISABLEPROC, glDisable) \
+    X(PFNGLDRAWARRAYSPROC, glDrawArrays) \
+    X(PFNGLENABLEPROC, glEnable) \
+    X(PFNGLENABLEVERTEXATTRIBARRAYPROC, glEnableVertexAttribArray) \
+    X(PFNGLFRAMEBUFFERRENDERBUFFERPROC, glFramebufferRenderbuffer) \
+    X(PFNGLFRAMEBUFFERTEXTURE2DPROC, glFramebufferTexture2D) \
+    X(PFNGLFRONTFACEPROC, glFrontFace) \
+    X(PFNGLGENBUFFERSPROC, glGenBuffers) \
+    X(PFNGLGENFRAMEBUFFERSPROC, glGenFramebuffers) \
+    X(PFNGLGENRENDERBUFFERSPROC, glGenRenderbuffers) \
+    X(PFNGLGENTEXTURESPROC, glGenTextures) \
+    X(PFNGLGENVERTEXARRAYSPROC, glGenVertexArrays) \
+    X(PFNGLGETPROGRAMIVPROC, glGetProgramiv) \
+    X(PFNGLGETSHADERINFOLOGPROC, glGetShaderInfoLog) \
+    X(PFNGLGETSHADERIVPROC, glGetShaderiv) \
+    X(PFNGLGETUNIFORMLOCATIONPROC, glGetUniformLocation) \
+    X(PFNGLLINKPROGRAMPROC, glLinkProgram) \
+    X(PFNGLPIXELSTOREIPROC, glPixelStorei) \
+    X(PFNGLPOLYGONOFFSETPROC, glPolygonOffset) \
+    X(PFNGLREADPIXELSPROC, glReadPixels) \
+    X(PFNGLRENDERBUFFERSTORAGEPROC, glRenderbufferStorage) \
+    X(PFNGLSCISSORPROC, glScissor) \
+    X(PFNGLSHADERSOURCEPROC, glShaderSource) \
+    X(PFNGLTEXIMAGE2DPROC, glTexImage2D) \
+    X(PFNGLTEXIMAGE3DPROC, glTexImage3D) \
+    X(PFNGLTEXPARAMETERIPROC, glTexParameteri) \
+    X(PFNGLTEXSUBIMAGE2DPROC, glTexSubImage2D) \
+    X(PFNGLUNIFORM1IPROC, glUniform1i) \
+    X(PFNGLUNIFORM2FPROC, glUniform2f) \
+    X(PFNGLUNIFORM4FPROC, glUniform4f) \
+    X(PFNGLUNIFORMMATRIX4FVPROC, glUniformMatrix4fv) \
+    X(PFNGLUSEPROGRAMPROC, glUseProgram) \
+    X(PFNGLVERTEXATTRIBPOINTERPROC, glVertexAttribPointer) \
+    X(PFNGLVIEWPORTPROC, glViewport)
+
+#define IGN_GL_POINTER(type, name) static type p_##name;
+IGN_GL_FUNCS(IGN_GL_POINTER)
+#undef IGN_GL_POINTER
+
+int rnd_gl_load(void *(*get)(const char *name))
+{
+    void *p;
+
+#define IGN_GL_GET(type, name) \
+    p = get(#name); \
+    if (p == NULL) { \
+        fprintf(stderr, "rnd: OpenGL has no %s\n", #name); \
+        return 0; \
+    } \
+    memcpy(&p_##name, &p, sizeof(p));
+    IGN_GL_FUNCS(IGN_GL_GET)
+#undef IGN_GL_GET
+    return 1;
+}
+
+#define glActiveTexture p_glActiveTexture
+#define glAttachShader p_glAttachShader
+#define glBindAttribLocation p_glBindAttribLocation
+#define glBindBuffer p_glBindBuffer
+#define glBindFragDataLocation p_glBindFragDataLocation
+#define glBindFramebuffer p_glBindFramebuffer
+#define glBindRenderbuffer p_glBindRenderbuffer
+#define glBindTexture p_glBindTexture
+#define glBindVertexArray p_glBindVertexArray
+#define glBlitFramebuffer p_glBlitFramebuffer
+#define glBufferData p_glBufferData
+#define glBufferSubData p_glBufferSubData
+#define glClear p_glClear
+#define glClearColor p_glClearColor
+#define glClearDepth p_glClearDepth
+#define glCompileShader p_glCompileShader
+#define glCopyTexSubImage2D p_glCopyTexSubImage2D
+#define glCreateProgram p_glCreateProgram
+#define glCreateShader p_glCreateShader
+#define glCullFace p_glCullFace
+#define glDeleteBuffers p_glDeleteBuffers
+#define glDeleteFramebuffers p_glDeleteFramebuffers
+#define glDeleteProgram p_glDeleteProgram
+#define glDeleteRenderbuffers p_glDeleteRenderbuffers
+#define glDeleteShader p_glDeleteShader
+#define glDeleteTextures p_glDeleteTextures
+#define glDeleteVertexArrays p_glDeleteVertexArrays
+#define glDepthFunc p_glDepthFunc
+#define glDepthMask p_glDepthMask
+#define glDisable p_glDisable
+#define glDrawArrays p_glDrawArrays
+#define glEnable p_glEnable
+#define glEnableVertexAttribArray p_glEnableVertexAttribArray
+#define glFramebufferRenderbuffer p_glFramebufferRenderbuffer
+#define glFramebufferTexture2D p_glFramebufferTexture2D
+#define glFrontFace p_glFrontFace
+#define glGenBuffers p_glGenBuffers
+#define glGenFramebuffers p_glGenFramebuffers
+#define glGenRenderbuffers p_glGenRenderbuffers
+#define glGenTextures p_glGenTextures
+#define glGenVertexArrays p_glGenVertexArrays
+#define glGetProgramiv p_glGetProgramiv
+#define glGetShaderInfoLog p_glGetShaderInfoLog
+#define glGetShaderiv p_glGetShaderiv
+#define glGetUniformLocation p_glGetUniformLocation
+#define glLinkProgram p_glLinkProgram
+#define glPixelStorei p_glPixelStorei
+#define glPolygonOffset p_glPolygonOffset
+#define glReadPixels p_glReadPixels
+#define glRenderbufferStorage p_glRenderbufferStorage
+#define glScissor p_glScissor
+#define glShaderSource p_glShaderSource
+#define glTexImage2D p_glTexImage2D
+#define glTexImage3D p_glTexImage3D
+#define glTexParameteri p_glTexParameteri
+#define glTexSubImage2D p_glTexSubImage2D
+#define glUniform1i p_glUniform1i
+#define glUniform2f p_glUniform2f
+#define glUniform4f p_glUniform4f
+#define glUniformMatrix4fv p_glUniformMatrix4fv
+#define glUseProgram p_glUseProgram
+#define glVertexAttribPointer p_glVertexAttribPointer
+#define glViewport p_glViewport
+
+#else
+
+int rnd_gl_load(void *(*get)(const char *name))
+{
+    (void)get;
+    return 1;
+}
+
+#endif
+
+/* A framebuffer name, with 0 the window's. */
+#define FB(f) ((f) != 0 ? (GLuint)(f) : (GLuint)rnd_gl_screen_fbo)
 
 enum { WORK_UNIT = 7 };
 
@@ -305,7 +494,21 @@ static GLuint compile(GLenum type, const char *src)
     GLuint s = glCreateShader(type);
     GLint ok = 0;
 
+#if defined(IGN_GLES)
+    static const char es[] =
+        "#version 300 es\n"
+        "precision highp float;\n"
+        "precision highp int;\n"
+        "precision highp sampler2D;\n"
+        "precision highp sampler2DArray;\n";
+    const char *parts[2];
+
+    parts[0] = es;
+    parts[1] = strncmp(src, "#version 150\n", 13) == 0 ? src + 13 : src;
+    glShaderSource(s, 2, parts, NULL);
+#else
     glShaderSource(s, 1, &src, NULL);
+#endif
     glCompileShader(s);
     glGetShaderiv(s, GL_COMPILE_STATUS, &ok);
     if (!ok) {
@@ -334,9 +537,11 @@ static int make_program(int p, const char *vs_src, const char *fs_src)
     if (p == RND_RASTER) {
         stride = 8;             /* and a float unused */
     }
+#if !defined(IGN_GLES)
     if (s_def[p].out != NULL) {
         glBindFragDataLocation(s_prog[p].program, 0, s_def[p].out);
     }
+#endif
     glLinkProgram(s_prog[p].program);
     glDeleteShader(vs);
     glDeleteShader(fs);
@@ -529,7 +734,7 @@ unsigned rnd_target(unsigned color, int depth)
         glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, c->w, c->h);
         glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, r->depth);
     }
-    glBindFramebuffer(GL_FRAMEBUFFER, s_bound);
+    glBindFramebuffer(GL_FRAMEBUFFER, FB(s_bound));
     return f;
 }
 
@@ -557,14 +762,14 @@ void rnd_bind(unsigned target)
     struct tex *c = tex_rec(fb_rec(target)->color);
 
     s_bound = target;
-    glBindFramebuffer(GL_FRAMEBUFFER, target);
+    glBindFramebuffer(GL_FRAMEBUFFER, FB(target));
     glViewport(0, 0, c->w, c->h);
 }
 
 void rnd_bind_screen(int w, int h)
 {
     s_bound = 0;
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, FB(0));
     glViewport(0, 0, w, h);
 }
 
@@ -577,7 +782,11 @@ void rnd_clear(const float *rgba, int depth)
         mask |= GL_COLOR_BUFFER_BIT;
     }
     if (depth) {
+#if defined(IGN_GLES)
+        glClearDepthf(1.0f);
+#else
         glClearDepth(1.0);
+#endif
         mask |= GL_DEPTH_BUFFER_BIT;
     }
     glClear(mask);
@@ -587,6 +796,25 @@ void rnd_read(int x, int y, int w, int h, int format, void *out, int pitch)
 {
     int bpp = format == RND_RG8 ? 2 : format == RND_RGB8 ? 3 : 1;
 
+#if defined(IGN_GLES)
+    u8 *rgba = malloc((size_t)w * (size_t)h * 4);
+    int r, c, k;
+
+    if (rgba == NULL) {
+        return;
+    }
+    glPixelStorei(GL_PACK_ALIGNMENT, 4);
+    glReadPixels(x, y, w, h, GL_RGBA, GL_UNSIGNED_BYTE, rgba);
+    for (r = 0; r < h; r++) {
+        for (c = 0; c < w; c++) {
+            for (k = 0; k < bpp; k++) {
+                ((u8 *)out)[r * pitch + c * bpp + k] = rgba[(r * w + c) * 4 + k];
+            }
+        }
+    }
+    free(rgba);
+    return;
+#endif
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
     glPixelStorei(GL_PACK_ROW_LENGTH, pitch != w * bpp ? pitch / bpp : 0);
     glReadPixels(x, y, w, h, gl_format(format), GL_UNSIGNED_BYTE, out);
@@ -602,10 +830,10 @@ void rnd_copy(unsigned tex, int x, int y, int w, int h)
 
 void rnd_blit(unsigned src, unsigned dst, int sw, int sh, int dw, int dh)
 {
-    glBindFramebuffer(GL_READ_FRAMEBUFFER, src);
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, dst);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, FB(src));
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, FB(dst));
     glBlitFramebuffer(0, 0, sw, sh, 0, 0, dw, dh, GL_COLOR_BUFFER_BIT, GL_NEAREST);
-    glBindFramebuffer(GL_FRAMEBUFFER, s_bound);
+    glBindFramebuffer(GL_FRAMEBUFFER, FB(s_bound));
 }
 
 /* ------------------------------------------------------------ state */

@@ -14,18 +14,13 @@
 #import <AudioUnit/AudioUnit.h>
 
 #include <mach/mach_time.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "app.h"
 #include "dik.h"
 #include "platform.h"
-
-u8 g_plat_keys[256];
-
-enum { KEY_QUEUE = 64 };
-
-static struct { u8 key, down; } s_key_queue[KEY_QUEUE];
-static unsigned s_key_head, s_key_tail;
+#include "platform_common.h"
 
 static NSWindow *s_window;
 static NSOpenGLContext *s_context;
@@ -193,67 +188,12 @@ static int map_keycode(unsigned short kc)
     return kc < 128 ? map[kc] : 0;
 }
 
-/* A full queue drops the event, as DirectInput's buffer overflows. */
-static void key_event(int dik, int down)
-{
-    if (s_key_head - s_key_tail < KEY_QUEUE) {
-        s_key_queue[s_key_head % KEY_QUEUE].key = (u8)dik;
-        s_key_queue[s_key_head % KEY_QUEUE].down = (u8)down;
-        s_key_head++;
-    }
-    g_plat_keys[dik] = down ? 0x80 : 0;
-}
-
-enum { SCHEDULED = 32 };
-
-static struct { u32 ms, hold; int key; int state; } s_scheduled[SCHEDULED];
-static int s_scheduled_count;
-
-void plat_schedule_key(u32 ms, int key, u32 hold)
-{
-    if (s_scheduled_count < SCHEDULED) {
-        s_scheduled[s_scheduled_count].ms = ms;
-        s_scheduled[s_scheduled_count].key = key;
-        s_scheduled[s_scheduled_count].hold = hold;
-        s_scheduled[s_scheduled_count].state = 0;
-        s_scheduled_count++;
-    }
-}
-
-/* A scheduled key goes down when its time comes and up `hold` ms later. */
-static void run_scheduled(void)
-{
-    u32 now = plat_time_ms();
-    int i;
-
-    for (i = 0; i < s_scheduled_count; i++) {
-        if (s_scheduled[i].state == 0 && now >= s_scheduled[i].ms) {
-            key_event(s_scheduled[i].key, 1);
-            s_scheduled[i].state = 1;
-        } else if (s_scheduled[i].state == 1 && now >= s_scheduled[i].ms + s_scheduled[i].hold) {
-            key_event(s_scheduled[i].key, 0);
-            s_scheduled[i].state = 2;
-        }
-    }
-}
-
-int plat_next_key_event(int *key, int *down)
-{
-    if (s_key_tail == s_key_head) {
-        return 0;
-    }
-    *key = s_key_queue[s_key_tail % KEY_QUEUE].key;
-    *down = s_key_queue[s_key_tail % KEY_QUEUE].down;
-    s_key_tail++;
-    return 1;
-}
-
 static void set_modifier(NSEventModifierFlags flags, NSEventModifierFlags bit, int dik)
 {
     int down = (flags & bit) != 0;
 
     if (down != (g_plat_keys[dik] != 0)) {
-        key_event(dik, down);
+        plat_key_event(dik, down);
     }
 }
 
@@ -276,7 +216,7 @@ static void handle_event(NSEvent *ev)
             break;
         }
         if (dik != 0 && ![ev isARepeat]) {
-            key_event(dik, 1);
+            plat_key_event(dik, 1);
         }
         break;
     }
@@ -284,7 +224,7 @@ static void handle_event(NSEvent *ev)
         int dik = map_keycode([ev keyCode]);
 
         if (dik != 0) {
-            key_event(dik, 0);
+            plat_key_event(dik, 0);
         }
         break;
     }
@@ -393,7 +333,7 @@ void plat_request_quit(void)
 
 void plat_pump_events(void)
 {
-    run_scheduled();
+    plat_run_scheduled();
     @autoreleasepool {
         NSEvent *ev;
 
@@ -405,8 +345,6 @@ void plat_pump_events(void)
         }
     }
 }
-
-int g_plat_run_inactive;
 
 static int run(int (*frame)(void *), void *user, int only_active)
 {
@@ -454,4 +392,37 @@ int plat_run(void)
 int plat_run_with(int (*frame)(void *user), void *user)
 {
     return run(frame, user, 0);
+}
+
+/* The folder holding the executable (Contents/MacOS in an app bundle). */
+const char *plat_host_exe_dir(void)
+{
+    static char dir[1024];
+
+    @autoreleasepool {
+        NSString *path = [[[NSBundle mainBundle] executablePath] stringByDeletingLastPathComponent];
+
+        if (path == nil) {
+            return NULL;
+        }
+        snprintf(dir, sizeof(dir), "%s", [path fileSystemRepresentation]);
+    }
+    return dir;
+}
+
+/* ~/Library/Application Support/Ignition */
+const char *plat_host_pref_dir(void)
+{
+    static char dir[1024];
+
+    @autoreleasepool {
+        NSArray *paths = NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory,
+                                                             NSUserDomainMask, YES);
+
+        if ([paths count] == 0) {
+            return NULL;
+        }
+        snprintf(dir, sizeof(dir), "%s/Ignition", [[paths objectAtIndex:0] fileSystemRepresentation]);
+    }
+    return dir;
 }

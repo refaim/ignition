@@ -4,8 +4,10 @@
  *
  * Replaces the Win32 parts of IGN_WIN.EXE (WinMain's message loop, the
  * window procedure, DirectDraw's window and DirectInput's keyboard). One
- * implementation per host: platform_macos.m, and platform_null.c, which
- * runs without a window for tests.
+ * implementation per host, on that system's own APIs: platform_macos.m,
+ * platform_linux.c, platform_windows.c, platform_web.c,
+ * platform_android.c, platform_ios.m and platform_vita.c. All but the
+ * Vita's share platform_common.c.
  *
  * Must not include a graphics API header; gfx.h must not include this.
  */

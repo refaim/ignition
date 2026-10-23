@@ -1,7 +1,8 @@
 # Ignition - reconstructed engine
 #
 # Native macOS build: Cocoa and OpenGL 3.2 core. The engine core is plain
-# C99; only src/platform_macos.m is host specific.
+# C99; only src/platform_macos.m is host specific. `make vita` builds the
+# PlayStation Vita package (src/platform_vita.c, docs/vita.md).
 
 TARGET := ignition
 SRCDIR := src
@@ -25,7 +26,7 @@ CFLAGS    := -std=c99 -D_POSIX_C_SOURCE=200809L -D_DARWIN_C_SOURCE -Wall -Wextra
 OBJCFLAGS := -fobjc-arc -DGL_SILENCE_DEPRECATION -Wno-deprecated-declarations -Wall -Wextra -Wno-unused-parameter -g -O1 -I$(SRCDIR)
 LDFLAGS   := -framework Cocoa -framework OpenGL -framework AudioUnit -framework AudioToolbox
 
-.PHONY: all clean extract test run
+.PHONY: all clean extract test run vita vita-clean
 
 all: $(TARGET) cd_extract
 
@@ -72,6 +73,23 @@ extract: cd_extract
 
 run: $(TARGET)
 	./$(TARGET)
+
+# PlayStation Vita: build-vita/ignition.vpk. Needs VitaSDK ($VITASDK, or
+# ~/vitasdk) with vitaShaRK, libmathneon, taihen and SceShaccCgExt from
+# vdpm; vitaGL is built into build-vita/deps by tools/vita_deps.sh.
+VITASDK ?= $(HOME)/vitasdk
+VBUILD  := build-vita
+JOBS    ?= $(shell sysctl -n hw.ncpu 2>/dev/null || echo 4)
+
+vita:
+	@test -f $(VBUILD)/deps/lib/libvitaGL.a || VITASDK=$(VITASDK) sh tools/vita_deps.sh $(VBUILD)/deps
+	@test -f $(VBUILD)/CMakeCache.txt || VITASDK=$(VITASDK) cmake -S platforms/vita -B $(VBUILD) \
+		-DVITA_DEPS=$(abspath $(VBUILD)/deps) >/dev/null
+	@VITASDK=$(VITASDK) cmake --build $(VBUILD) -j $(JOBS)
+	@echo "ignition: $(VBUILD)/ignition.vpk"
+
+vita-clean:
+	rm -rf $(VBUILD)
 
 clean:
 	rm -rf $(BUILD) $(TARGET) cd_extract test_lisa test_menu test_settings test_sound *.dSYM

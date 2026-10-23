@@ -10,12 +10,7 @@
  * clipped at the near plane, which the original does not do.
  */
 
-#ifdef __APPLE__
-#define GL_SILENCE_DEPRECATION
-#include <OpenGL/gl3.h>
-#else
-#include <GL/glcorearb.h>
-#endif
+#include "gl_compat.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -50,11 +45,13 @@ struct texture_entry {
     const u8 *pixels;
     int pages;
     GLuint tex;
+    int cols, rows;             /* Vita: the tiles' layout (pages_texture) */
 };
 
 static int s_ready;
 static GLuint s_program, s_vao, s_vbo;
 static GLint s_u_matrix, s_u_pages;
+static GLuint s_fbo;            /* the framebuffer drawn into */
 /* Render targets: 0 is read back over an 8 bit screen, 1 is the view
  * kept on the GPU. */
 struct target {
@@ -120,6 +117,43 @@ static int s_table_count;
 static float *s_raster_verts;
 static int s_raster_cap;
 
+#ifdef IGN_GL_VITA
+/* Cg for vitaGL. A slot's pages are tiles of one 2D texture, u_grid.x a
+ * row, u_grid.yz one over its size (pages_texel below); the varyings
+ * are not flat, but a face's three vertices carry the same info. */
+#define CG_PAGES \
+    "float4 pages_texel(sampler2D pages, float3 grid, float page, float2 t) {\n" \
+    "    float row = floor((page + 0.5) / grid.x);\n" \
+    "    float col = page - row * grid.x;\n" \
+    "    return tex2D(pages, (float2(col, row) * 256.0 + t + 0.5) * grid.yz);\n" \
+    "}\n"
+
+static GLint s_u_grid, s_du_grid, s_ru_grid, s_du_dst_size, s_ru_dst_size;
+
+static const char *s_vs =
+    "void main(float3 a_pos, float2 a_uv, float3 a_info, uniform float4x4 u_matrix,\n"
+    "          float2 out v_uv : TEXCOORD0, float3 out v_info : TEXCOORD1,\n"
+    "          float4 out gl_Position : POSITION) {\n"
+    "    v_uv = a_uv;\n"
+    "    v_info = a_info;\n"
+    "    gl_Position = mul(float4(a_pos, 1.0), u_matrix);\n"
+    "}\n";
+
+static const char *s_fs =
+    CG_PAGES
+    "float4 main(float2 v_uv : TEXCOORD0, float3 v_info : TEXCOORD1,\n"
+    "            uniform sampler2D u_pages, uniform float3 u_grid) : COLOR {\n"
+    "    float c = floor(v_info.y + 0.5);\n"
+    "    if (v_info.z < 1.5) {\n"
+    "        float2 t = min(floor(frac(v_uv) * 256.0), 255.0);\n"
+    "        c = floor(pages_texel(u_pages, u_grid, floor(v_info.x + 0.5), t).r * 255.0 + 0.5);\n"
+    "        if (v_info.z > 0.5 && c < 0.5) {\n"
+    "            discard;\n"
+    "        }\n"
+    "    }\n"
+    "    return float4((c + 0.25) / 255.0, 1.0, 0.0, 1.0);\n"
+    "}\n";
+#else
 static const char *s_vs =
     "#version 150\n"
     "uniform mat4 u_matrix;\n"
@@ -148,10 +182,11 @@ static const char *s_fs =
     "    }\n"
     "    o_index = vec2(c / 255.0, 1.0);\n"
     "}\n";
+#endif
 
 static GLuint compile(GLenum type, const char *src)
 {
-    GLuint s = glCreateShader(type);
+    GLuint s = glCreateShader(type == GL_VERTEX_SHADER ? IGN_VERTEX_SHADER : IGN_FRAGMENT_SHADER);
     GLint ok = 0;
 
     glShaderSource(s, 1, &src, NULL);
@@ -183,6 +218,9 @@ static void init(void)
     glDeleteShader(fs);
     s_u_matrix = glGetUniformLocation(s_program, "u_matrix");
     s_u_pages = glGetUniformLocation(s_program, "u_pages");
+#ifdef IGN_GL_VITA
+    s_u_grid = glGetUniformLocation(s_program, "u_grid");
+#endif
 
     glGenVertexArrays(1, &s_vao);
     glBindVertexArray(s_vao);
@@ -346,6 +384,59 @@ void gl3d_mesh_changed(const s32 *mesh)
     free(verts);
 }
 
+#ifdef IGN_GL_VITA
+enum { PAGES_COLS = 16 };      /* 4096 texels, GXM's widest */
+
+static int s_raster_cols, s_raster_rows;
+
+/* `pages` pages of 256 x 256 as tiles of one texture, `*cols` to a row
+ * and `*rows_out` rows. */
+static GLuint pages_texture(const u8 *pixels, int pages, int *cols, int *rows_out)
+{
+    int c = pages < PAGES_COLS ? pages : PAGES_COLS, rows = (pages + c - 1) / c, i;
+    GLuint t;
+
+    glGenTextures(1, &t);
+    glBindTexture(GL_TEXTURE_2D, t);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, c * 256, rows * 256, 0, GL_RED, GL_UNSIGNED_BYTE, NULL);
+    for (i = 0; i < pages; i++) {
+        glTexSubImage2D(GL_TEXTURE_2D, 0, i % c * 256, i / c * 256, 256, 256, GL_RED,
+                        GL_UNSIGNED_BYTE, pixels + (size_t)i * 256 * 256);
+    }
+    *cols = c;
+    *rows_out = rows;
+    return t;
+}
+
+/* Binds a pages texture and gives the program's u_grid its layout. */
+static void bind_pages(GLint u_grid, GLuint tex)
+{
+    int cols = 1, rows = 1, i;
+
+    if (tex != 0 && tex == s_raster_pages) {
+        cols = s_raster_cols;
+        rows = s_raster_rows;
+    } else {
+        for (i = 0; i < s_texture_count; i++) {
+            if (s_textures[i].tex == tex) {
+                cols = s_textures[i].cols;
+                rows = s_textures[i].rows;
+                break;
+            }
+        }
+    }
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glUniform3f(u_grid, (float)cols, 1.0f / (cols * 256.0f), 1.0f / (rows * 256.0f));
+}
+#else
+#define bind_pages(u_grid, tex) glBindTexture(GL_TEXTURE_2D_ARRAY, (tex))
+#endif
+
 /* A texture slot's pages as a texture array. */
 static GLuint texture_get(int slot)
 {
@@ -369,6 +460,9 @@ static GLuint texture_get(int slot)
     e = &s_textures[s_texture_count++];
     e->pixels = pixels;
     e->pages = pages;
+#ifdef IGN_GL_VITA
+    e->tex = pages_texture(pixels, pages, &e->cols, &e->rows);
+#else
     glGenTextures(1, &e->tex);
     glBindTexture(GL_TEXTURE_2D_ARRAY, e->tex);
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -378,6 +472,7 @@ static GLuint texture_get(int slot)
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_R8, 256, 256, pages, 0, GL_RED, GL_UNSIGNED_BYTE,
                  pixels);
+#endif
     return e->tex;
 }
 
@@ -413,6 +508,7 @@ static void target_begin(struct target *t, int w, int h)
         glGenFramebuffers(1, &t->fbo);
     }
     glBindFramebuffer(GL_FRAMEBUFFER, t->fbo);
+    s_fbo = t->fbo;
     if (w != t->w || h != t->h) {
         if (t->color != 0) {
             glDeleteTextures(1, &t->color);
@@ -474,7 +570,7 @@ void gl3d_view_fill(double y0, double y1, int index)
     }
     glEnable(GL_SCISSOR_TEST);
     glScissor(0, r0, s_w, r1 - r0);
-    glClearColor((index & 0xff) / 255.0f, 1.0f, 0, 0);
+    glClearColor(IGN_INDEX_F(index & 0xff), 1.0f, 0, 0);
     glClear(GL_COLOR_BUFFER_BIT);
     glClearColor(0, 0, 0, 0);
     glDisable(GL_SCISSOR_TEST);
@@ -487,6 +583,7 @@ void gl3d_view_resume(void)
     struct target *t = &s_targets[1];
 
     glBindFramebuffer(GL_FRAMEBUFFER, t->fbo);
+    s_fbo = t->fbo;
     glViewport(0, 0, t->w, t->h);
     s_target = t;
     s_w = t->w;
@@ -579,6 +676,41 @@ static void object_matrix(const struct scene *sc, const struct scene_obj *o, dou
 /* Deferred faces: the texel through the table with the pixel under it
  * (a copy in u_dst), or as the main pass draws them. A keyed face
  * leaves colour 0 out either way. */
+#ifdef IGN_GL_VITA
+static const char *s_dyn_vs =
+    "void main(float4 a_pos, float2 a_uv, float3 a_info,\n"
+    "          float2 out v_uv : TEXCOORD0, float3 out v_info : TEXCOORD1,\n"
+    "          float4 out gl_Position : POSITION) {\n"
+    "    v_uv = a_uv;\n"
+    "    v_info = a_info;\n"
+    "    gl_Position = a_pos;\n"
+    "}\n";
+
+static const char *s_dyn_fs =
+    CG_PAGES
+    "float table_of(sampler2D table, sampler2D dst, float2 dst_size, float4 frag, float c) {\n"
+    "    float d = tex2D(dst, (floor(frag.xy) + 0.5) / dst_size).r * 255.0;\n"
+    "    float2 at = float2(floor(d + 0.5) + 0.5, floor(c + 0.5) + 0.5) / 256.0;\n"
+    "    return tex2D(table, at).r * 255.0;\n"
+    "}\n"
+    "float4 main(float2 v_uv : TEXCOORD0, float3 v_info : TEXCOORD1, float4 frag : WPOS,\n"
+    "            uniform sampler2D u_pages, uniform float3 u_grid, uniform sampler2D u_table,\n"
+    "            uniform sampler2D u_dst, uniform float2 u_dst_size,\n"
+    "            uniform float u_use_table) : COLOR {\n"
+    "    float c = v_info.z > 2.5 ? floor(v_uv.x) : v_info.y;\n"
+    "    if (v_info.z < 1.5) {\n"
+    "        float2 t = min(floor(frac(v_uv) * 256.0), 255.0);\n"
+    "        c = pages_texel(u_pages, u_grid, floor(v_info.x + 0.5), t).r * 255.0;\n"
+    "        if (v_info.z > 0.5 && c < 0.5) {\n"
+    "            discard;\n"
+    "        }\n"
+    "    }\n"
+    "    if (u_use_table > 0.5) {\n"
+    "        c = table_of(u_table, u_dst, u_dst_size, frag, c);\n"
+    "    }\n"
+    "    return float4((floor(c + 0.5) + 0.25) / 255.0, 1.0, 0.0, 1.0);\n"
+    "}\n";
+#else
 static const char *s_dyn_vs =
     "#version 150\n"
     "in vec4 a_pos;\n"
@@ -618,6 +750,7 @@ static const char *s_dyn_fs =
     "    }\n"
     "    o_index = vec2(c / 255.0, 1.0);\n"
     "}\n";
+#endif
 
 static void dyn_init(void)
 {
@@ -638,6 +771,10 @@ static void dyn_init(void)
     s_du_table = glGetUniformLocation(s_dyn_program, "u_table");
     s_du_dst = glGetUniformLocation(s_dyn_program, "u_dst");
     s_du_use_table = glGetUniformLocation(s_dyn_program, "u_use_table");
+#ifdef IGN_GL_VITA
+    s_du_grid = glGetUniformLocation(s_dyn_program, "u_grid");
+    s_du_dst_size = glGetUniformLocation(s_dyn_program, "u_dst_size");
+#endif
     glGenVertexArrays(1, &s_dyn_vao);
     glBindVertexArray(s_dyn_vao);
     glGenBuffers(1, &s_dyn_vbo);
@@ -935,6 +1072,7 @@ static void draw_dyns(void)
     }
     if (s_dyn_dst == 0 || s_dyn_dst_w != s_w || s_dyn_dst_h != s_h) {
         if (s_dyn_dst != 0) {
+            ign_forget_texture(s_dyn_dst);
             glDeleteTextures(1, &s_dyn_dst);
         }
         glGenTextures(1, &s_dyn_dst);
@@ -952,6 +1090,9 @@ static void draw_dyns(void)
     glUniform1i(s_du_pages, 0);
     glUniform1i(s_du_table, 1);
     glUniform1i(s_du_dst, 2);
+#ifdef IGN_GL_VITA
+    glUniform2f(s_du_dst_size, (float)s_w, (float)s_h);
+#endif
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
     glDisable(GL_CULL_FACE);
@@ -964,8 +1105,7 @@ static void draw_dyns(void)
                 continue;
             }
             glActiveTexture(GL_TEXTURE2);
-            glBindTexture(GL_TEXTURE_2D, s_dyn_dst);
-            glCopyTexSubImage2D(GL_TEXTURE_2D, 0, r[0], r[1], r[0], r[1], r[2] - r[0], r[3] - r[1]);
+            ign_copy_rect(s_fbo, s_dyn_dst, r[0], r[1], r[2] - r[0], r[3] - r[1]);
             glActiveTexture(GL_TEXTURE1);
             glBindTexture(GL_TEXTURE_2D, table_get(d->table));
         }
@@ -973,7 +1113,7 @@ static void draw_dyns(void)
          * is behind them. */
         glDepthMask(use_table ? GL_FALSE : GL_TRUE);
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D_ARRAY, d->tex);
+        bind_pages(s_du_grid, d->tex);
         glUniform1i(s_du_use_table, use_table);
         glBufferSubData(GL_ARRAY_BUFFER, 0, (GLsizeiptr)d->count * DYN_FLOATS * sizeof(float), d->v);
         glDrawArrays(GL_TRIANGLES, 0, d->count);
@@ -1021,7 +1161,7 @@ void gl3d_draw(const struct scene *sc, struct scene_obj *const *objs, int count,
         }
         glUseProgram(s_program);
         glBindVertexArray(s_vao);
-        glBindTexture(GL_TEXTURE_2D_ARRAY, texture_get(o->tex));
+        bind_pages(s_u_grid, texture_get(o->tex));
         glUniformMatrix4fv(s_u_matrix, 1, GL_FALSE, m);
         glDrawArrays(GL_TRIANGLES, e->first, e->count);
     }
@@ -1053,6 +1193,36 @@ void gl3d_end(u8 *screen, int pitch)
  * colour, 2 the texel and 3 the colour through the table with the
  * pixel under them. Vertices go half a pixel left and up, as the
  * original fills a pixel whose bottom right corner is inside. */
+#ifdef IGN_GL_VITA
+static const char *s_raster_vs =
+    "void main(float2 a_pos, float2 a_uv, float3 a_info, uniform float2 u_size,\n"
+    "          uniform float2 u_off, float2 out v_uv : TEXCOORD0,\n"
+    "          float3 out v_info : TEXCOORD1, float4 out gl_Position : POSITION) {\n"
+    "    v_uv = a_uv;\n"
+    "    v_info = a_info;\n"
+    "    gl_Position = float4((a_pos - 0.5 + u_off) / u_size * 2.0 - 1.0, 0.0, 1.0);\n"
+    "}\n";
+
+static const char *s_raster_fs =
+    CG_PAGES
+    "float4 main(float2 v_uv : TEXCOORD0, float3 v_info : TEXCOORD1, float4 frag : WPOS,\n"
+    "            uniform sampler2D u_pages, uniform float3 u_grid, uniform sampler2D u_table,\n"
+    "            uniform sampler2D u_dst, uniform float2 u_dst_size) : COLOR {\n"
+    "    float mode = v_info.z;\n"
+    "    float a = v_info.y;\n"
+    "    if (mode < 0.5 || (mode > 1.5 && mode < 2.5)) {\n"
+    "        float2 t = floor(v_uv);\n"
+    "        t = t - 256.0 * floor(t / 256.0);\n"
+    "        a = pages_texel(u_pages, u_grid, floor(v_info.x + 0.5), t).r * 255.0;\n"
+    "    }\n"
+    "    if (mode > 1.5) {\n"
+    "        float d = tex2D(u_dst, (floor(frag.xy) + 0.5) / u_dst_size).r * 255.0;\n"
+    "        float2 at = float2(floor(d + 0.5) + 0.5, floor(a + 0.5) + 0.5) / 256.0;\n"
+    "        a = tex2D(u_table, at).r * 255.0;\n"
+    "    }\n"
+    "    return float4((floor(a + 0.5) + 0.25) / 255.0, 0.0, 0.0, 1.0);\n"
+    "}\n";
+#else
 static const char *s_raster_vs =
     "#version 150\n"
     "uniform vec2 u_size;\n"
@@ -1089,6 +1259,7 @@ static const char *s_raster_fs =
     "    }\n"
     "    o_index = a / 255.0;\n"
     "}\n";
+#endif
 
 static void raster_init(void)
 {
@@ -1110,6 +1281,10 @@ static void raster_init(void)
     s_ru_pages = glGetUniformLocation(s_raster_program, "u_pages");
     s_ru_table = glGetUniformLocation(s_raster_program, "u_table");
     s_ru_dst = glGetUniformLocation(s_raster_program, "u_dst");
+#ifdef IGN_GL_VITA
+    s_ru_grid = glGetUniformLocation(s_raster_program, "u_grid");
+    s_ru_dst_size = glGetUniformLocation(s_raster_program, "u_dst_size");
+#endif
     glGenVertexArrays(1, &s_raster_vao);
     glBindVertexArray(s_raster_vao);
     glGenBuffers(1, &s_raster_vbo);
@@ -1167,6 +1342,9 @@ void gl3d_raster_pages(const u8 *pixels, int count)
     if (s_raster_pages != 0) {
         glDeleteTextures(1, &s_raster_pages);
     }
+#ifdef IGN_GL_VITA
+    s_raster_pages = pages_texture(pixels, count, &s_raster_cols, &s_raster_rows);
+#else
     glGenTextures(1, &s_raster_pages);
     glBindTexture(GL_TEXTURE_2D_ARRAY, s_raster_pages);
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -1174,6 +1352,7 @@ void gl3d_raster_pages(const u8 *pixels, int count)
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_R8, 256, 256, count, 0, GL_RED, GL_UNSIGNED_BYTE,
                  pixels);
+#endif
 }
 
 static int cmd_mode(int type)
@@ -1196,6 +1375,7 @@ void gl3d_raster(u8 *target, int w, int h, int pitch, const struct raster_cmd *c
     }
     if (!gpu && (w != s_raster_w || h != s_raster_h)) {
         if (s_raster_color != 0) {
+            ign_forget_texture(s_raster_dst);
             glDeleteTextures(1, &s_raster_color);
             glDeleteTextures(1, &s_raster_dst);
         }
@@ -1260,8 +1440,11 @@ void gl3d_raster(u8 *target, int w, int h, int pitch, const struct raster_cmd *c
     glUniform1i(s_ru_pages, 0);
     glUniform1i(s_ru_table, 1);
     glUniform1i(s_ru_dst, 2);
+#ifdef IGN_GL_VITA
+    glUniform2f(s_ru_dst_size, (float)(gpu ? pw : w), (float)(gpu ? ph : h));
+#endif
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D_ARRAY, s_raster_pages);
+    bind_pages(s_ru_grid, s_raster_pages);
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_CULL_FACE);
 
@@ -1290,8 +1473,7 @@ void gl3d_raster(u8 *target, int w, int h, int pitch, const struct raster_cmd *c
                 glBindTexture(GL_TEXTURE_2D, copy);
             } else {
                 glActiveTexture(GL_TEXTURE2);
-                glBindTexture(GL_TEXTURE_2D, s_raster_dst);
-                glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, w, h);
+                ign_copy_rect(s_raster_fbo, s_raster_dst, 0, 0, w, h);
             }
             glActiveTexture(GL_TEXTURE1);
             glBindTexture(GL_TEXTURE_2D, table_get(cmds[i].table));
@@ -1302,9 +1484,26 @@ void gl3d_raster(u8 *target, int w, int h, int pitch, const struct raster_cmd *c
 
     if (!gpu) {
         glPixelStorei(GL_PACK_ALIGNMENT, 1);
+#ifdef IGN_GL_VITA
+        /* No GL_PACK_ROW_LENGTH: read whole rows, then spread them. */
+        if (pitch == w) {
+            glReadPixels(0, 0, w, h, GL_RED, GL_UNSIGNED_BYTE, target);
+        } else {
+            u8 *rows = malloc((size_t)w * h);
+
+            if (rows != NULL) {
+                glReadPixels(0, 0, w, h, GL_RED, GL_UNSIGNED_BYTE, rows);
+                for (k = 0; k < h; k++) {
+                    memcpy(target + (size_t)k * pitch, rows + (size_t)k * w, (size_t)w);
+                }
+                free(rows);
+            }
+        }
+#else
         glPixelStorei(GL_PACK_ROW_LENGTH, pitch);
         glReadPixels(0, 0, w, h, GL_RED, GL_UNSIGNED_BYTE, target);
         glPixelStorei(GL_PACK_ROW_LENGTH, 0);
+#endif
     }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
@@ -1316,7 +1515,8 @@ int gl3d_surface_begin(u8 *key, int lw, int lh)
     if (!s_ready) {
         init();
     }
-    if (canvas_bind(key, &pw, &ph, 1) == 0) {
+    s_fbo = canvas_bind(key, &pw, &ph, 1);
+    if (s_fbo == 0) {
         return 0;
     }
     {

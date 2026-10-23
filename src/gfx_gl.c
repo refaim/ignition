@@ -2,12 +2,7 @@
  * gfx_gl.c - OpenGL 3.2 core renderer.
  */
 
-#ifdef __APPLE__
-#define GL_SILENCE_DEPRECATION
-#include <OpenGL/gl3.h>
-#else
-#include <GL/glcorearb.h>
-#endif
+#include "gl_compat.h"
 
 #include <stdio.h>
 
@@ -24,6 +19,36 @@ static GLuint s_snap_tex;       /* R8, the screen as the 3D left it */
 static int s_tex_w, s_tex_h;
 static int s_draw_w, s_draw_h;
 
+#ifdef IGN_GL_VITA
+/* Cg for vitaGL. The quad's corners come from a buffer: (0, 0), (1, 0),
+ * (0, 1), (1, 1). */
+static GLuint s_corners;
+
+static const char *s_vs =
+    "void main(float2 a_corner, uniform float4 u_rect,\n"
+    "          float2 out v_uv : TEXCOORD0, float4 out gl_Position : POSITION) {\n"
+    "    v_uv = float2(a_corner.x, 1.0 - a_corner.y);\n"
+    "    gl_Position = float4(lerp(u_rect.xy, u_rect.zw, a_corner), 0.0, 1.0);\n"
+    "}\n";
+
+static const char *s_fs =
+    "float4 main(float2 v_uv : TEXCOORD0, uniform sampler2D u_index,\n"
+    "            uniform sampler2D u_palette) : COLOR {\n"
+    "    float i = tex2D(u_index, v_uv).r * 255.0;\n"
+    "    return float4(tex2D(u_palette, float2((i + 0.5) / 256.0, 0.5)).rgb, 1.0);\n"
+    "}\n";
+
+static const char *s_over_fs =
+    "float4 main(float2 v_uv : TEXCOORD0, uniform sampler2D u_index,\n"
+    "            uniform sampler2D u_palette, uniform sampler2D u_snap) : COLOR {\n"
+    "    float i = tex2D(u_index, v_uv).r * 255.0;\n"
+    "    float s = tex2D(u_snap, v_uv).r * 255.0;\n"
+    "    if (abs(i - s) < 0.5) {\n"
+    "        discard;\n"
+    "    }\n"
+    "    return float4(tex2D(u_palette, float2((i + 0.5) / 256.0, 0.5)).rgb, 1.0);\n"
+    "}\n";
+#else
 /* A quad from gl_VertexID; u_rect is x0, y0, x1, y1 in clip space. */
 static const char *s_vs =
     "#version 150\n"
@@ -61,10 +86,11 @@ static const char *s_over_fs =
     "    if (abs(i - s) < 0.5) discard;\n"
     "    o_color = vec4(texture(u_palette, vec2((i + 0.5) / 256.0, 0.5)).rgb, 1.0);\n"
     "}\n";
+#endif
 
 static GLuint compile(GLenum type, const char *src)
 {
-    GLuint s = glCreateShader(type);
+    GLuint s = glCreateShader(type == GL_VERTEX_SHADER ? IGN_VERTEX_SHADER : IGN_FRAGMENT_SHADER);
     GLint ok;
 
     glShaderSource(s, 1, &src, NULL);
@@ -101,6 +127,9 @@ int gfx_init(void)
     s_program = glCreateProgram();
     glAttachShader(s_program, vs);
     glAttachShader(s_program, fs);
+#ifdef IGN_GL_VITA
+    glBindAttribLocation(s_program, 0, "a_corner");
+#endif
     glLinkProgram(s_program);
     glDeleteShader(vs);
     glDeleteShader(fs);
@@ -115,6 +144,18 @@ int gfx_init(void)
     s_u_rect = glGetUniformLocation(s_program, "u_rect");
 
     glGenVertexArrays(1, &s_vao);
+#ifdef IGN_GL_VITA
+    {
+        static const float corners[8] = { 0, 0, 1, 0, 0, 1, 1, 1 };
+
+        glBindVertexArray(s_vao);
+        glGenBuffers(1, &s_corners);
+        glBindBuffer(GL_ARRAY_BUFFER, s_corners);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(corners), corners, GL_STATIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void *)0);
+    }
+#endif
     s_index_tex = make_texture();
     s_palette_tex = make_texture();
     glBindTexture(GL_TEXTURE_2D, s_palette_tex);
@@ -126,6 +167,9 @@ int gfx_init(void)
     s_over_program = glCreateProgram();
     glAttachShader(s_over_program, vs);
     glAttachShader(s_over_program, fs);
+#ifdef IGN_GL_VITA
+    glBindAttribLocation(s_over_program, 0, "a_corner");
+#endif
     glBindFragDataLocation(s_over_program, 0, "o_color");
     glLinkProgram(s_over_program);
     glDeleteShader(vs);

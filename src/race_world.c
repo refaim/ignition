@@ -415,7 +415,7 @@ void race_make_world(void)
 }
 
 /* An all zero screen: the back buffer's colour 0 shows the 3D. */
-static const u8 s_clear[800 * 600];
+static const u8 s_clear[SCREEN_MAX_W * SCREEN_MAX_H];
 
 /* Rows the view fills with a colour before drawing, as the original
  * fills the back buffer (the sky, track 2's band). */
@@ -445,15 +445,18 @@ void race_draw_view(const struct scene *sc, struct scene_obj *const *objs, int n
     if (w <= 0 || h <= 0) {
         return;
     }
-    /* The race's screen (320 x 200 .. 800 x 600) fills a 4:3 picture;
-     * a wider drawable sees more at the sides. The view is drawn at the
-     * internal resolution, as wide as the drawable's shape. */
-    vw = g_screen_width * ((double)w / h) / (4.0 / 3.0);
+    /* The race's screen (320 x 200 .. 800 x 600, or NATIVE's) fills the
+     * drawable's height; a drawable wider than the screen sees more at
+     * the sides. The view is drawn at the internal resolution, as wide
+     * as the drawable's shape. */
     {
+        /* 320 x 200's pixels are 1.2 times as tall as they are wide. */
+        double tall = g_screen_width == 320 && g_screen_height == 200 ? 1.2 : 1.0;
         int w43, ih;
 
+        vw = g_screen_height * tall * w / h;
         canvas_internal_size(&w43, &ih);
-        w = (int)(w43 * vw / g_screen_width + 0.5);
+        w = (int)((double)ih * w / h + 0.5);
         h = ih;
     }
     gl3d_view_begin(w, h, vw, g_screen_height);

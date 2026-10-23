@@ -356,6 +356,22 @@ void race_play_ghost(void)
     }
 }
 
+/* g_cone_table[x * 800 + 400 + c] (0x4200e0), worked out so a screen
+ * wider than the table's 800 columns, or a circle wider than its 405
+ * rows, has the same edge: 0 well inside the circle, then 1 .. 5 over
+ * its last pixels, and 20 outside. */
+static u8 cone_level(int x, int c)
+{
+    int k;
+
+    for (k = 5; k >= 0; k--) {
+        if (c >= k - x && c < x - k) {
+            return (u8)(5 - k);
+        }
+    }
+    return 20;
+}
+
 /* 0x438210
  * The iris: a circle of radius step * 4 (of 320) about the screen's
  * middle; outside it the back buffer goes through MENU.TAB's darker
@@ -383,7 +399,7 @@ void race_iris(int step)
         }
         for (col = 0; col < w; col++) {
             u8 *p = &g_back_buffer[y * w + col];
-            u8 level = g_cone_table[x * 800 - w / 2 + 400 + col];
+            u8 level = cone_level(x, col - w / 2);
 
             *p = g_level_pan[level << 8 | *p];
         }

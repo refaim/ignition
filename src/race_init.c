@@ -10,6 +10,7 @@
 #include <string.h>
 
 #include "app.h"
+#include "canvas.h"
 #include "cd.h"
 #include "game.h"
 #include "input.h"
@@ -453,15 +454,47 @@ void race_layout_views(void)
 /* 0x43dea0: the race's video mode from RESOLUTION, the cameras' focal
  * lengths and near distance for it, and the views. The original also
  * darkens the palette for the rain here (0x445f20). */
+/* NATIVE (a port addition): the window's size over a whole scale of 1
+ * or 2, 2 once the window is at least twice 600 rows. It is never
+ * smaller than 800 x 600's height where the window allows, nor larger
+ * than the 2D buffers. */
+static void native_screen(s32 *w, s32 *h)
+{
+    int dw = 0, dh = 0, scale;
+
+    video_drawable_size(&dw, &dh);
+    if (dw < 320 || dh < 200) {
+        *w = 800;
+        *h = 600;
+        return;
+    }
+    scale = dh >= 1200 ? 2 : 1;
+    *w = dw / scale;
+    *h = dh / scale;
+    if (*w > SCREEN_MAX_W) {
+        *w = SCREEN_MAX_W;
+    }
+    if (*h > SCREEN_MAX_H) {
+        *h = SCREEN_MAX_H;
+    }
+}
+
 void race_init_hud(void)
 {
     static const s32 modes[3][2] = { { 320, 200 }, { 640, 480 }, { 800, 600 } };
     static const s32 focal[3][2] = { { 200, 164 }, { 425, 425 }, { 550, 550 } };
     static const double near_d[3] = { 25.0, 10.0, 10.0 };
     int size = g_race_screen_size, i;
+    s32 w = modes[size][0], h = modes[size][1], fx = focal[size][0], fy = focal[size][1];
 
-    g_video_mode.width = modes[size][0];
-    g_video_mode.height = modes[size][1];
+    if (race_cfg(0x10b) == CANVAS_NATIVE && size == 2) {
+        /* 800 x 600's sprites and focal length, the focal scaled to the
+         * height so the view sees as much up and down. */
+        native_screen(&w, &h);
+        fx = fy = (s32)(550.0 * h / 600.0 + 0.5);
+    }
+    g_video_mode.width = w;
+    g_video_mode.height = h;
     g_video_mode.bpp = 8;
     g_video_mode.flag = 1;
     if (!video_set_mode()) {
@@ -469,11 +502,11 @@ void race_init_hud(void)
         g_fatal_error = 1;
         return;
     }
-    g_screen_width = modes[size][0];
-    g_screen_height = modes[size][1];
+    g_screen_width = w;
+    g_screen_height = h;
     for (i = 0; i < g_driver_count; i++) {
-        g_race_cams[i].f58 = focal[size][0];
-        g_race_cams[i].f5c = focal[size][1];
+        g_race_cams[i].f58 = fx;
+        g_race_cams[i].f5c = fy;
         g_race_cams[i].f60 = near_d[size];
     }
     video_set_palette(g_level_col + 8);

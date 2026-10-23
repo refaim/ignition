@@ -14,7 +14,11 @@ extern int g_fatal_error;
 extern char g_error_text[256];
 extern s32 g_screen_width;
 extern s32 g_screen_height;
-extern u8 g_back_buffer[800 * 600];
+/* The largest 2D screen: the original's 800 x 600, or the window's size
+ * over its scale in NATIVE. */
+enum { SCREEN_MAX_W = 2560, SCREEN_MAX_H = 1440 };
+
+extern u8 g_back_buffer[SCREEN_MAX_W * SCREEN_MAX_H];
 extern u8 *g_sysgfx;
 extern u8 *g_sysgfx2;
 extern u8 *g_sys_palette;

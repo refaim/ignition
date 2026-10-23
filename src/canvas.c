@@ -39,6 +39,11 @@ struct surface {
     int margin;             /* the margins' colour, -1 the picture's ground */
     int pw, ph;             /* physical, margins included */
     unsigned target, tex, copy;
+    /* What was drawn since `copy` was taken (logical rectangles); a
+     * blended draw copies the surface again only when it covers them.
+     * Each copy costs the Vita a scene of its own. */
+    int copy_ok, dirty_n;
+    float dirty[32][4];
 };
 
 struct table {
@@ -147,6 +152,8 @@ static void surface_make(struct surface *s)
     s->tex = rnd_texture(RND_R8, s->pw, s->ph, NULL, 0);
     s->copy = rnd_texture(RND_R8, s->pw, s->ph, NULL, 0);
     s->target = rnd_target(s->tex, 1);
+    s->copy_ok = 0;
+    s->dirty_n = 0;
     rnd_bind(s->target);
     rnd_clear(s_zero, 1);
 }
@@ -379,6 +386,44 @@ float canvas_aspect(const u8 *key, float fallback)
     return (float)s->pw / (float)s->ph;
 }
 
+/* The whole surface changed (cleared, put, copied over, or drawn by
+ * gl3d): the copy no longer matches it anywhere. */
+static void dirty_all(struct surface *s)
+{
+    s->copy_ok = 0;
+}
+
+static void dirty_rect(struct surface *s, float x0, float y0, float x1, float y1)
+{
+    if (s->dirty_n == 32) {
+        s->copy_ok = 0;
+        return;
+    }
+    s->dirty[s->dirty_n][0] = x0;
+    s->dirty[s->dirty_n][1] = y0;
+    s->dirty[s->dirty_n][2] = x1;
+    s->dirty[s->dirty_n][3] = y1;
+    s->dirty_n++;
+}
+
+/* Whether the copy is out of date under the rectangle. */
+static int copy_stale(const struct surface *s, float x0, float y0, float x1, float y1)
+{
+    int i;
+
+    if (!s->copy_ok) {
+        return 1;
+    }
+    for (i = 0; i < s->dirty_n; i++) {
+        const float *d = s->dirty[i];
+
+        if (x0 < d[2] + 1 && d[0] - 1 < x1 && y0 < d[3] + 1 && d[1] - 1 < y1) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 void canvas_clear(u8 *key, u8 index, size_t bytes)
 {
     struct surface *s = find(key);
@@ -389,6 +434,7 @@ void canvas_clear(u8 *key, u8 index, size_t bytes)
     }
     rnd_bind(s->target);
     clear_index(index);
+    dirty_all(s);
 }
 
 /* Draws the quad (x0, y0)..(x1, y1) in logical pixels with texture
@@ -439,6 +485,7 @@ void canvas_put(u8 *dst, const u8 *pixels, int pitch)
     set_mode(0);
     rnd_texture_unit(0, tex);
     quad(0, 0, (float)s->lw, (float)s->lh, 0, 0, (float)s->lw, (float)s->lh);
+    dirty_all(s);
 }
 
 void canvas_copy(u8 *dst, const u8 *src, size_t bytes)
@@ -451,6 +498,7 @@ void canvas_copy(u8 *dst, const u8 *src, size_t bytes)
     }
     if (d != NULL && s != NULL) {
         rnd_blit(s->target, d->target, s->pw, s->ph, d->pw, d->ph);
+        dirty_all(d);
         return;
     }
     if (d != NULL) {
@@ -567,14 +615,18 @@ static void snapshot_rect(struct surface *s, float x0, float y0, float x1, float
 }
 
 /* Binds the table and, if it can blend, the pixels under the
- * rectangle. */
+ * rectangle: a copy of the whole surface, taken again only where it is
+ * stale, so draws that do not overlap share one. */
 static void use_table(struct surface *s, const u8 *table, float x0, float y0, float x1, float y1)
 {
     struct table *t = table_get(table);
 
-    if (t->blends) {
-        snapshot_rect(s, x0, y0, x1, y1);
+    if (t->blends && copy_stale(s, x0, y0, x1, y1)) {
+        rnd_copy(s->copy, 0, 0, s->pw, s->ph);
+        s->copy_ok = 1;
+        s->dirty_n = 0;
     }
+    dirty_rect(s, x0, y0, x1, y1);
     rnd_texture_unit(1, t->tex);
     rnd_texture_unit(2, t->rows);
     rnd_texture_unit(3, s->copy);
@@ -705,6 +757,8 @@ unsigned canvas_bind(u8 *key, int *pw, int *ph, int clear_depth)
     if (clear_depth) {
         rnd_clear(NULL, 1);
     }
+    /* gl3d draws into it. */
+    dirty_all(s);
     *pw = s->pw;
     *ph = s->ph;
     return s->target;
@@ -726,6 +780,8 @@ unsigned canvas_snapshot(const u8 *key)
     }
     rnd_bind(s->target);
     rnd_copy(s->copy, 0, 0, s->pw, s->ph);
+    s->copy_ok = 1;
+    s->dirty_n = 0;
     return s->copy;
 }
 
@@ -737,5 +793,7 @@ unsigned canvas_snapshot_rect(const u8 *key, float x0, float y0, float x1, float
         return 0;
     }
     snapshot_rect(s, x0, y0, x1, y1);
+    /* Only part of the copy is fresh. */
+    dirty_all(s);
     return s->copy;
 }

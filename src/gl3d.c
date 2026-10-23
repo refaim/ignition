@@ -945,11 +945,57 @@ static void cmd_rect(const struct raster_cmd *c, int r[4])
     r[3] = (int)ceilf(y1) + 1;
 }
 
+/* A flat triangle into memory, as the GPU path covers it: a pixel is
+ * filled when its bottom right corner (x + 1, y + 1) is inside. */
+static void flat_fill(u8 *target, int w, int h, int pitch, const struct raster_cmd *c)
+{
+    double x0 = c->x[0], y0 = c->y[0], x1 = c->x[1], y1 = c->y[1], x2 = c->x[2], y2 = c->y[2];
+    double area = (x1 - x0) * (y2 - y0) - (y1 - y0) * (x2 - x0);
+    int lx = (int)floor(fmin(x0, fmin(x1, x2))) - 1, hx = (int)ceil(fmax(x0, fmax(x1, x2)));
+    int ly = (int)floor(fmin(y0, fmin(y1, y2))) - 1, hy = (int)ceil(fmax(y0, fmax(y1, y2)));
+    int x, y;
+
+    if (area == 0.0) {
+        return;
+    }
+    lx = lx < 0 ? 0 : lx;
+    ly = ly < 0 ? 0 : ly;
+    hx = hx > w ? w : hx;
+    hy = hy > h ? h : hy;
+    for (y = ly; y < hy; y++) {
+        double py = y + 1.0;
+
+        for (x = lx; x < hx; x++) {
+            double px = x + 1.0;
+            double e0 = (x1 - x0) * (py - y0) - (y1 - y0) * (px - x0);
+            double e1 = (x2 - x1) * (py - y1) - (y2 - y1) * (px - x1);
+            double e2 = (x0 - x2) * (py - y2) - (y0 - y2) * (px - x2);
+
+            if (area > 0 ? (e0 >= 0 && e1 >= 0 && e2 >= 0) : (e0 <= 0 && e1 <= 0 && e2 <= 0)) {
+                target[y * pitch + x] = c->colour;
+            }
+        }
+    }
+}
+
 void gl3d_raster(u8 *target, int w, int h, int pitch, const struct raster_cmd *cmds, int count)
 {
     int i, k, run, pw, ph, copied = 0, batch = rnd_batch_copies();
     int gpu = canvas_is_gpu(target);
     float size[2], off[2] = { 0, 0 };
+
+    /* Only flat triangles into memory (the race HUD's needle and bar):
+     * filled here, as a trip through the GPU waits for it twice. */
+    if (!gpu) {
+        for (i = 0; i < count && cmds[i].type == RASTER_FLAT; i++) {
+        }
+        if (i == count) {
+            for (i = 0; i < count; i++) {
+                flat_fill(target, w, h, pitch, &cmds[i]);
+            }
+            return;
+        }
+    }
 
     if (!gpu && (w != s_raster_w || h != s_raster_h)) {
         if (s_raster_color != 0) {

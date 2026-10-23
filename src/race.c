@@ -263,7 +263,25 @@ void race_frame(void)
     }
     /* r_552f18 2 and 3 wait for network players; there are none. */
     if (r_494990 == 1) {
-        if (r_5532b0 != 1) {
+        if (r_552f10 == 2) {
+            /* Off the network the race stands still: the view, as it
+             * is, under the menu. */
+            race_view(0);
+            if (r_5532b0 != 1) {
+                if (r_601674 == 0) {
+                    race_pause_menu();
+                } else {
+                    race_ask_box();
+                }
+            }
+            present_back_buffer();
+            if (r_5daff0 > 0) {
+                r_5daff0 = (s32)(r_5daff0 + dt);
+                if (r_5daff0 > 20) {
+                    r_563d88 = 1;
+                }
+            }
+        } else if (r_5532b0 != 1) {
             if (r_601674 == 0) {
                 race_pause_menu();
             } else {

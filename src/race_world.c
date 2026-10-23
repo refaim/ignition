@@ -256,6 +256,54 @@ static void at_car(struct scene_desc *d, const struct car *c)
     d->az = (s32)(c->f110 * 572.957795130822);
 }
 
+/* The shadows (a port's change): the original's is the collisions' box
+ * (g_car_hulls) at the ground, two faces of type 20 through the level's
+ * shades. Here it is an octagon over the same box, its corners cut by
+ * a third of the narrow side, six faces of the same shade. */
+enum { SHADOW_VERTS = 8, SHADOW_FACES = 6 };
+static s32 s_shadows[RACE_DRIVERS][2 + 3 * SHADOW_VERTS + 5 * SHADOW_FACES + 1];
+
+static void shadow_shape(int i)
+{
+    const struct car *c = &g_cars[i];
+    s32 *m = s_shadows[i];
+    double x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9, cut;
+    double px[SHADOW_VERTS], pz[SHADOW_VERTS];
+    int k;
+
+    for (k = 0; k < 4; k++) {
+        x0 = fmin(x0, c->corner_x[k]);
+        x1 = fmax(x1, c->corner_x[k]);
+        z0 = fmin(z0, c->corner_z[k] * 1.2);
+        z1 = fmax(z1, c->corner_z[k] * 1.2);
+    }
+    cut = fmin(x1 - x0, z1 - z0) / 3.0;
+    px[0] = x0 + cut; pz[0] = z0;
+    px[1] = x1 - cut; pz[1] = z0;
+    px[2] = x1;       pz[2] = z0 + cut;
+    px[3] = x1;       pz[3] = z1 - cut;
+    px[4] = x1 - cut; pz[4] = z1;
+    px[5] = x0 + cut; pz[5] = z1;
+    px[6] = x0;       pz[6] = z1 - cut;
+    px[7] = x0;       pz[7] = z0 + cut;
+    m[0] = SHADOW_VERTS;
+    m[1] = SHADOW_FACES;
+    for (k = 0; k < SHADOW_VERTS; k++) {
+        m[2 + 3 * k] = (s32)px[k];
+        m[3 + 3 * k] = 0;
+        m[4 + 3 * k] = (s32)pz[k];
+    }
+    for (k = 0; k < SHADOW_FACES; k++) {
+        s32 *f = m + 2 + 3 * SHADOW_VERTS + 5 * k;
+
+        f[0] = 20;
+        f[1] = 0;
+        f[2] = k + 1;
+        f[3] = k + 2;
+        f[4] = 40;
+    }
+}
+
 /* 0x41c29f */
 static void make_car_objects(void)
 {
@@ -298,7 +346,8 @@ static void make_car_objects(void)
             scene_obj_link(&g_car7_objs[i]);
         }
         at_car(&g_shadow_objs[i], c);
-        if (scene_obj_create(&g_shadow_objs[i], g_car_hulls[i].v, 0, 200, 0, -1, 0) != 0) {
+        shadow_shape(i);
+        if (scene_obj_create(&g_shadow_objs[i], s_shadows[i], 0, 200, 0, -1, 0) != 0) {
             log_printf("Error while creating shadow\n");
             exit(1);
         }
@@ -603,6 +652,7 @@ void race_place_car(int i)
     if (!(0.0 <= sz) || !(sz <= 50000.0)) {
         sz = 28000.0;
     }
+    shadow_shape(i);
     h->v[2] = (s32)c->corner_x[2];
     h->v[4] = (s32)(c->corner_z[2] * 1.2);
     h->v[5] = (s32)c->corner_x[3];

@@ -62,4 +62,6 @@ double menu_step_part(void);
 /* The text being typed into a text field (0x4c4fc8). */
 const char *menu_edit_text(void);
 
+int menu_spread_y(int y);
+
 #endif /* IGN_MENU_ENGINE_H */

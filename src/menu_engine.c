@@ -14,6 +14,7 @@
 #include <string.h>
 
 #include "app.h"
+#include "canvas.h"
 #include "input.h"
 #include "lisa/font.h"
 #include "lisa/gfx.h"
@@ -604,11 +605,23 @@ static int screen_x(s16 x)
     return g_menu.scaled ? x * g_menu.screen_w / 0xc80 + half : x + half;
 }
 
+/* NATIVE's menus have height to spare: the items' rows, given from the
+ * screen's centre, are spread 1.3 times as far apart (their sizes kept). */
+extern u8 *g_menu_screen;
+
+int menu_spread_y(int y)
+{
+    float mx, my;
+
+    canvas_extent(g_menu_screen, &mx, &my);
+    return my > 0 ? (y * 13 + (y < 0 ? -5 : 5)) / 10 : y;
+}
+
 static int screen_y(s16 y)
 {
     int half = g_menu.screen_h * g_menu.centre / 2;
 
-    return g_menu.scaled ? y * g_menu.screen_h / 0x960 + half : y + half;
+    return menu_spread_y(g_menu.scaled ? y * g_menu.screen_h / 0x960 : y) + half;
 }
 
 /* 0x411960: draws a visual's sprite and its text, the text through the

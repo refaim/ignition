@@ -443,7 +443,10 @@ void race_layout_views(void)
 
     g_view_w = (s32)(w * s_view_scale[r_527f28][0] * (split ? 0.5 : 1.0));
     g_view_h = (s32)(h * s_view_scale[r_527f28][1]);
-    r_552d80 = (s32)(w * 204.796875);
+    /* The screen's scale from 320 x 200 in 16.16 (the effects' sizes).
+     * A screen wider than 4:3 (NATIVE) scales as its 4:3 width, so its
+     * sprites keep 320 x 200's shape. */
+    r_552d80 = (s32)((w * 3 > h * 4 ? h * 4 / 3 : w) * 204.796875);
     r_552f5c = (s32)(h * 327.675);
     for (i = 0; i < g_driver_count; i++) {
         struct race_driver *d = &g_drivers[i];

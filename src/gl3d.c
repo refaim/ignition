@@ -970,8 +970,15 @@ static void draw_dyns(void)
             glBindTexture(GL_TEXTURE_2D, table_get(d->table));
         }
         /* Through a table nothing writes the depth, as the faces show what
-         * is behind them. */
+         * is behind them; and they are pulled a little toward the eye, as
+         * the shadows and skids lie on the ground they shade. */
         glDepthMask(use_table ? GL_FALSE : GL_TRUE);
+        if (use_table) {
+            glEnable(GL_POLYGON_OFFSET_FILL);
+            glPolygonOffset(-1.0f, -4.0f);
+        } else {
+            glDisable(GL_POLYGON_OFFSET_FILL);
+        }
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D_ARRAY, d->tex);
         glUniform1i(s_du_use_table, use_table);
@@ -979,6 +986,7 @@ static void draw_dyns(void)
         glDrawArrays(GL_TRIANGLES, 0, d->count);
     }
     glDepthMask(GL_TRUE);
+    glDisable(GL_POLYGON_OFFSET_FILL);
     glDisable(GL_DEPTH_TEST);
     glActiveTexture(GL_TEXTURE0);
     s_dyn_count = 0;

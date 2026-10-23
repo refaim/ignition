@@ -105,6 +105,15 @@ static u8 *at(const struct panel *p, int row_add, int x)
 }
 
 /* 0x4011c0 */
+/* Panels drawn on their own, without the bridges between rows (the
+ * menus' items spread in NATIVE no longer sit on adjacent rows). */
+static int s_apart;
+
+void panels_apart(int on)
+{
+    s_apart = on;
+}
+
 static void panel_draw(struct panel *n)
 {
     const u8 *bkg = g_menu_background;
@@ -117,7 +126,7 @@ static void panel_draw(struct panel *n)
         fill(s_dst + (n->row * 19 + n->y + i + 8) * s_pitch + n->x0 + 13,
              n->x1 - n->x0, bkg[0x9340 + i]);
     }
-    for (m = s_panels; m != NULL; m = m->next) {
+    for (m = s_apart ? NULL : s_panels; m != NULL; m = m->next) {
         int dx0, dx1;
 
         if (m == n) {

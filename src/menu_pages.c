@@ -131,9 +131,10 @@ static void blend_panels(void)
         blend_rect(g_menu_buffer2, 0, 0x41, 0x140, 0xbc, g_menu_screen, 0, 0x41, tab, w, w);
     } else if ((v = cur->items[0].visuals) != NULL
                && (fe_4be850 == 0.0 || fe_4be850 >= 1306.8)) {
-        int y = v->y + mode[1] / 2 - 4;
+        int y = menu_spread_y(v->y) + mode[1] / 2 - 4;
 
-        blend_rect(g_menu_buffer2, 0, y, 0x13f, y + cur->count * 19 + 5, g_menu_screen,
+        blend_rect(g_menu_buffer2, 0, y, 0x13f, y + menu_spread_y(cur->count * 19) + 5,
+                   g_menu_screen,
                    0, y, tab, w, w);
     }
 }
@@ -143,7 +144,7 @@ static void blend_panels(void)
 static void panel_for_text(const char *text, int font, s16 tx, s16 ty, int highlight)
 {
     const s32 *mode = g_menu_modes[g_menu_mode_index];
-    int y = ty + mode[1] / 2;
+    int y = menu_spread_y(ty) + mode[1] / 2;
 
     panel_add(tx + mode[0] / 2 - 13, y / 19, text_width(text, g_fonts_menu[font]),
               y % 19 - 12, highlight);
@@ -252,7 +253,9 @@ int menu_redraw_page(void)
         panels_draw(g_menu_buffer2, mode[0]);
     }
     if (fe_4bf564 == 0 && fe_4be598 < 1080.0) {
+        panels_apart(menu_spread_y(19) != 19);
         panels_draw(g_menu_buffer2, mode[0]);
+        panels_apart(0);
         menu_draw_items();
     } else if (fe_4be598 >= 1080.0) {
         if (title != NULL) {

@@ -503,10 +503,38 @@ static u8 *box_buffer(void)
     return b;
 }
 
+/* NATIVE's race screen is the window at half scale (or whole), the
+ * menus' 320 x 200 at twice that, 1.2 times as tall: the boxes are
+ * blown up to the menus' size, each pixel to 2 x 2.4. */
+static int box_scaled(void)
+{
+    return g_screen_width > 800 || g_screen_height > 600;
+}
+
 static void box_done(u8 *b, int rows, int dy)
 {
-    blend_rect(b, 0, 0, 320, rows, g_back_buffer, g_screen_width / 2 - 160,
-               g_screen_height / 2 - dy, g_level_pan, 320, g_screen_width);
+    if (box_scaled()) {
+        int w = 640, h = (int)(rows * 2.4 + 0.5), x0 = g_screen_width / 2 - 320;
+        int y0 = g_screen_height / 2 - (int)(dy * 2.4 + 0.5), x, y;
+
+        for (y = 0; y < h; y++) {
+            const u8 *src = b + (int)(y / 2.4) * 320;
+            u8 *dst;
+
+            if (y0 + y < 0 || y0 + y >= g_screen_height) {
+                continue;
+            }
+            dst = g_back_buffer + (y0 + y) * g_screen_width;
+            for (x = 0; x < w; x++) {
+                if (x0 + x >= 0 && x0 + x < g_screen_width) {
+                    dst[x0 + x] = g_level_pan[src[x / 2] << 8 | dst[x0 + x]];
+                }
+            }
+        }
+    } else {
+        blend_rect(b, 0, 0, 320, rows, g_back_buffer, g_screen_width / 2 - 160,
+                   g_screen_height / 2 - dy, g_level_pan, 320, g_screen_width);
+    }
     set_target(g_back_buffer, g_screen_width, g_screen_width, g_screen_height, 8);
     g_gfx_color_table = g_level_pan;
 }

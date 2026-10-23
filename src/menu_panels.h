@@ -8,6 +8,7 @@
 #include "types.h"
 
 void panels_clear(void);
+void panels_apart(int on);
 void panel_add(int x, int row, int width, int y, int highlight);
 void panels_draw(u8 *dst, int pitch);
 

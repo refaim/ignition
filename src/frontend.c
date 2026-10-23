@@ -116,16 +116,26 @@ int frontend_load_language(void)
  * picture, put on the menu screen after each frame. */
 static u8 s_intro_pixels[320 * 200];
 
-/* The palette's brightest colour: the white about the film in NATIVE. */
-static int whitest(const u8 *pal)
+/* The colour about the film in NATIVE: the first film's ground (its
+ * first pixel) as it fades, then kept for the films after it as their
+ * palettes change. */
+static int s_film_rgb[3];
+
+static int film_margin(const u8 *pal, const u8 *pixels, int first_film)
 {
-    int i, best = 0, most = -1;
+    int i, best = 0, least = 1 << 30;
 
+    if (first_film) {
+        for (i = 0; i < 3; i++) {
+            s_film_rgb[i] = pal[3 * pixels[0] + i];
+        }
+    }
     for (i = 0; i < 256; i++) {
-        int sum = pal[3 * i] + pal[3 * i + 1] + pal[3 * i + 2];
+        int dr = pal[3 * i] - s_film_rgb[0], dg = pal[3 * i + 1] - s_film_rgb[1];
+        int db = pal[3 * i + 2] - s_film_rgb[2], d = dr * dr + dg * dg + db * db;
 
-        if (sum > most) {
-            most = sum;
+        if (d < least) {
+            least = d;
             best = i;
         }
     }
@@ -702,7 +712,8 @@ static void intro_step(void)
                     cdp_open(&s_intro_anim);
                 }
             }
-            canvas_set_margin(g_menu_screen, whitest(g_video_palette));
+            canvas_set_margin(g_menu_screen, film_margin(g_video_palette, s_intro_pixels,
+                                                       fe_4be56c == 0 && s_intro_anim.frame <= 2));
             canvas_put(g_menu_screen, s_intro_pixels, 320);
             if (s_intro_anim.frame == 2) {
                 cdp_draw(&s_intro_anim);

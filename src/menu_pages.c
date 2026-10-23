@@ -105,8 +105,17 @@ static const char *mini_text(u32 addr)
     return ui_text(addr + 200 * g_menu_language);
 }
 
+/* Centred text. The hints at the screen's foot (PRESS ANY KEY, SELECT
+ * YOUR LANGUAGE, the players' car prompts) go down into NATIVE's bottom
+ * margin, most of the way to the window's foot. */
 static void draw_centred(const char *text, int font, int y)
 {
+    float mx, my;
+
+    canvas_extent(g_menu_screen, &mx, &my);
+    if (y >= 0xb0) {
+        y += (int)(my * 0.75f);
+    }
     text_draw(text, font, 160 - text_width(text, font) / 2, y);
 }
 

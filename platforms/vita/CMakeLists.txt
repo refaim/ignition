@@ -2,16 +2,13 @@
 # Ignition - PlayStation Vita build
 #------------------------------------------------------------------------------
 #
-#   tools/vita_deps.sh build-vita/deps
-#   cmake -S platforms/vita -B build-vita -DVITA_DEPS=build-vita/deps
+#   cmake -S platforms/vita -B build-vita
 #   cmake --build build-vita
 #       -> build-vita/ignition.vpk (title IGNT00001)
 #
-# Or "make vita" from the top, which does all three. Needs VitaSDK
-# ($VITASDK, or ~/vitasdk) with vitaShaRK, libmathneon, taihen and
-# SceShaccCgExt installed (vdpm), and vitaGL from tools/vita_deps.sh.
-# Compiles ../../src directly; the Vita parts are src/platform_vita.c and
-# src/gl_compat.c. See the README.
+# Or "make vita" from the top. Needs VitaSDK ($VITASDK, or ~/vitasdk);
+# its system libraries only. Compiles ../../src directly; the Vita parts
+# are src/platform_vita.c and src/rnd_gxm.c (GXM). See docs/vita.md.
 
 cmake_minimum_required(VERSION 3.16)
 
@@ -37,19 +34,16 @@ endif()
 
 set(ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../..)
 set(SRC ${ROOT}/src)
-set(VITA_DEPS "" CACHE PATH "absolute prefix with include/ and lib/ for vitaGL (tools/vita_deps.sh)")
 
-# Every engine file, and the Vita host instead of the others.
+# Every engine file, the Vita host instead of the others, and the GXM
+# renderer instead of the OpenGL one.
 file(GLOB IGN_SOURCES ${SRC}/*.c ${SRC}/lisa/*.c)
 list(FILTER IGN_SOURCES EXCLUDE REGEX "/platform_[a-z]+\\.c$")
+list(FILTER IGN_SOURCES EXCLUDE REGEX "/rnd_gl\\.c$")
 list(APPEND IGN_SOURCES ${SRC}/platform_vita.c)
 
 add_executable(ignition ${IGN_SOURCES})
 target_include_directories(ignition PRIVATE ${SRC})
-if(VITA_DEPS)
-    target_include_directories(ignition BEFORE PRIVATE ${VITA_DEPS}/include)
-    target_link_directories(ignition BEFORE PRIVATE ${VITA_DEPS}/lib)
-endif()
 # -fsigned-char: the game is x86 code, where char is signed.
 target_compile_options(ignition PRIVATE
     -O2 -fsigned-char -Wall -Wextra -Wno-unused-parameter -Wno-format-truncation)
@@ -57,24 +51,16 @@ target_compile_options(ignition PRIVATE
 # SDK's linker script reads __sce_headroom).
 target_link_options(ignition PRIVATE -Wl,--defsym,__sce_headroom=0x4000)
 target_link_libraries(ignition
-    vitaGL
-    vitashark
-    SceShaccCgExt
-    mathneon
-    taihen_stub
-    SceShaccCg_stub
-    SceKernelDmacMgr_stub
     SceGxm_stub
     SceDisplay_stub
-    SceCommonDialog_stub
-    SceAppMgr_stub
     SceSysmodule_stub
     SceCtrl_stub
     SceAudio_stub
     ScePower_stub
+    SceAppMgr_stub
     SceIofilemgr_stub
     SceLibKernel_stub
-    stdc++
+    SceShaccCg_stub_weak        # resolved only once libshacccg.suprx is loaded
     m
     c
 )
@@ -88,6 +74,17 @@ add_custom_command(
     COMMENT "LiveArea art")
 add_custom_target(ignition_sce_sys DEPENDS ${SYS}/icon0.png)
 
+# Compiled shaders, once there are some: packaged as app0:shaders/*.gxp.
+# Without them the game compiles its own on the device (rnd_gxm.c) and
+# saves them to ux0:data/ignition/shaders/, from where they are copied
+# here.
+file(GLOB GXP CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.gxp)
+set(GXP_FILES)
+foreach(g ${GXP})
+    get_filename_component(n ${g} NAME)
+    list(APPEND GXP_FILES FILE ${g} shaders/${n})
+endforeach()
+
 vita_create_self(eboot.bin ignition UNSAFE)
 vita_create_vpk(ignition.vpk IGNT00001 eboot.bin
     VERSION 01.00
@@ -96,5 +93,6 @@ vita_create_vpk(ignition.vpk IGNT00001 eboot.bin
          ${SYS}/livearea/contents/bg.png sce_sys/livearea/contents/bg.png
          ${SYS}/livearea/contents/startup.png sce_sys/livearea/contents/startup.png
          ${CMAKE_CURRENT_SOURCE_DIR}/sce_sys/livearea/contents/template.xml sce_sys/livearea/contents/template.xml
+         ${GXP_FILES}
 )
 add_dependencies(ignition.vpk-vpk ignition_sce_sys)

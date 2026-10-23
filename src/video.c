@@ -1,5 +1,5 @@
 /*
- * video.c - the Lisa video layer, on OpenGL.
+ * video.c - the Lisa video layer, on the GPU (gfx.h).
  */
 
 #include <stdio.h>

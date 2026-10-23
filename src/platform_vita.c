@@ -1,9 +1,9 @@
 /*
- * platform_vita.c - the PlayStation Vita host: vitaGL's display, the
+ * platform_vita.c - the PlayStation Vita host: the display, the
  * buttons as DirectInput scan codes, the clock and audio.
  *
- * VitaSDK and vitaGL. The renderer above this is the same OpenGL code
- * as on macOS; gl_compat.h covers what vitaGL does differently. The
+ * VitaSDK only. The renderer above this is the same as on macOS, on
+ * GXM instead of OpenGL (rnd_gxm.c, which owns the display). The
  * screen is 960 x 544, which the NATIVE resolution follows.
  *
  * The game reads a keyboard, so the buttons press keys. Which keys
@@ -30,7 +30,6 @@
 #include <psp2/kernel/processmgr.h>
 #include <psp2/kernel/threadmgr.h>
 #include <psp2/power.h>
-#include <vitaGL.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -43,9 +42,10 @@
 #include "platform.h"
 #include "race.h"
 #include "race_init.h"
+#include "rnd.h"
 
-/* newlib's heap: the game's pools and the decoded data. vitaGL takes
- * the memory left over for textures and buffers. */
+/* newlib's heap: the game's pools and the decoded data. rnd_gxm.c
+ * takes GPU memory from what is left. */
 unsigned int _newlib_heap_size_user = 128 * 1024 * 1024;
 unsigned int sceUserMainThreadStackSize = 1024 * 1024;
 
@@ -66,7 +66,7 @@ static struct { u8 key, down; } s_key_queue[KEY_QUEUE];
 static unsigned s_key_head, s_key_tail;
 static u8 s_pad_keys[256];      /* the keys the buttons hold down */
 static int s_quit;
-static int s_gl_ready;
+static int s_display_ready;
 static u64 s_start;
 
 /* ------------------------------------------------------------ log */
@@ -113,24 +113,16 @@ int plat_window_open(const char *title, int width, int height, int fullscreen)
     (void)width;
     (void)height;
     (void)fullscreen;
-    if (s_gl_ready) {
+    if (s_display_ready) {
         return 1;
     }
-    /* Full clocks: CPU 444 MHz, bus and GPU 222, crossbar 166. */
+    /* Full clocks: CPU 444 MHz, bus and GPU 222, crossbar 166. The
+     * display itself is GXM's, started by gfx_init (rnd_gxm.c). */
     scePowerSetArmClockFrequency(444);
     scePowerSetBusClockFrequency(222);
     scePowerSetGpuClockFrequency(222);
     scePowerSetGpuXbarClockFrequency(166);
-
-    /* The shaders turn colour indices into floats and back: no fast
-     * maths or reduced precision. */
-    vglSetupRuntimeShaderCompiler(SHARK_OPT_DEFAULT, GL_FALSE, GL_FALSE, GL_FALSE);
-    if (!vglInitExtended(0, SCREEN_W, SCREEN_H, 16 * 1024 * 1024, SCE_GXM_MULTISAMPLE_NONE)) {
-        fprintf(stderr, "vita: vitaGL failed to start (is ur0:data/libshacccg.suprx there?)\n");
-        return 0;
-    }
-    vglWaitVblankStart(GL_TRUE);
-    s_gl_ready = 1;
+    s_display_ready = 1;
     return 1;
 }
 
@@ -144,9 +136,11 @@ void plat_drawable_size(int *width, int *height)
     *height = SCREEN_H;
 }
 
+/* Queues the frame for the display, which waits for the vertical
+ * blank. */
 void plat_present(void)
 {
-    vglSwapBuffers(GL_FALSE);
+    rnd_present();
 }
 
 /* ------------------------------------------------------------ keys */

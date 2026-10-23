@@ -221,7 +221,7 @@ the GPU, keeping the 8 bit colour indices and the game's colour tables:
 - The race's 3D draws at the internal resolution, as wide as the
   window's shape; the HUD's 320 x 200 layer shows over it where it is
   not colour 0.
-- `video.c` and `gfx_gl.c` show a surface through the palette, centred
+- `video.c` and `gfx.c` show a surface through the palette, centred
   at 4:3, or the race's layers across the window.
 - `--software` or Alt+R switches the 2D back to the original's CPU
   drawing into the 8 bit buffers, with the 3D read back into them.

@@ -1,0 +1,40 @@
+name: CI
+
+# Builds every platform on each push and pull request. The packages are
+# kept as workflow artifacts; nothing is published.
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # vX.Y.Z-dev.<commit>, from the VERSION file.
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.compute.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute version
+        id: compute
+        run: |
+          sha=${{ github.event.pull_request.head.sha || github.sha }}
+          echo "version=v$(cat VERSION)-dev.${sha::7}" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: version
+    uses: ./.github/workflows/build.yml
+    with:
+      version: ${{ needs.version.outputs.version }}
+    secrets: inherit

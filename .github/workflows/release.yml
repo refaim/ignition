@@ -1,0 +1,96 @@
+name: Release
+
+# Pushing a tag vX.Y.Z builds every platform and publishes a GitHub
+# release with the packages, and with CHANGELOG.md's section for X.Y.Z as
+# its notes. The tag must match the VERSION file, and the changelog must
+# have the section; otherwise nothing is built.
+#
+# Run by hand (workflow_dispatch) on a tag to rebuild its release.
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the tag against VERSION and CHANGELOG.md
+        id: check
+        run: |
+          if [[ "$GITHUB_REF" != refs/tags/v* ]]; then
+            echo "::error::Run this workflow on a tag vX.Y.Z."
+            exit 1
+          fi
+          tag=${GITHUB_REF#refs/tags/}
+          want="v$(cat VERSION)"
+          if [ "$tag" != "$want" ]; then
+            echo "::error::Tag $tag does not match VERSION ($want)."
+            exit 1
+          fi
+          if ! grep -q "^## \[${tag#v}\]" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md has no section for ${tag#v}."
+            exit 1
+          fi
+          echo "version=$tag" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: version
+    uses: ./.github/workflows/build.yml
+    with:
+      version: ${{ needs.version.outputs.version }}
+    secrets: inherit
+
+  release:
+    needs: [version, build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Release notes from CHANGELOG.md
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          awk -v v="${VERSION#v}" '
+            $0 ~ "^## \\[" v "\\]" { on = 1; next }
+            on && /^## \[/ { exit }
+            on { print }
+          ' CHANGELOG.md > notes.md
+          {
+            echo
+            echo "The game data is not included: these builds need the files of your own Ignition CD."
+            echo "See README.md and the guide for each platform under platforms/."
+          } >> notes.md
+          cat notes.md
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.version.outputs.version }}
+          name: Ignition ${{ needs.version.outputs.version }}
+          body_path: notes.md
+          prerelease: ${{ contains(needs.version.outputs.version, '-') }}
+          # The Vita package is optional until that build runs on hardware.
+          fail_on_unmatched_files: false
+          files: |
+            artifacts/macos-build/*.zip
+            artifacts/linux-x86_64-build/*.AppImage
+            artifacts/linux-aarch64-build/*.AppImage
+            artifacts/windows-x86_64-build/*.zip
+            artifacts/web-build/*.zip
+            artifacts/android-build/*.apk
+            artifacts/ios-build/*.ipa
+            artifacts/vita-build/*.vpk

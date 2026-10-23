@@ -15,6 +15,7 @@
 #include "pic.h"
 #include "startup.h"
 #include "stubs.h"
+#include "version.h"
 #include "vfs.h"
 #include "video.h"
 
@@ -225,6 +226,7 @@ int game_video_init(void)
     g_log_to_stdout = 0;
     g_log_to_file = 1;
     log_printf("Ignition version %.2f initiated\n", IGNITION_VERSION);
+    log_printf("Reimplementation version %s\n", IGN_VERSION);
     game_load_system_gfx();
 
     for (i = 0; i < 4; i++) {

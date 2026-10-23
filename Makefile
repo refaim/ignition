@@ -1,8 +1,9 @@
 # Ignition - reconstructed engine
 #
-# Native macOS build: Cocoa and OpenGL 3.2 core. The engine core is plain
-# C99; only src/platform_macos.m is host specific. `make vita` builds the
-# PlayStation Vita package (src/platform_vita.c, docs/vita.md).
+# Native macOS build: Cocoa and OpenGL 3.2 core (src/rnd_gl.c). The
+# engine core is plain C99; only src/platform_macos.m is host specific.
+# `make vita` builds the PlayStation Vita package (src/platform_vita.c,
+# src/rnd_gxm.c, docs/vita.md).
 
 TARGET := ignition
 SRCDIR := src
@@ -14,7 +15,7 @@ CORE_SRC := $(SRCDIR)/app.c $(SRCDIR)/game.c $(SRCDIR)/stubs.c $(SRCDIR)/net.c $
             $(SRCDIR)/lisa/font.c $(SRCDIR)/startup.c $(SRCDIR)/input.c \
             $(SRCDIR)/menu_engine.c $(SRCDIR)/menu_data.c $(SRCDIR)/settings.c $(SRCDIR)/frontend.c $(SRCDIR)/frontend_state.c \
             $(SRCDIR)/menu_panels.c $(SRCDIR)/menu_pages.c $(SRCDIR)/audio.c $(SRCDIR)/cd.c $(SRCDIR)/sound.c $(SRCDIR)/cdp.c \
-            $(SRCDIR)/video.c $(SRCDIR)/gfx_gl.c $(SRCDIR)/vfs.c $(SRCDIR)/main.c \
+            $(SRCDIR)/video.c $(SRCDIR)/gfx.c $(SRCDIR)/rnd_gl.c $(SRCDIR)/vfs.c $(SRCDIR)/main.c \
             $(SRCDIR)/cdimage.c
 MAC_SRC  := $(SRCDIR)/platform_macos.m
 
@@ -26,7 +27,7 @@ CFLAGS    := -std=c99 -D_POSIX_C_SOURCE=200809L -D_DARWIN_C_SOURCE -Wall -Wextra
 OBJCFLAGS := -fobjc-arc -DGL_SILENCE_DEPRECATION -Wno-deprecated-declarations -Wall -Wextra -Wno-unused-parameter -g -O1 -I$(SRCDIR)
 LDFLAGS   := -framework Cocoa -framework OpenGL -framework AudioUnit -framework AudioToolbox
 
-.PHONY: all clean extract test run vita vita-clean
+.PHONY: all clean extract test run vita vita-deploy vita-clean
 
 all: $(TARGET) cd_extract
 
@@ -75,18 +76,22 @@ run: $(TARGET)
 	./$(TARGET)
 
 # PlayStation Vita: build-vita/ignition.vpk. Needs VitaSDK ($VITASDK, or
-# ~/vitasdk) with vitaShaRK, libmathneon, taihen and SceShaccCgExt from
-# vdpm; vitaGL is built into build-vita/deps by tools/vita_deps.sh.
+# ~/vitasdk), nothing else. The renderer is src/rnd_gxm.c.
 VITASDK ?= $(HOME)/vitasdk
 VBUILD  := build-vita
 JOBS    ?= $(shell sysctl -n hw.ncpu 2>/dev/null || echo 4)
 
 vita:
-	@test -f $(VBUILD)/deps/lib/libvitaGL.a || VITASDK=$(VITASDK) sh tools/vita_deps.sh $(VBUILD)/deps
-	@test -f $(VBUILD)/CMakeCache.txt || VITASDK=$(VITASDK) cmake -S platforms/vita -B $(VBUILD) \
-		-DVITA_DEPS=$(abspath $(VBUILD)/deps) >/dev/null
+	@test -f $(VBUILD)/CMakeCache.txt || VITASDK=$(VITASDK) cmake -S platforms/vita -B $(VBUILD) >/dev/null
 	@VITASDK=$(VITASDK) cmake --build $(VBUILD) -j $(JOBS)
 	@echo "ignition: $(VBUILD)/ignition.vpk"
+
+# To the console (tools/vita_deploy.sh): the shaders it compiled come
+# back into platforms/vita/shaders/ first, so the package carries them.
+vita-deploy:
+	@sh tools/vita_deploy.sh pull
+	@$(MAKE) --no-print-directory vita
+	@sh tools/vita_deploy.sh push
 
 vita-clean:
 	rm -rf $(VBUILD)

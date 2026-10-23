@@ -1,5 +1,5 @@
 /*
- * gl3d.h - draws the scene's objects with OpenGL, in place of the
+ * gl3d.h - draws the scene's objects on the GPU (rnd.h), in place of the
  * original's software pipeline and rasteriser (0x4466d0, 0x44f0e9).
  *
  * The meshes' faces become triangles with 8 bit colour indices; the
@@ -33,7 +33,7 @@ void gl3d_mesh_changed(const s32 *mesh);
 void gl3d_view_resume(void);
 void gl3d_view_columns(double x0, double x1);
 void gl3d_view_end(void);
-/* The view's colour indices: a GL texture, R, row 0 at the top. */
+/* The view's colour indices: a texture (rnd.h), R, row 0 at the top. */
 unsigned gl3d_view_texture(void);
 /* Draws into a canvas surface of logical size lw x lh, over what it
  * holds, with a cleared depth buffer. Returns 0 if `key` is not one. */

@@ -1,13 +1,14 @@
 /*
- * gfx.h - OpenGL renderer.
+ * gfx.h - the screen.
  *
  * Replaces the original's software rasteriser and DirectDraw. The 2D
  * screens (menus, HUD overlays) are still drawn by the game into an 8 bit
  * surface at their original size; gfx_draw_screen shows that surface,
  * through its palette, centred at its original aspect ratio in the window.
- * 3D scenes are drawn with OpenGL directly.
+ * 3D scenes are drawn on the GPU directly (gl3d.c). All GPU work goes
+ * through rnd.h: OpenGL on macOS, GXM on the Vita.
  *
- * Must not include platform.h. Expects a current OpenGL 3.2 core context.
+ * Must not include platform.h. Expects the host's window to be open.
  */
 
 #ifndef IGN_GFX_H
@@ -29,13 +30,13 @@ void gfx_begin_frame(int width, int height);
 void gfx_draw_screen(const u8 *pixels, int w, int h, int pitch,
                      const u8 *palette, float aspect);
 
-/* Draws `layer`, a GL texture of colour indices (row 0 at the top),
+/* Draws `layer`, a texture of colour indices (rnd.h) (row 0 at the top),
  * over the whole drawable, then the surface over it as gfx_draw_screen
  * places it, but only its pixels that differ from `snapshot`. */
 void gfx_draw_layers(unsigned layer, const u8 *pixels, const u8 *snapshot, int w, int h,
                      int pitch, const u8 *palette, float aspect);
 
-/* Draws a GL texture of colour indices (row 0 at the top) as
+/* Draws a texture of colour indices (rnd.h) (row 0 at the top) as
  * gfx_draw_screen places a surface. */
 void gfx_draw_index_texture(unsigned tex, const u8 *palette, float aspect);
 

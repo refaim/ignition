@@ -9,10 +9,8 @@
  * d. Most rows are the identity (s leaves d alone) or one colour (s is
  * opaque); only the other rows need d. Each table is classed row by row
  * when first used, so drawing copies the surface only when a source
- * colour can blend.
+ * colour can blend. The GPU work goes through rnd.h.
  */
-
-#include "gl_compat.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -21,6 +19,7 @@
 
 #include "canvas.h"
 #include "lisa/gfx.h"
+#include "rnd.h"
 #include "video.h"
 
 enum {
@@ -39,20 +38,20 @@ struct surface {
     int fit;                /* NATIVE fills the height, not a whole scale */
     int margin;             /* the margins' colour, -1 the picture's ground */
     int pw, ph;             /* physical, margins included */
-    GLuint fbo, tex, copy, depth;
+    unsigned target, tex, copy;
 };
 
 struct table {
     const u8 *table;
-    GLuint tex;             /* R8 256 x 256, row = source */
-    GLuint rows;            /* RG8 256 x 1: class, colour */
+    unsigned tex;           /* R8 256 x 256, row = source */
+    unsigned rows;          /* RG8 256 x 1: class, colour */
     int blends;             /* some row needs the destination */
 };
 
 struct sprite_tex {
     const u8 *pixels;
     int w, h, stride;
-    GLuint tex;
+    unsigned tex;
     u32 used;
 };
 
@@ -65,166 +64,10 @@ static struct table s_tables[MAX_TABLES];
 static int s_table_count;
 static struct sprite_tex s_sprites[MAX_SPRITES];
 static u32 s_clock;
-static GLuint s_program, s_vao, s_vbo, s_upload;
-static int s_upload_w, s_upload_h;
-static GLint s_u_lsize, s_u_off, s_u_mode;
-
-#ifdef IGN_GL_VITA
-/* Cg for vitaGL: it has no texelFetch or textureSize, so the shader is
- * given the sizes and samples at texel centres (all textures here are
- * nearest). */
-static GLint s_u_src_size, s_u_dst_size;
-
-static const char *s_vs =
-    "void main(float2 a_pos, float2 a_uv, uniform float2 u_lsize, uniform float2 u_off,\n"
-    "          float2 out v_uv : TEXCOORD0, float4 out gl_Position : POSITION) {\n"
-    "    v_uv = a_uv;\n"
-    "    gl_Position = float4((a_pos + u_off) / u_lsize * 2.0 - 1.0, 0.0, 1.0);\n"
-    "}\n";
-
-static const char *s_fs =
-    "float4 main(float2 v_uv : TEXCOORD0, float4 frag : WPOS,\n"
-    "            uniform sampler2D u_src, uniform sampler2D u_table,\n"
-    "            uniform sampler2D u_rows, uniform sampler2D u_dst, uniform float u_mode,\n"
-    "            uniform float2 u_src_size, uniform float2 u_dst_size) : COLOR {\n"
-    "    float2 t = clamp(floor(v_uv), float2(0.0, 0.0), u_src_size - 1.0);\n"
-    "    float s = floor(tex2D(u_src, (t + 0.5) / u_src_size).r * 255.0 + 0.5);\n"
-    "    if (u_mode > 0.5) {\n"
-    "        float2 row = tex2D(u_rows, float2((s + 0.5) / 256.0, 0.5)).rg;\n"
-    "        float cls = floor(row.r * 255.0 + 0.5);\n"
-    "        if (cls < 0.5) {\n"
-    "            discard;\n"
-    "        }\n"
-    "        if (cls < 1.5) {\n"
-    "            s = floor(row.g * 255.0 + 0.5);\n"
-    "        } else {\n"
-    "            float d = tex2D(u_dst, (floor(frag.xy) + 0.5) / u_dst_size).r;\n"
-    "            float2 at = float2(floor(d * 255.0 + 0.5) + 0.5, s + 0.5) / 256.0;\n"
-    "            s = floor(tex2D(u_table, at).r * 255.0 + 0.5);\n"
-    "        }\n"
-    "    }\n"
-    "    return float4((s + 0.25) / 255.0, 0.0, 0.0, 1.0);\n"
-    "}\n";
-
-/* The size of the texture on unit 0, in texels. */
-static void src_size(int w, int h)
-{
-    glUniform2f(s_u_src_size, (float)w, (float)h);
-}
-#else
-#define src_size(w, h) ((void)0)
-
-
-static const char *s_vs =
-    "#version 150\n"
-    "uniform vec2 u_lsize;\n"
-    "uniform vec2 u_off;\n"
-    "in vec2 a_pos;\n"
-    "in vec2 a_uv;\n"
-    "out vec2 v_uv;\n"
-    "void main() {\n"
-    "    v_uv = a_uv;\n"
-    "    gl_Position = vec4((a_pos + u_off) / u_lsize * 2.0 - 1.0, 0.0, 1.0);\n"
-    "}\n";
-
-/* Mode 0 copies the source index, 1 puts it through the table. */
-static const char *s_fs =
-    "#version 150\n"
-    "uniform sampler2D u_src;\n"
-    "uniform sampler2D u_table;\n"
-    "uniform sampler2D u_rows;\n"
-    "uniform sampler2D u_dst;\n"
-    "uniform int u_mode;\n"
-    "in vec2 v_uv;\n"
-    "out float o_index;\n"
-    "void main() {\n"
-    "    ivec2 size = textureSize(u_src, 0);\n"
-    "    ivec2 t = clamp(ivec2(floor(v_uv)), ivec2(0), size - 1);\n"
-    "    float s = texelFetch(u_src, t, 0).r;\n"
-    "    if (u_mode == 1) {\n"
-    "        int si = int(s * 255.0 + 0.5);\n"
-    "        vec2 row = texelFetch(u_rows, ivec2(si, 0), 0).rg;\n"
-    "        int cls = int(row.r * 255.0 + 0.5);\n"
-    "        if (cls == 0) discard;\n"
-    "        if (cls == 1) {\n"
-    "            s = row.g;\n"
-    "        } else {\n"
-    "            float d = texelFetch(u_dst, ivec2(gl_FragCoord.xy), 0).r;\n"
-    "            s = texelFetch(u_table, ivec2(int(d * 255.0 + 0.5), si), 0).r;\n"
-    "        }\n"
-    "    }\n"
-    "    o_index = s;\n"
-    "}\n";
-#endif
-
-static GLuint compile(GLenum type, const char *src)
-{
-    GLuint s = glCreateShader(type == GL_VERTEX_SHADER ? IGN_VERTEX_SHADER : IGN_FRAGMENT_SHADER);
-    GLint ok = 0;
-
-    glShaderSource(s, 1, &src, NULL);
-    glCompileShader(s);
-    glGetShaderiv(s, GL_COMPILE_STATUS, &ok);
-    if (!ok) {
-        char log[512];
-
-        glGetShaderInfoLog(s, sizeof(log), NULL, log);
-        fprintf(stderr, "canvas: shader: %s\n", log);
-    }
-    return s;
-}
-
-static GLuint r_texture(GLenum format, int w, int h, const void *pixels)
-{
-    GLuint t;
-
-    glGenTextures(1, &t);
-    glBindTexture(GL_TEXTURE_2D, t);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    glTexImage2D(GL_TEXTURE_2D, 0, format, w, h, 0, format == GL_RG8 ? GL_RG : GL_RED,
-                 GL_UNSIGNED_BYTE, pixels);
-    return t;
-}
+static unsigned s_upload;
 
 int canvas_init(void)
 {
-    GLuint vs = compile(GL_VERTEX_SHADER, s_vs);
-    GLuint fs = compile(GL_FRAGMENT_SHADER, s_fs);
-
-    s_program = glCreateProgram();
-    glAttachShader(s_program, vs);
-    glAttachShader(s_program, fs);
-    glBindAttribLocation(s_program, 0, "a_pos");
-    glBindAttribLocation(s_program, 1, "a_uv");
-    glBindFragDataLocation(s_program, 0, "o_index");
-    glLinkProgram(s_program);
-    glDeleteShader(vs);
-    glDeleteShader(fs);
-    glUseProgram(s_program);
-    glUniform1i(glGetUniformLocation(s_program, "u_src"), 0);
-    glUniform1i(glGetUniformLocation(s_program, "u_table"), 1);
-    glUniform1i(glGetUniformLocation(s_program, "u_rows"), 2);
-    glUniform1i(glGetUniformLocation(s_program, "u_dst"), 3);
-    s_u_lsize = glGetUniformLocation(s_program, "u_lsize");
-    s_u_off = glGetUniformLocation(s_program, "u_off");
-    s_u_mode = glGetUniformLocation(s_program, "u_mode");
-#ifdef IGN_GL_VITA
-    s_u_src_size = glGetUniformLocation(s_program, "u_src_size");
-    s_u_dst_size = glGetUniformLocation(s_program, "u_dst_size");
-#endif
-    glGenVertexArrays(1, &s_vao);
-    glBindVertexArray(s_vao);
-    glGenBuffers(1, &s_vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, s_vbo);
-    glBufferData(GL_ARRAY_BUFFER, 16 * sizeof(float), NULL, GL_STREAM_DRAW);
-    glEnableVertexAttribArray(0);
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *)0);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *)(2 * sizeof(float)));
     s_ready = 1;
     return 1;
 }
@@ -252,14 +95,12 @@ void canvas_internal_size(int *w43, int *h)
 
 static void surface_free(struct surface *s)
 {
-    if (s->fbo != 0) {
-        ign_forget_texture(s->copy);
-        glDeleteFramebuffers(1, &s->fbo);
-        glDeleteTextures(1, &s->tex);
-        glDeleteTextures(1, &s->copy);
-        glDeleteRenderbuffers(1, &s->depth);
+    if (s->target != 0) {
+        rnd_target_free(s->target);
+        rnd_texture_free(s->tex);
+        rnd_texture_free(s->copy);
     }
-    s->fbo = s->tex = s->copy = s->depth = 0;
+    s->target = s->tex = s->copy = 0;
 }
 
 /* In NATIVE a 320 x 200 screen fills the drawable: its pixels are
@@ -291,6 +132,8 @@ static int native_margins(const struct surface *s, float *mx, float *my, int *pw
     return 1;
 }
 
+static const float s_zero[4] = { 0, 0, 0, 0 };
+
 static void surface_make(struct surface *s)
 {
     int w43, h;
@@ -301,18 +144,11 @@ static void surface_make(struct surface *s)
         s->pw = (int)((double)s->lw * w43 / 320.0 + 0.5);
         s->ph = (int)((double)s->lh * h / 200.0 + 0.5);
     }
-    s->tex = r_texture(GL_R8, s->pw, s->ph, NULL);
-    s->copy = r_texture(GL_R8, s->pw, s->ph, NULL);
-    glGenRenderbuffers(1, &s->depth);
-    glBindRenderbuffer(GL_RENDERBUFFER, s->depth);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, s->pw, s->ph);
-    glGenFramebuffers(1, &s->fbo);
-    glBindFramebuffer(GL_FRAMEBUFFER, s->fbo);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, s->tex, 0);
-    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, s->depth);
-    glClearColor(0, 0, 0, 0);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    s->tex = rnd_texture(RND_R8, s->pw, s->ph, NULL, 0);
+    s->copy = rnd_texture(RND_R8, s->pw, s->ph, NULL, 0);
+    s->target = rnd_target(s->tex, 1);
+    rnd_bind(s->target);
+    rnd_clear(s_zero, 1);
 }
 
 void canvas_force_resolution(int mode)
@@ -368,7 +204,7 @@ static struct surface *find(const u8 *key)
     }
     for (i = 0; i < MAX_SURFACES; i++) {
         if (s_surfaces[i].key == key) {
-            return s_hardware && s_surfaces[i].fbo != 0 ? &s_surfaces[i] : NULL;
+            return s_hardware && s_surfaces[i].target != 0 ? &s_surfaces[i] : NULL;
         }
     }
     return NULL;
@@ -456,21 +292,37 @@ int canvas_is_gpu(const u8 *key)
     return find(key) != NULL;
 }
 
-/* Binds a surface's framebuffer and viewport, for 2D drawing. */
+/* Binds a surface, for 2D drawing. */
 static void bind(struct surface *s)
 {
-    glBindFramebuffer(GL_FRAMEBUFFER, s->fbo);
-    glViewport(0, 0, s->pw, s->ph);
-    glDisable(GL_DEPTH_TEST);
-    glDisable(GL_CULL_FACE);
-    glDisable(GL_BLEND);
-    glUseProgram(s_program);
-    glBindVertexArray(s_vao);
-    glUniform2f(s_u_lsize, s->lw + 2 * s->mx, s->lh + 2 * s->my);
-    glUniform2f(s_u_off, s->mx, s->my);
-#ifdef IGN_GL_VITA
-    glUniform2f(s_u_dst_size, (float)s->pw, (float)s->ph);
-#endif
+    float lsize[2], off[2];
+
+    lsize[0] = s->lw + 2 * s->mx;
+    lsize[1] = s->lh + 2 * s->my;
+    off[0] = s->mx;
+    off[1] = s->my;
+    rnd_bind(s->target);
+    rnd_depth(RND_DEPTH_OFF, 1);
+    rnd_cull(RND_CULL_OFF);
+    rnd_use(RND_CANVAS);
+    rnd_uniform(RND_U_LSIZE, lsize);
+    rnd_uniform(RND_U_OFF, off);
+}
+
+static void set_mode(int mode)
+{
+    float m = (float)mode;
+
+    rnd_uniform(RND_U_MODE, &m);
+}
+
+/* Clears the bound surface's colour to an index. */
+static void clear_index(int index)
+{
+    float c[4] = { 0, 0, 0, 0 };
+
+    c[0] = (float)index / 255.0f;
+    rnd_clear(c, 0);
 }
 
 /* Logical to physical, margins included. */
@@ -494,7 +346,7 @@ void canvas_set_fit(const u8 *key, int on)
     }
     s->fit = on;
     s->margin = -1;
-    if (s_ready && s_hardware && s->fbo != 0) {
+    if (s_ready && s_hardware && s->target != 0) {
         surface_free(s);
         surface_make(s);
     }
@@ -535,10 +387,8 @@ void canvas_clear(u8 *key, u8 index, size_t bytes)
         memset(key, index, bytes);
         return;
     }
-    glBindFramebuffer(GL_FRAMEBUFFER, s->fbo);
-    glClearColor(IGN_INDEX_F(index), 0, 0, 0);
-    glClear(GL_COLOR_BUFFER_BIT);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    rnd_bind(s->target);
+    clear_index(index);
 }
 
 /* Draws the quad (x0, y0)..(x1, y1) in logical pixels with texture
@@ -549,32 +399,25 @@ static void quad(float x0, float y0, float x1, float y1, float u0, float v0, flo
         x0, y0, u0, v0,  x1, y0, u1, v0,  x0, y1, u0, v1,  x1, y1, u1, v1
     };
 
-    glBindBuffer(GL_ARRAY_BUFFER, s_vbo);
-    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(v), v);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    rnd_stream(v, 4);
+    rnd_draw(RND_STRIP, 0, 4);
 }
 
-static void upload_src(const u8 *pixels, int w, int h, int pitch)
+/* A CPU image as a texture, for the next draw to read. */
+static unsigned upload_src(const u8 *pixels, int w, int h, int pitch)
 {
-    glActiveTexture(GL_TEXTURE0);
-    if (s_upload == 0 || s_upload_w != w || s_upload_h != h) {
-        if (s_upload != 0) {
-            glDeleteTextures(1, &s_upload);
-        }
-        s_upload = r_texture(GL_R8, w, h, NULL);
-        s_upload_w = w;
-        s_upload_h = h;
+    if (s_upload == 0) {
+        s_upload = rnd_texture(RND_R8, w, h, pixels, pitch);
+    } else {
+        rnd_texture_set(s_upload, w, h, pixels, pitch);
     }
-    glBindTexture(GL_TEXTURE_2D, s_upload);
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, w, h, GL_RED, GL_UNSIGNED_BYTE, pixels);
-    glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+    return s_upload;
 }
 
 void canvas_put(u8 *dst, const u8 *pixels, int pitch)
 {
     struct surface *s = find(dst);
+    unsigned tex;
 
     if (s == NULL) {
         int y;
@@ -586,18 +429,16 @@ void canvas_put(u8 *dst, const u8 *pixels, int pitch)
         }
         return;
     }
-    upload_src(pixels, s->lw, s->lh, pitch);
+    tex = upload_src(pixels, s->lw, s->lh, pitch);
     bind(s);
     if (s->mx != 0 || s->my != 0) {
         /* A whole screen put: the margins take its first pixel's
          * colour, the picture's ground. */
-        glClearColor(IGN_INDEX_F(s->margin >= 0 ? s->margin : pixels[0]), 0, 0, 0);
-        glClear(GL_COLOR_BUFFER_BIT);
+        clear_index(s->margin >= 0 ? s->margin : pixels[0]);
     }
-    glUniform1i(s_u_mode, 0);
-    src_size(s->lw, s->lh);
+    set_mode(0);
+    rnd_texture_unit(0, tex);
     quad(0, 0, (float)s->lw, (float)s->lh, 0, 0, (float)s->lw, (float)s->lh);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 void canvas_copy(u8 *dst, const u8 *src, size_t bytes)
@@ -609,11 +450,7 @@ void canvas_copy(u8 *dst, const u8 *src, size_t bytes)
         return;
     }
     if (d != NULL && s != NULL) {
-        glBindFramebuffer(GL_READ_FRAMEBUFFER, s->fbo);
-        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, d->fbo);
-        glBlitFramebuffer(0, 0, s->pw, s->ph, 0, 0, d->pw, d->ph, GL_COLOR_BUFFER_BIT,
-                          GL_NEAREST);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        rnd_blit(s->target, d->target, s->pw, s->ph, d->pw, d->ph);
         return;
     }
     if (d != NULL) {
@@ -635,8 +472,8 @@ static struct table *table_get(const u8 *table)
         }
     }
     if (s_table_count == MAX_TABLES) {
-        glDeleteTextures(1, &s_tables[0].tex);
-        glDeleteTextures(1, &s_tables[0].rows);
+        rnd_texture_free(s_tables[0].tex);
+        rnd_texture_free(s_tables[0].rows);
         memmove(s_tables, s_tables + 1, (MAX_TABLES - 1) * sizeof(s_tables[0]));
         s_table_count--;
     }
@@ -655,12 +492,12 @@ static struct table *table_get(const u8 *table)
         rows[2 * s + 1] = row[0];
         t->blends |= rows[2 * s] == ROW_BLEND;
     }
-    t->tex = r_texture(GL_R8, 256, 256, table);
-    t->rows = r_texture(GL_RG8, 256, 1, rows);
+    t->tex = rnd_texture(RND_R8, 256, 256, table, 256);
+    t->rows = rnd_texture(RND_RG8, 256, 1, rows, 256);
     return t;
 }
 
-static GLuint sprite_tex(const u8 *pixels, int w, int h, int stride)
+static unsigned sprite_tex(const u8 *pixels, int w, int h, int stride)
 {
     struct sprite_tex *e, *old = &s_sprites[0];
     int i;
@@ -677,11 +514,9 @@ static GLuint sprite_tex(const u8 *pixels, int w, int h, int stride)
         }
     }
     if (old->tex != 0) {
-        glDeleteTextures(1, &old->tex);
+        rnd_texture_free(old->tex);
     }
-    glPixelStorei(GL_UNPACK_ROW_LENGTH, stride);
-    old->tex = r_texture(GL_R8, w, h, pixels);
-    glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+    old->tex = rnd_texture(RND_R8, w, h, pixels, stride);
     old->pixels = pixels;
     old->w = w;
     old->h = h;
@@ -699,14 +534,15 @@ void canvas_forget(const u8 *pixels)
     }
     for (i = 0; i < MAX_SPRITES; i++) {
         if (s_sprites[i].pixels == pixels && s_sprites[i].tex != 0) {
-            glDeleteTextures(1, &s_sprites[i].tex);
+            rnd_texture_free(s_sprites[i].tex);
             memset(&s_sprites[i], 0, sizeof(s_sprites[i]));
         }
     }
 }
 
 /* Copies the part of the surface a draw covers (logical rectangle) into
- * its copy texture, for the shader to read the pixels under it. */
+ * its copy texture, for the shader to read the pixels under it. The
+ * surface is bound. */
 static void snapshot_rect(struct surface *s, float x0, float y0, float x1, float y1)
 {
     int px0 = (int)floorf(phys_x(s, x0)) - 1, py0 = (int)floorf(phys_y(s, y0)) - 1;
@@ -727,8 +563,7 @@ static void snapshot_rect(struct surface *s, float x0, float y0, float x1, float
     if (px1 <= px0 || py1 <= py0) {
         return;
     }
-    glActiveTexture(GL_TEXTURE3);
-    ign_copy_rect(s->fbo, s->copy, px0, py0, px1 - px0, py1 - py0);
+    rnd_copy(s->copy, px0, py0, px1 - px0, py1 - py0);
 }
 
 /* Binds the table and, if it can blend, the pixels under the
@@ -740,12 +575,10 @@ static void use_table(struct surface *s, const u8 *table, float x0, float y0, fl
     if (t->blends) {
         snapshot_rect(s, x0, y0, x1, y1);
     }
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, t->tex);
-    glActiveTexture(GL_TEXTURE2);
-    glBindTexture(GL_TEXTURE_2D, t->rows);
-    glActiveTexture(GL_TEXTURE0);
-    glUniform1i(s_u_mode, 1);
+    rnd_texture_unit(1, t->tex);
+    rnd_texture_unit(2, t->rows);
+    rnd_texture_unit(3, s->copy);
+    set_mode(1);
 }
 
 static void scissor(struct surface *s)
@@ -761,15 +594,14 @@ static void scissor(struct surface *s)
         y1 = s->ph;
     }
 
-    glEnable(GL_SCISSOR_TEST);
-    glScissor(x0, y0, x1 - x0, y1 - y0);
+    rnd_scissor(1, x0, y0, x1 - x0, y1 - y0);
 }
 
 int canvas_sprite(const u8 *pixels, int w, int h, int stride, s32 x, s32 y, s32 hx, s32 hy,
                   const s32 *m)
 {
     struct surface *s = find(g_gfx_target.base);
-    GLuint tex;
+    unsigned tex;
     float fx = x / 256.0f, fy = y / 256.0f;
 
     if (s == NULL || pixels == NULL) {
@@ -778,11 +610,9 @@ int canvas_sprite(const u8 *pixels, int w, int h, int stride, s32 x, s32 y, s32 
     tex = sprite_tex(pixels, w, h, stride);
     bind(s);
     scissor(s);
-    src_size(w, h);
     if (m == NULL) {
         use_table(s, g_gfx_color_table, fx, fy, fx + w, fy + h);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, tex);
+        rnd_texture_unit(0, tex);
         quad(fx, fy, fx + w, fy + h, 0, 0, (float)w, (float)h);
     } else {
         /* Corners of the texture about its hot spot, through m. */
@@ -813,14 +643,11 @@ int canvas_sprite(const u8 *pixels, int w, int h, int stride, s32 x, s32 y, s32 
             hi_y = py[k] > hi_y ? py[k] : hi_y;
         }
         use_table(s, g_gfx_color_table, lo_x, lo_y, hi_x, hi_y);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, tex);
-        glBindBuffer(GL_ARRAY_BUFFER, s_vbo);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(v), v);
-        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+        rnd_texture_unit(0, tex);
+        rnd_stream(v, 4);
+        rnd_draw(RND_STRIP, 0, 4);
     }
-    glDisable(GL_SCISSOR_TEST);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    rnd_scissor(0, 0, 0, 0, 0);
     return 1;
 }
 
@@ -829,6 +656,7 @@ int canvas_blend_rect(const u8 *src, int x0, int y0, int x1, int y1, u8 *dst, in
 {
     struct surface *d = find(dst), *s = find(src);
     int w = x1 - x0, h = y1 - y0;
+    unsigned tex;
 
     if (d == NULL) {
         return 0;
@@ -840,36 +668,30 @@ int canvas_blend_rect(const u8 *src, int x0, int y0, int x1, int y1, u8 *dst, in
     if (s != NULL) {
         /* A surface's texture is physical; draw it at its own scale. */
         fprintf(stderr, "canvas: blend from a surface not supported\n");
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
         return 1;
     }
-    upload_src(src + y0 * src_pitch + x0, w, h, src_pitch);
-    src_size(w, h);
+    tex = upload_src(src + y0 * src_pitch + x0, w, h, src_pitch);
     use_table(d, table, (float)dx, (float)dy, (float)(dx + w), (float)(dy + h));
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, s_upload);
+    rnd_texture_unit(0, tex);
     quad((float)dx, (float)dy, (float)(dx + w), (float)(dy + h), 0, 0, (float)w, (float)h);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
     return 1;
 }
 
 void canvas_remap(u8 *dst, const u8 *levels, const u8 *table)
 {
     struct surface *d = find(dst);
+    unsigned tex;
 
     if (d == NULL) {
         return;
     }
-    upload_src(levels, d->lw, d->lh, d->lw);
+    tex = upload_src(levels, d->lw, d->lh, d->lw);
     bind(d);
-    src_size(d->lw, d->lh);
     use_table(d, table, -d->mx, -d->my, d->lw + d->mx, d->lh + d->my);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, s_upload);
+    rnd_texture_unit(0, tex);
     /* The levels' edges carry on over the margins. */
     quad(-d->mx, -d->my, d->lw + d->mx, d->lh + d->my, -d->mx, -d->my, d->lw + d->mx,
          d->lh + d->my);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 unsigned canvas_bind(u8 *key, int *pw, int *ph, int clear_depth)
@@ -879,15 +701,13 @@ unsigned canvas_bind(u8 *key, int *pw, int *ph, int clear_depth)
     if (s == NULL) {
         return 0;
     }
-    glBindFramebuffer(GL_FRAMEBUFFER, s->fbo);
-    glViewport(0, 0, s->pw, s->ph);
+    rnd_bind(s->target);
     if (clear_depth) {
-        glClearDepth(1.0);
-        glClear(GL_DEPTH_BUFFER_BIT);
+        rnd_clear(NULL, 1);
     }
     *pw = s->pw;
     *ph = s->ph;
-    return s->fbo;
+    return s->target;
 }
 
 unsigned canvas_texture(const u8 *key)
@@ -904,10 +724,8 @@ unsigned canvas_snapshot(const u8 *key)
     if (s == NULL) {
         return 0;
     }
-    glBindFramebuffer(GL_FRAMEBUFFER, s->fbo);
-    glActiveTexture(GL_TEXTURE3);
-    ign_copy_rect(s->fbo, s->copy, 0, 0, s->pw, s->ph);
-    glActiveTexture(GL_TEXTURE0);
+    rnd_bind(s->target);
+    rnd_copy(s->copy, 0, 0, s->pw, s->ph);
     return s->copy;
 }
 
@@ -919,6 +737,5 @@ unsigned canvas_snapshot_rect(const u8 *key, float x0, float y0, float x1, float
         return 0;
     }
     snapshot_rect(s, x0, y0, x1, y1);
-    glActiveTexture(GL_TEXTURE0);
     return s->copy;
 }

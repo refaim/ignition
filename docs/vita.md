@@ -1,43 +1,86 @@
 # PlayStation Vita port
 
-The Vita build runs the same engine and the same OpenGL renderer as macOS.
-The host is `src/platform_vita.c` (display, buttons, clock, audio, log).
-OpenGL comes from [vitaGL](https://github.com/Rinnegatamante/vitaGL), and
-`src/gl_compat.h` and `src/gl_compat.c` cover the places where vitaGL
-differs from OpenGL 3.2 core.
+The Vita build runs the same engine and the same renderer as macOS. The
+renderer (`canvas.c`, `gl3d.c`, `gfx.c`) draws through a small set of GPU
+operations, `src/rnd.h`, with one backend for each host:
 
-Status: the package builds. It has not run on a Vita or in Vita3K yet,
-and the Cg shaders have not been through the device's compiler.
+- `src/rnd_gl.c`: OpenGL 3.2 core, on macOS.
+- `src/rnd_gxm.c`: GXM, the Vita's own GPU API.
+
+The host is `src/platform_vita.c` (buttons, clock, audio, log). The build
+uses VitaSDK's system libraries only.
+
+Status: the package builds, and in Vita3K it gets as far as loading the
+shaders. It has not run on a Vita yet, so the Cg shaders have not been
+through the device's compiler.
 
 ## Build
 
-You need VitaSDK, at `$VITASDK` or `~/vitasdk`, with these packages:
+You need VitaSDK, at `$VITASDK` or `~/vitasdk`. No extra packages.
 
 ```
-vdpm install vitaShaRK libmathneon taihen SceShaccCgExt
 make vita                      # -> build-vita/ignition.vpk (title IGNT00001)
 ```
 
-`make vita` first runs `tools/vita_deps.sh`. The script builds vitaGL into
-`build-vita/deps` at the commit of the VitaSDK package, but with
-`STORE_DEPTH_STENCIL=1` (see [Renderer](#renderer)). `make vita-clean`
-removes `build-vita/`.
+`make vita-clean` removes `build-vita/`.
 
 The LiveArea images are drawn by `tools/vita_sce_sys.py`, so the package
 holds no art from the game.
 
 ## Install
 
-1. Install `ignition.vpk` with VitaShell.
-2. Copy the extracted disc (`make extract` makes
-   `data/<image>/disc/`) to `ux0:data/ignition/disc/`.
-3. For the CD music, copy the image's `.cue` and every `.bin` it names to
-   `ux0:data/ignition/`, next to `disc/`.
-4. vitaGL compiles the shaders on the device, so the Vita needs
-   `ur0:data/libshacccg.suprx`. Most homebrew setups already have it.
+```
+make vita-deploy
+```
+
+This copies the package to the Vita (`tools/vita_deploy.sh`):
+
+- `eboot.bin`, `sce_sys/` and `shaders/` to `ux0:app/IGNT00001/`
+- the package itself to `ux0:data/ignition/ignition.vpk`
+- the extracted disc to `ux0:data/ignition/disc/`, if it is not there yet
+
+The Vita is found in one of two ways:
+
+- **A mounted ux0**: the memory card in a reader, or VitaShell's USB mode.
+  The script takes the first volume in `/Volumes` that has `app/`, `data/`
+  and `id.dat`, or the folder in `VITA_UX0`.
+- **VitaShell's FTP server**: press Select in VitaShell, then
+  `VITA_IP=<address> make vita-deploy` (`VITA_PORT` defaults to 1337). The
+  disc is not copied over FTP; copy it once by hand.
+
+The first time, install `ux0:data/ignition/ignition.vpk` with VitaShell,
+or use VitaShell's "Refresh LiveArea", so the game gets its bubble. After
+that, `make vita-deploy` replaces the files in place.
+
+For the CD music, set `VITA_MUSIC=1`. This also copies the image's `.cue`
+and every `.bin` it names to `ux0:data/ignition/`, next to `disc/`. To
+use another extracted disc, set `DATA` to its `disc/` folder (the default
+is the one `make` runs).
 
 Settings are saved in the `disc/` folder, as on the PC. The log goes to
 `ux0:data/ignition/log.txt` and `err.txt`.
+
+## Shaders
+
+GXM runs only compiled programs (`.gxp`), and the Mac has no compiler
+for them. The Cg source is in `rnd_gxm.c`. The game looks for each
+program in this order:
+
+1. `app0:shaders/`, which the package fills from `platforms/vita/shaders/`.
+2. `ux0:data/ignition/shaders/`, compiled by an earlier run.
+3. Compiled now by the system's Cg compiler, `libshacccg.suprx`, loaded
+   from `ur0:data/` (where Vita homebrew keeps it) or
+   `ux0:data/ignition/`. The result is saved to (2).
+
+A file's name holds a hash of its source, for example
+`canvas_f_55cdda29.gxp`, so a changed shader is compiled again.
+
+The first run on a Vita with `libshacccg.suprx` compiles all 16 programs.
+The next `make vita-deploy` copies them into `platforms/vita/shaders/`
+before it builds, so the package carries them. Commit them; then no
+compiler is needed, and Vita3K can run the game too. Without them, a Vita
+without the module, or Vita3K, stops at
+`gxm: shader programs failed` in `log.txt`.
 
 ## Controls
 
@@ -61,38 +104,54 @@ the keyboard in the menu, the buttons follow.
 The screen is 960 x 544. The NATIVE resolution follows it, and the 2D menu
 is drawn at 4:3 in the middle, as on macOS.
 
-What changes on the Vita, all under `IGN_GL_VITA`:
+Everything is colour indices until the present. Render targets hold an
+index in R (`U8_R`), or an index and a "drawn" flag in R and G (`U8U8_GR`)
+for the 3D. `gfx.c` shows them through the palette. How `rnd_gxm.c` does
+what OpenGL does:
 
-- **Shaders.** Each renderer file has a Cg copy of its GLSL 150 shaders,
-  passed to vitaGL as `GL_CG_*_SHADER_EXT`. Cg has no `texelFetch` or
-  `textureSize`, so the shaders get texture sizes as uniforms and sample
-  at texel centres. All the textures are nearest. `gl_FragCoord` is
-  `WPOS`.
-- **No texture arrays.** `gl3d.c` lays a slot's 256 x 256 pages out as
-  tiles of one 2D texture, 16 to a row (4096 texels, the widest GXM
-  allows). The shaders find a page's tile from `u_grid`.
-- **No `gl_VertexID`.** `gfx_gl.c` gives the screen quad's corners in a
-  buffer.
-- **No `glBindFragDataLocation`.** Cg names the output by semantic.
-- **No `GL_PACK_ROW_LENGTH`.** The CPU 2D raster path reads whole rows,
-  then copies them to the pitch.
-- **Copies.** The shaders that read the pixel under a face read a copy of
-  the framebuffer. vitaGL's `glCopyTexSubImage2D` reads back to the CPU,
-  so `ign_copy_rect` blits into a framebuffer made for the copy. Each blit
-  starts a new GXM scene. vitaGL drops the depth buffer between scenes
-  unless it is built with `STORE_DEPTH_STENCIL=1`, and the faces drawn
-  after a copy test depth. This is why `tools/vita_deps.sh` builds vitaGL.
-- **Index rounding.** A colour index is written as `(i + 0.25) / 255`, so
-  GXM's pack to 8 bits gives `i` whether it rounds or truncates.
+- **Scenes.** Each draw goes into the scene of the bound target. Drawing
+  into another target ends that scene and begins one there. Colour stays
+  in the target's memory between scenes. Depth is stored at the end of a
+  scene and loaded again at the start of the next one.
+- **Reading the pixel under a face.** The colour tables need the pixel a
+  face covers, so the shaders read a copy of the target. A copy is a scene
+  of its own: a quad that reads the target and draws into the copy. That
+  ends the target's scene and begins two more. Faces through a table share
+  one copy of the whole frame until one of them covers something drawn
+  since (`rnd_batch_copies`; on macOS each face copies its own rectangle,
+  as before).
+- **Clears.** GXM has no clear. Colour is cleared with a quad. Depth is
+  cleared by beginning a scene that does not load it.
+- **Scissor.** GXM's region clip works on whole tiles, so the scissor is a
+  test in the fragment programs (`u_clip`).
+- **Shaders.** Cg has no `texelFetch` or `textureSize`. The shaders get
+  texture sizes as uniforms and sample at texel centres; all textures are
+  nearest. `gl_FragCoord` is `WPOS`. An index is written as
+  `(i + 0.25) / 255`, so GXM's pack to 8 bits gives `i` whether it rounds
+  or truncates.
+- **No texture arrays.** A slot's 256 x 256 pages are tiles of one
+  texture, 16 to a row (4096 texels, the widest GXM allows). The shaders
+  find a page's tile from `u_grid`.
+- **Which way up.** Targets are drawn the way their memory is laid out
+  (row 0 first), as OpenGL's framebuffer objects are, so OpenGL's windings
+  hold. GXM names windings as seen with y down, so a face OpenGL calls
+  counter-clockwise is `SCE_GXM_CULL_CW`. The screen is drawn the other
+  way up, as a window is.
+- **Memory.** Two heaps from memblocks mapped for the GPU: CDRAM for
+  textures, targets and the mesh store, and uncached main memory for
+  textures filled each frame and buffers. The GPU runs up to two frames
+  behind. So vertices go to a per-frame arena, a texture filled again gets
+  new memory, freed memory waits three frames, and the mesh store has a
+  copy for each frame in flight. A frame's last scene writes a
+  notification that is waited on before its slot is used again.
+- **Display.** Three buffers in CDRAM, shown by the display queue from
+  `plat_present`, at the vertical blank.
 
 ## Not done
 
-- Not run on hardware or in Vita3K.
+- Not run on hardware. The Cg shaders have not been compiled yet.
+- The race's 2D is drawn on the CPU. Its HUD triangles go through the GPU
+  and are read back each frame, which waits for the GPU twice a frame.
 - The game's joystick (`g_joysticks`, analog steering) is not fed from
   the stick; the stick presses the steering keys.
 - No touch input, and no way to type names in the menus.
-- Each translucent face costs a blit and a scene change. Races with a
-  lot of smoke may be slow.
-- `gl3d_mesh_changed` updates part of one large vertex buffer. vitaGL
-  copies the whole buffer when the GPU still uses it, which can be slow
-  for animated textures.

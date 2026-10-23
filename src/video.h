@@ -1,5 +1,5 @@
 /*
- * video.h - the Lisa video layer, on OpenGL.
+ * video.h - the Lisa video layer, on the GPU (gfx.h).
  *
  * The original goes through a function table at 0x50eb6c, filled for
  * DirectDraw: create the window (0x456bc0), set a mode (0x456be0), set

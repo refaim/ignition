@@ -9,7 +9,7 @@
  * combines a source colour with the colour under it goes through the
  * game's 256 x 256 tables, as in the original.
  *
- * Without a GL context (the tests) nothing is registered and the game
+ * Without a GPU (the tests) nothing is registered and the game
  * draws into its buffers on the CPU as before.
  */
 
@@ -85,7 +85,7 @@ int canvas_blend_rect(const u8 *src, int x0, int y0, int x1, int y1, u8 *dst, in
 void canvas_remap(u8 *dst, const u8 *levels, const u8 *table);
 
 /* Binds a surface to draw 3D into, with a depth buffer: returns its
- * GL framebuffer, and its physical size in *pw, *ph; 0 when `key` is
+ * target (rnd.h), and its physical size in *pw, *ph; 0 when `key` is
  * not a surface. `clear_depth` clears the depth. */
 unsigned canvas_bind(u8 *key, int *pw, int *ph, int clear_depth);
 /* Its colour texture (R8, row 0 at the top), and a copy of what it

@@ -126,7 +126,7 @@ extern s32 *g_level_plc;                /* 0x54f9cc */
 extern s32 *g_cars_plc;                 /* 0x552fc8 */
 extern s32 *g_level_msh;                /* 0x525e60 */
 extern s32 *g_cars_msh;                 /* 0x527f34 */
-/* Track, CARS, LIGHT, SMOKE, DARKSMOK, BOOM, EXSMOKE, DIVSPR, a blank
+/* Track, CARS, DIVSPR, LIGHT, SMOKE, DARKSMOK, BOOM, EXSMOKE, a blank
  * page (0x5530f0..0x553110), and their sizes in pages. */
 extern u8 *g_race_tex[RACE_TEX_SLOTS];
 extern int g_race_tex_pages[RACE_TEX_SLOTS];

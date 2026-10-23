@@ -408,11 +408,14 @@ static void load_msh(void)
 }
 
 /* 0x419d10: every texture into one block, each at a 64 KB page. The
- * original sizes the block from the files first, then reads them. */
+ * original sizes the block from the files first, then reads them. The
+ * slots (0x5530f0..0x553110) are the track's, CARS, DIVSPR, LIGHT,
+ * SMOKE, DARKSMOK, BOOM, EXSMOKE and a blank page: DIVSPR is read last
+ * but goes to slot 2, and the effects name their textures by slot. */
 static void load_textures(void)
 {
     static const char *const general[6] = {
-        "LIGHT", "SMOKE", "DARKSMOK", "BOOM", "EXSMOKE", "DIVSPR"
+        "DIVSPR", "LIGHT", "SMOKE", "DARKSMOK", "BOOM", "EXSMOKE"
     };
     char names[RACE_TEX_SLOTS - 1][64];
     long sizes[RACE_TEX_SLOTS - 1];

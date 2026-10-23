@@ -68,7 +68,6 @@ s32 r_553068, r_527f78, r_525e68, r_552e58, r_563be0, r_553084;
 s32 r_54f958, r_527f20, r_5daff8;
 s32 g_race_sfx_volume;                  /* 0x601668, 0..100 */
 s32 g_race_cd_volume;                   /* 0x527f30 */
-s32 g_race_screen_size;                 /* 0x527f80 (g_screen_size) */
 
 /* Championship tracks by difficulty and race (0x4984a0), and each
  * track's CD track (0x497eb8). */
@@ -177,7 +176,7 @@ static void read_settings(void)
 
     g_driver_count = race_cfg(0x153);
     /* The port's NATIVE (3) takes the 800 x 600 layout. */
-    g_race_screen_size = race_cfg(0x10b) > 2 ? 2 : race_cfg(0x10b);
+    g_screen_size = race_cfg(0x10b) > 2 ? 2 : race_cfg(0x10b);
     r_527f28 = r_563c6c = race_cfg(0x107);
     g_two_players = race_cfg(0x004);
     r_552f10 = race_cfg(0x197);

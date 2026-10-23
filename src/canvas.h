@@ -52,6 +52,12 @@ int canvas_is_gpu(const u8 *key);
 void canvas_extent(const u8 *key, float *mx, float *my);
 float canvas_aspect(const u8 *key, float fallback);
 void canvas_sync_drawable(void);
+/* In NATIVE, `key` fills the drawable's height instead of a whole
+ * scale (the intro's film). */
+void canvas_set_fit(const u8 *key, int on);
+/* The colour a whole screen put gives the margins; -1 (the default
+ * after canvas_set_fit) takes the picture's first pixel. */
+void canvas_set_margin(const u8 *key, int index);
 
 /* memset and memcpy for buffers that may be surfaces. */
 void canvas_clear(u8 *key, u8 index, size_t bytes);

@@ -425,8 +425,8 @@ static void race_save_settings(void)
     cfg_set(0x107, r_563c6c);
     /* The port's RESOLUTION has a fourth value, NATIVE (3), that the
      * race plays as 2: it is kept. */
-    if (!(race_cfg(0x10b) > 2 && g_race_screen_size == 2)) {
-        cfg_set(0x10b, g_race_screen_size);
+    if (!(race_cfg(0x10b) > 2 && g_screen_size == 2)) {
+        cfg_set(0x10b, g_screen_size);
     }
     file_write("ign_win.btz", g_race_cfg, 0x597);
 }
@@ -876,8 +876,8 @@ void race_hot_keys(void)
     }
     if (edge(0x4e, &any)) {
         r_563c18 = 0x4e;
-        if (++g_race_screen_size > 2) {
-            g_race_screen_size = 2;
+        if (++g_screen_size > 2) {
+            g_screen_size = 2;
         } else {
             race_init_hud();
             race_hud_layout();
@@ -886,8 +886,8 @@ void race_hot_keys(void)
     }
     if (edge(0x4a, &any)) {
         r_563c18 = 0x4a;
-        if (--g_race_screen_size < 0) {
-            g_race_screen_size = 0;
+        if (--g_screen_size < 0) {
+            g_screen_size = 0;
         } else {
             race_init_hud();
             race_hud_layout();

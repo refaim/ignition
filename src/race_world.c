@@ -362,8 +362,8 @@ void race_make_world(void)
     /* 0x447280 builds blurred levels of the track's texture when
      * r_527f78 is set; GL samples the pages as they are. */
     memcpy(r_563c80, sizes, sizeof(sizes));
-    r_527f2c = g_race_screen_size != 0 ? 7 : 6;
-    r_54f9d4 = r_563c80[g_two_players + 2 * (r_527f28 + 4 * g_race_screen_size)];
+    r_527f2c = g_screen_size != 0 ? 7 : 6;
+    r_54f9d4 = r_563c80[g_two_players + 2 * (r_527f28 + 4 * g_screen_size)];
 
     if (raster_set_grid(0xc800, 0xc800, 1500) == -1) {
         mem_out_of_memory();

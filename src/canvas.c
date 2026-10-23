@@ -41,6 +41,8 @@ struct surface {
     u8 *key;                /* registered; GPU objects only in hardware */
     int lw, lh;             /* logical, the original's pixels */
     float mx, my;           /* NATIVE's margins about them, logical */
+    int fit;                /* NATIVE fills the height, not a whole scale */
+    int margin;             /* the margins' colour, -1 the picture's ground */
     int pw, ph;             /* physical, margins included */
     GLuint fbo, tex, copy, depth;
 };
@@ -230,7 +232,9 @@ static int native_margins(const struct surface *s, float *mx, float *my, int *pw
         return 0;
     }
     k = dh >= 1200 ? 4.0 : 2.0;
-    if (320.0 * k > dw || 240.0 * k > dh) {
+    if (s->fit) {
+        k = fmin(dw / 320.0, dh / 240.0);
+    } else if (320.0 * k > dw || 240.0 * k > dh) {
         k = floor(fmin(dw / 320.0, dh / 240.0));
     }
     *mx = (float)((dw / k - 320.0) / 2.0);
@@ -382,6 +386,7 @@ void canvas_register(u8 *key, int lw, int lh)
         surface_free(s);
     }
     s->key = key;
+    s->margin = -1;
     s->lw = lw;
     s->lh = lh;
     if (s_hardware) {
@@ -427,6 +432,31 @@ static float phys_x(const struct surface *s, float x)
 static float phys_y(const struct surface *s, float y)
 {
     return (y + s->my) * s->ph / (s->lh + 2 * s->my);
+}
+
+void canvas_set_fit(const u8 *key, int on)
+{
+    struct surface *s = registered(key);
+
+    on = on != 0;
+    if (s == NULL || s->fit == on) {
+        return;
+    }
+    s->fit = on;
+    s->margin = -1;
+    if (s_ready && s_hardware && s->fbo != 0) {
+        surface_free(s);
+        surface_make(s);
+    }
+}
+
+void canvas_set_margin(const u8 *key, int index)
+{
+    struct surface *s = registered(key);
+
+    if (s != NULL) {
+        s->margin = index;
+    }
 }
 
 void canvas_extent(const u8 *key, float *mx, float *my)
@@ -509,8 +539,9 @@ void canvas_put(u8 *dst, const u8 *pixels, int pitch)
     upload_src(pixels, s->lw, s->lh, pitch);
     bind(s);
     if (s->mx != 0 || s->my != 0) {
-        /* A whole screen put: the margins are black. */
-        glClearColor(0, 0, 0, 0);
+        /* A whole screen put: the margins take its first pixel's
+         * colour, the picture's ground. */
+        glClearColor((s->margin >= 0 ? s->margin : pixels[0]) / 255.0f, 0, 0, 0);
         glClear(GL_COLOR_BUFFER_BIT);
     }
     glUniform1i(s_u_mode, 0);

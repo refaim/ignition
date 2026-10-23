@@ -116,6 +116,22 @@ int frontend_load_language(void)
  * picture, put on the menu screen after each frame. */
 static u8 s_intro_pixels[320 * 200];
 
+/* The palette's brightest colour: the white about the film in NATIVE. */
+static int whitest(const u8 *pal)
+{
+    int i, best = 0, most = -1;
+
+    for (i = 0; i < 256; i++) {
+        int sum = pal[3 * i] + pal[3 * i + 1] + pal[3 * i + 2];
+
+        if (sum > most) {
+            most = sum;
+            best = i;
+        }
+    }
+    return best;
+}
+
 /* Starts the intro's first animation into `screen` (0x409b4f). */
 void frontend_intro_start(void *file, u8 *screen)
 {
@@ -668,6 +684,8 @@ static void joysticks_to_keys(void)
 static void intro_step(void)
 {
     fe_4be850 += s_step_part;
+    /* The film fills the screen's height. */
+    canvas_set_fit(g_menu_screen, fe_4be850 > 28.8 && fe_4be850 < 1278.0);
     if (fe_4be850 > 28.8 && fe_4be850 < 1278.0) {
         fe_4be560 += s_step_part;
         if (fe_4be560 >= 2.393103448275862) {
@@ -684,6 +702,7 @@ static void intro_step(void)
                     cdp_open(&s_intro_anim);
                 }
             }
+            canvas_set_margin(g_menu_screen, whitest(g_video_palette));
             canvas_put(g_menu_screen, s_intro_pixels, 320);
             if (s_intro_anim.frame == 2) {
                 cdp_draw(&s_intro_anim);

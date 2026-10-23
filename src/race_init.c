@@ -484,7 +484,7 @@ void race_init_hud(void)
     static const s32 modes[3][2] = { { 320, 200 }, { 640, 480 }, { 800, 600 } };
     static const s32 focal[3][2] = { { 200, 164 }, { 425, 425 }, { 550, 550 } };
     static const double near_d[3] = { 25.0, 10.0, 10.0 };
-    int size = g_race_screen_size, i;
+    int size = g_screen_size, i;
     s32 w = modes[size][0], h = modes[size][1], fx = focal[size][0], fy = focal[size][1];
 
     if (race_cfg(0x10b) == CANVAS_NATIVE && size == 2) {

@@ -46,6 +46,12 @@ void canvas_internal_size(int *w43, int *h);
 void canvas_register(u8 *key, int lw, int lh);
 void canvas_unregister(u8 *key);
 int canvas_is_gpu(const u8 *key);
+/* A surface's margins about its logical screen in NATIVE, in logical
+ * pixels (0 for none), and the shape it is shown at (`fallback` without
+ * margins). */
+void canvas_extent(const u8 *key, float *mx, float *my);
+float canvas_aspect(const u8 *key, float fallback);
+void canvas_sync_drawable(void);
 
 /* memset and memcpy for buffers that may be surfaces. */
 void canvas_clear(u8 *key, u8 index, size_t bytes);

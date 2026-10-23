@@ -40,7 +40,8 @@ enum {
 struct surface {
     u8 *key;                /* registered; GPU objects only in hardware */
     int lw, lh;             /* logical, the original's pixels */
-    int pw, ph;             /* physical */
+    float mx, my;           /* NATIVE's margins about them, logical */
+    int pw, ph;             /* physical, margins included */
     GLuint fbo, tex, copy, depth;
 };
 
@@ -69,17 +70,18 @@ static struct sprite_tex s_sprites[MAX_SPRITES];
 static u32 s_clock;
 static GLuint s_program, s_vao, s_vbo, s_upload;
 static int s_upload_w, s_upload_h;
-static GLint s_u_lsize, s_u_mode;
+static GLint s_u_lsize, s_u_off, s_u_mode;
 
 static const char *s_vs =
     "#version 150\n"
     "uniform vec2 u_lsize;\n"
+    "uniform vec2 u_off;\n"
     "in vec2 a_pos;\n"
     "in vec2 a_uv;\n"
     "out vec2 v_uv;\n"
     "void main() {\n"
     "    v_uv = a_uv;\n"
-    "    gl_Position = vec4(a_pos / u_lsize * 2.0 - 1.0, 0.0, 1.0);\n"
+    "    gl_Position = vec4((a_pos + u_off) / u_lsize * 2.0 - 1.0, 0.0, 1.0);\n"
     "}\n";
 
 /* Mode 0 copies the source index, 1 puts it through the table. */
@@ -164,6 +166,7 @@ int canvas_init(void)
     glUniform1i(glGetUniformLocation(s_program, "u_rows"), 2);
     glUniform1i(glGetUniformLocation(s_program, "u_dst"), 3);
     s_u_lsize = glGetUniformLocation(s_program, "u_lsize");
+    s_u_off = glGetUniformLocation(s_program, "u_off");
     s_u_mode = glGetUniformLocation(s_program, "u_mode");
     glGenVertexArrays(1, &s_vao);
     glBindVertexArray(s_vao);
@@ -210,13 +213,43 @@ static void surface_free(struct surface *s)
     s->fbo = s->tex = s->copy = s->depth = 0;
 }
 
+/* In NATIVE a 320 x 200 screen fills the drawable: its pixels are
+ * shown at a whole scale of 2 (4 from 1200 rows, as such a drawable is
+ * twice the window's points), 1.2 times as tall as wide, and the rest
+ * of the drawable is a margin about them. Returns 0 for no margins. */
+static int native_margins(const struct surface *s, float *mx, float *my, int *pw, int *ph)
+{
+    int dw = 0, dh = 0;
+    double k;
+
+    if (s_mode != CANVAS_NATIVE || s->lw != 320 || s->lh != 200) {
+        return 0;
+    }
+    video_drawable_size(&dw, &dh);
+    if (dw < 320 || dh < 240) {
+        return 0;
+    }
+    k = dh >= 1200 ? 4.0 : 2.0;
+    if (320.0 * k > dw || 240.0 * k > dh) {
+        k = floor(fmin(dw / 320.0, dh / 240.0));
+    }
+    *mx = (float)((dw / k - 320.0) / 2.0);
+    *my = (float)((dh / (k * 1.2) - 200.0) / 2.0);
+    *pw = dw;
+    *ph = dh;
+    return 1;
+}
+
 static void surface_make(struct surface *s)
 {
     int w43, h;
 
-    canvas_internal_size(&w43, &h);
-    s->pw = (int)((double)s->lw * w43 / 320.0 + 0.5);
-    s->ph = (int)((double)s->lh * h / 200.0 + 0.5);
+    s->mx = s->my = 0;
+    if (!native_margins(s, &s->mx, &s->my, &s->pw, &s->ph)) {
+        canvas_internal_size(&w43, &h);
+        s->pw = (int)((double)s->lw * w43 / 320.0 + 0.5);
+        s->ph = (int)((double)s->lh * h / 200.0 + 0.5);
+    }
     s->tex = r_texture(GL_R8, s->pw, s->ph, NULL);
     s->copy = r_texture(GL_R8, s->pw, s->ph, NULL);
     glGenRenderbuffers(1, &s->depth);
@@ -249,6 +282,24 @@ void canvas_set_resolution(int mode)
             surface_free(&s_surfaces[i]);
             surface_make(&s_surfaces[i]);
         }
+    }
+}
+
+/* NATIVE follows the drawable: when it changes size, the surfaces are
+ * made again (empty; the menus draw theirs each frame). */
+void canvas_sync_drawable(void)
+{
+    static int last_w, last_h;
+    int w = 0, h = 0;
+
+    if (!s_ready || s_mode != CANVAS_NATIVE || !s_hardware) {
+        return;
+    }
+    video_drawable_size(&w, &h);
+    if (w != last_w || h != last_h) {
+        last_w = w;
+        last_h = h;
+        canvas_set_resolution(CANVAS_NATIVE);
     }
 }
 
@@ -363,7 +414,37 @@ static void bind(struct surface *s)
     glDisable(GL_BLEND);
     glUseProgram(s_program);
     glBindVertexArray(s_vao);
-    glUniform2f(s_u_lsize, (float)s->lw, (float)s->lh);
+    glUniform2f(s_u_lsize, s->lw + 2 * s->mx, s->lh + 2 * s->my);
+    glUniform2f(s_u_off, s->mx, s->my);
+}
+
+/* Logical to physical, margins included. */
+static float phys_x(const struct surface *s, float x)
+{
+    return (x + s->mx) * s->pw / (s->lw + 2 * s->mx);
+}
+
+static float phys_y(const struct surface *s, float y)
+{
+    return (y + s->my) * s->ph / (s->lh + 2 * s->my);
+}
+
+void canvas_extent(const u8 *key, float *mx, float *my)
+{
+    struct surface *s = find(key);
+
+    *mx = s != NULL ? s->mx : 0;
+    *my = s != NULL ? s->my : 0;
+}
+
+float canvas_aspect(const u8 *key, float fallback)
+{
+    struct surface *s = find(key);
+
+    if (s == NULL || (s->mx == 0 && s->my == 0)) {
+        return fallback;
+    }
+    return (float)s->pw / (float)s->ph;
 }
 
 void canvas_clear(u8 *key, u8 index, size_t bytes)
@@ -427,6 +508,11 @@ void canvas_put(u8 *dst, const u8 *pixels, int pitch)
     }
     upload_src(pixels, s->lw, s->lh, pitch);
     bind(s);
+    if (s->mx != 0 || s->my != 0) {
+        /* A whole screen put: the margins are black. */
+        glClearColor(0, 0, 0, 0);
+        glClear(GL_COLOR_BUFFER_BIT);
+    }
     glUniform1i(s_u_mode, 0);
     quad(0, 0, (float)s->lw, (float)s->lh, 0, 0, (float)s->lw, (float)s->lh);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -541,8 +627,8 @@ void canvas_forget(const u8 *pixels)
  * its copy texture, for the shader to read the pixels under it. */
 static void snapshot_rect(struct surface *s, float x0, float y0, float x1, float y1)
 {
-    int px0 = (int)floorf(x0 * s->pw / s->lw) - 1, py0 = (int)floorf(y0 * s->ph / s->lh) - 1;
-    int px1 = (int)ceilf(x1 * s->pw / s->lw) + 1, py1 = (int)ceilf(y1 * s->ph / s->lh) + 1;
+    int px0 = (int)floorf(phys_x(s, x0)) - 1, py0 = (int)floorf(phys_y(s, y0)) - 1;
+    int px1 = (int)ceilf(phys_x(s, x1)) + 1, py1 = (int)ceilf(phys_y(s, y1)) + 1;
 
     if (px0 < 0) {
         px0 = 0;
@@ -584,8 +670,15 @@ static void use_table(struct surface *s, const u8 *table, float x0, float y0, fl
 static void scissor(struct surface *s)
 {
     const struct gfx_target *g = &g_gfx_target;
-    int x0 = g->clip_x0 * s->pw / s->lw, y0 = g->clip_y0 * s->ph / s->lh;
-    int x1 = g->clip_x1 * s->pw / s->lw, y1 = g->clip_y1 * s->ph / s->lh;
+    int x0 = (int)phys_x(s, (float)g->clip_x0), y0 = (int)phys_y(s, (float)g->clip_y0);
+    int x1 = (int)phys_x(s, (float)g->clip_x1), y1 = (int)phys_y(s, (float)g->clip_y1);
+
+    /* A clip of the whole screen takes in the margins. */
+    if (g->clip_x0 <= 0 && g->clip_y0 <= 0 && g->clip_x1 >= s->lw && g->clip_y1 >= s->lh) {
+        x0 = y0 = 0;
+        x1 = s->pw;
+        y1 = s->ph;
+    }
 
     glEnable(GL_SCISSOR_TEST);
     glScissor(x0, y0, x1 - x0, y1 - y0);
@@ -686,10 +779,12 @@ void canvas_remap(u8 *dst, const u8 *levels, const u8 *table)
     }
     upload_src(levels, d->lw, d->lh, d->lw);
     bind(d);
-    use_table(d, table, 0, 0, (float)d->lw, (float)d->lh);
+    use_table(d, table, -d->mx, -d->my, d->lw + d->mx, d->lh + d->my);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, s_upload);
-    quad(0, 0, (float)d->lw, (float)d->lh, 0, 0, (float)d->lw, (float)d->lh);
+    /* The levels' edges carry on over the margins. */
+    quad(-d->mx, -d->my, d->lw + d->mx, d->lh + d->my, -d->mx, -d->my, d->lw + d->mx,
+         d->lh + d->my);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 

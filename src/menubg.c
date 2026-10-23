@@ -20,6 +20,7 @@
 
 #include "frontend.h"
 #include "frontend_state.h"
+#include "canvas.h"
 #include "gl3d.h"
 #include "lisa/file.h"
 #include "menubg.h"
@@ -330,6 +331,29 @@ static int build_frame(int frame)
     return n;
 }
 
+/* NATIVE's margins about the menu: the frame grows about the screen's
+ * middle until it covers them too, so the track fills the window. */
+static void fill_margins(int n, int w, int h)
+{
+    float mx, my, f, cx = w / 2.0f, cy = h / 2.0f;
+    int i, k;
+
+    canvas_extent(g_menu_buffer1, &mx, &my);
+    if (mx == 0 && my == 0) {
+        return;
+    }
+    f = (w + 2 * mx) / w;
+    if ((h + 2 * my) / h > f) {
+        f = (h + 2 * my) / h;
+    }
+    for (i = 0; i < n; i++) {
+        for (k = 0; k < 3; k++) {
+            s_cmds[i].x[k] = cx + (s_cmds[i].x[k] - cx) * f;
+            s_cmds[i].y[k] = cy + (s_cmds[i].y[k] - cy) * f;
+        }
+    }
+}
+
 /* 0x40c740: the next frame of the sequence into g_menu_buffer1. */
 int menu_background_render(void)
 {
@@ -354,6 +378,7 @@ int menu_background_render(void)
         return 0;
     }
     n = build_frame(frame);
+    fill_margins(n, mode[0], mode[1]);
     gl3d_raster(g_menu_buffer1, mode[0], mode[1], mode[0], s_cmds, n);
     return 0;
 }

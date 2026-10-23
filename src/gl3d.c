@@ -66,6 +66,7 @@ static struct target s_targets[2];
 static struct target *s_target;
 static int s_w, s_h;            /* the target's size */
 static double s_vw, s_vh;       /* the original's pixels it spans */
+static double s_ox, s_oy;       /* where the original's (0, 0) is in them */
 static struct mesh_entry s_meshes[MAX_MESHES];
 static int s_mesh_count;
 static GLint s_vbo_used, s_vbo_size;
@@ -110,7 +111,7 @@ struct table_entry {
 
 static int s_raster_ready;
 static GLuint s_raster_program, s_raster_vao, s_raster_vbo;
-static GLint s_ru_size, s_ru_pages, s_ru_table, s_ru_dst;
+static GLint s_ru_size, s_ru_off, s_ru_pages, s_ru_table, s_ru_dst;
 static GLuint s_raster_fbo, s_raster_color, s_raster_dst;
 static int s_raster_w, s_raster_h;
 static GLuint s_raster_pages;
@@ -400,6 +401,7 @@ static void target_begin(struct target *t, int w, int h)
     s_target = t;
     s_w = w;
     s_h = h;
+    s_ox = s_oy = 0;
     glViewport(0, 0, w, h);
     glClearColor(0, 0, 0, 0);
     glClearDepth(1.0);
@@ -461,8 +463,8 @@ static void object_matrix(const struct scene *sc, const struct scene_obj *o, dou
 {
     double view[3][3], rot[3][3], m[3][3], t[3], clip[4][4];
     double n = sc->near_ofs, near_w = 1.0, far_w = 200000.0;
-    double ax = -2.0 * sc->focal_x * sc->zoom / s_vw, bx = 2.0 * (ox + sc->center_x) / s_vw - 1.0;
-    double ay = -2.0 * sc->focal_y / s_vh, by = 2.0 * (oy + sc->center_y) / s_vh - 1.0;
+    double ax = -2.0 * sc->focal_x * sc->zoom / s_vw, bx = 2.0 * (ox + s_ox + sc->center_x) / s_vw - 1.0;
+    double ay = -2.0 * sc->focal_y / s_vh, by = 2.0 * (oy + s_oy + sc->center_y) / s_vh - 1.0;
     double az = (far_w + near_w) / (far_w - near_w), bz = -2.0 * far_w * near_w / (far_w - near_w);
     double d[3];
     int i, j, k;
@@ -980,6 +982,7 @@ void gl3d_end(u8 *screen, int pitch)
 static const char *s_raster_vs =
     "#version 150\n"
     "uniform vec2 u_size;\n"
+    "uniform vec2 u_off;\n"
     "in vec2 a_pos;\n"
     "in vec2 a_uv;\n"
     "in vec3 a_info;\n"
@@ -988,7 +991,7 @@ static const char *s_raster_vs =
     "void main() {\n"
     "    v_uv = a_uv;\n"
     "    v_info = a_info;\n"
-    "    gl_Position = vec4((a_pos - 0.5) / u_size * 2.0 - 1.0, 0.0, 1.0);\n"
+    "    gl_Position = vec4((a_pos - 0.5 + u_off) / u_size * 2.0 - 1.0, 0.0, 1.0);\n"
     "}\n";
 
 static const char *s_raster_fs =
@@ -1029,6 +1032,7 @@ static void raster_init(void)
     glDeleteShader(vs);
     glDeleteShader(fs);
     s_ru_size = glGetUniformLocation(s_raster_program, "u_size");
+    s_ru_off = glGetUniformLocation(s_raster_program, "u_off");
     s_ru_pages = glGetUniformLocation(s_raster_program, "u_pages");
     s_ru_table = glGetUniformLocation(s_raster_program, "u_table");
     s_ru_dst = glGetUniformLocation(s_raster_program, "u_dst");
@@ -1169,7 +1173,16 @@ void gl3d_raster(u8 *target, int w, int h, int pitch, const struct raster_cmd *c
     glBindBuffer(GL_ARRAY_BUFFER, s_raster_vbo);
     glBufferSubData(GL_ARRAY_BUFFER, 0, (GLsizeiptr)count * 3 * RASTER_FLOATS * sizeof(float),
                     s_raster_verts);
-    glUniform2f(s_ru_size, (float)w, (float)h);
+    {
+        /* A surface with NATIVE's margins spans more than w x h. */
+        float mx = 0, my = 0;
+
+        if (gpu) {
+            canvas_extent(target, &mx, &my);
+        }
+        glUniform2f(s_ru_size, w + 2 * mx, h + 2 * my);
+        glUniform2f(s_ru_off, mx, my);
+    }
     glUniform1i(s_ru_pages, 0);
     glUniform1i(s_ru_table, 1);
     glUniform1i(s_ru_dst, 2);
@@ -1232,11 +1245,18 @@ int gl3d_surface_begin(u8 *key, int lw, int lh)
     if (canvas_bind(key, &pw, &ph, 1) == 0) {
         return 0;
     }
+    {
+        float mx, my;
+
+        canvas_extent(key, &mx, &my);
+        s_ox = mx;
+        s_oy = my;
+        s_vw = lw + 2.0 * mx;
+        s_vh = lh + 2.0 * my;
+    }
     s_target = NULL;
     s_w = pw;
     s_h = ph;
-    s_vw = lw;
-    s_vh = lh;
     return 1;
 }
 

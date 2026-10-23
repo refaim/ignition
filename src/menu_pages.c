@@ -638,11 +638,17 @@ int menu_page_handler_a(void)
     }
     if (intro_done) {
         const s32 *r = g_position_icon_rect;
+        float fx, fy;
+        int mx, my;
 
-        draw_sprite_at(g_position_icons[0], 0, 0);
-        draw_sprite_at(g_position_icons[1], mode[0] - r[2], 0);
-        draw_sprite_at(g_position_icons[2], 0, mode[1] - r[3]);
-        draw_sprite_at(g_position_icons[3], mode[0] - r[2], mode[1] - r[3]);
+        /* The corners of the screen, or of NATIVE's margins. */
+        canvas_extent(g_menu_screen, &fx, &fy);
+        mx = (int)fx;
+        my = (int)fy;
+        draw_sprite_at(g_position_icons[0], -mx, -my);
+        draw_sprite_at(g_position_icons[1], mode[0] - r[2] + mx, -my);
+        draw_sprite_at(g_position_icons[2], -mx, mode[1] - r[3] + my);
+        draw_sprite_at(g_position_icons[3], mode[0] - r[2] + mx, mode[1] - r[3] + my);
     }
     return 0;
 }

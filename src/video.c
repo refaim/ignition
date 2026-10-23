@@ -236,10 +236,12 @@ void video_present(void)
     if (!s_gfx_ready || g_video_screen == NULL) {
         return;
     }
+    canvas_sync_drawable();
     plat_drawable_size(&w, &h);
     gfx_begin_frame(w, h);
     if (s_present != NULL) {
-        gfx_draw_index_texture(canvas_texture(s_present), g_video_palette, video_aspect());
+        gfx_draw_index_texture(canvas_texture(s_present), g_video_palette,
+                               canvas_aspect(s_present, video_aspect()));
     } else if (s_layer != 0) {
         gfx_draw_layers(s_layer, g_video_screen, s_layer_snapshot, s_screen_w, s_screen_h,
                         s_screen_w, g_video_palette, video_aspect());

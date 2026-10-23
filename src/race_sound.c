@@ -32,7 +32,7 @@ extern s32 r_527f20, r_54f958;
 static s32 s_open_params[3];                /* 0x5530d0: channels, then two from the settings */
 static struct sound_request s_request;      /* 0x5532d0 */
 s32 g_ghost_voice;                          /* 0x603ad8 */
-struct scene_desc *g_ghost_objs;            /* 0x525e40, set by the ghost's load (0x420240) */
+extern struct scene_desc *g_ghost_objs;     /* 0x525e40, race_misc.c (the ghost's load, 0x420240) */
 
 /* The players are done: the one player, or both of two. */
 static int players_finished(void)

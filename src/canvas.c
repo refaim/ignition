@@ -12,12 +12,7 @@
  * colour can blend.
  */
 
-#ifdef __APPLE__
-#define GL_SILENCE_DEPRECATION
-#include <OpenGL/gl3.h>
-#else
-#include <GL/glcorearb.h>
-#endif
+#include "gl_compat.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -74,6 +69,52 @@ static GLuint s_program, s_vao, s_vbo, s_upload;
 static int s_upload_w, s_upload_h;
 static GLint s_u_lsize, s_u_off, s_u_mode;
 
+#ifdef IGN_GL_VITA
+/* Cg for vitaGL: it has no texelFetch or textureSize, so the shader is
+ * given the sizes and samples at texel centres (all textures here are
+ * nearest). */
+static GLint s_u_src_size, s_u_dst_size;
+
+static const char *s_vs =
+    "void main(float2 a_pos, float2 a_uv, uniform float2 u_lsize, uniform float2 u_off,\n"
+    "          float2 out v_uv : TEXCOORD0, float4 out gl_Position : POSITION) {\n"
+    "    v_uv = a_uv;\n"
+    "    gl_Position = float4((a_pos + u_off) / u_lsize * 2.0 - 1.0, 0.0, 1.0);\n"
+    "}\n";
+
+static const char *s_fs =
+    "float4 main(float2 v_uv : TEXCOORD0, float4 frag : WPOS,\n"
+    "            uniform sampler2D u_src, uniform sampler2D u_table,\n"
+    "            uniform sampler2D u_rows, uniform sampler2D u_dst, uniform float u_mode,\n"
+    "            uniform float2 u_src_size, uniform float2 u_dst_size) : COLOR {\n"
+    "    float2 t = clamp(floor(v_uv), float2(0.0, 0.0), u_src_size - 1.0);\n"
+    "    float s = floor(tex2D(u_src, (t + 0.5) / u_src_size).r * 255.0 + 0.5);\n"
+    "    if (u_mode > 0.5) {\n"
+    "        float2 row = tex2D(u_rows, float2((s + 0.5) / 256.0, 0.5)).rg;\n"
+    "        float cls = floor(row.r * 255.0 + 0.5);\n"
+    "        if (cls < 0.5) {\n"
+    "            discard;\n"
+    "        }\n"
+    "        if (cls < 1.5) {\n"
+    "            s = floor(row.g * 255.0 + 0.5);\n"
+    "        } else {\n"
+    "            float d = tex2D(u_dst, (floor(frag.xy) + 0.5) / u_dst_size).r;\n"
+    "            float2 at = float2(floor(d * 255.0 + 0.5) + 0.5, s + 0.5) / 256.0;\n"
+    "            s = floor(tex2D(u_table, at).r * 255.0 + 0.5);\n"
+    "        }\n"
+    "    }\n"
+    "    return float4((s + 0.25) / 255.0, 0.0, 0.0, 1.0);\n"
+    "}\n";
+
+/* The size of the texture on unit 0, in texels. */
+static void src_size(int w, int h)
+{
+    glUniform2f(s_u_src_size, (float)w, (float)h);
+}
+#else
+#define src_size(w, h) ((void)0)
+
+
 static const char *s_vs =
     "#version 150\n"
     "uniform vec2 u_lsize;\n"
@@ -114,10 +155,11 @@ static const char *s_fs =
     "    }\n"
     "    o_index = s;\n"
     "}\n";
+#endif
 
 static GLuint compile(GLenum type, const char *src)
 {
-    GLuint s = glCreateShader(type);
+    GLuint s = glCreateShader(type == GL_VERTEX_SHADER ? IGN_VERTEX_SHADER : IGN_FRAGMENT_SHADER);
     GLint ok = 0;
 
     glShaderSource(s, 1, &src, NULL);
@@ -170,6 +212,10 @@ int canvas_init(void)
     s_u_lsize = glGetUniformLocation(s_program, "u_lsize");
     s_u_off = glGetUniformLocation(s_program, "u_off");
     s_u_mode = glGetUniformLocation(s_program, "u_mode");
+#ifdef IGN_GL_VITA
+    s_u_src_size = glGetUniformLocation(s_program, "u_src_size");
+    s_u_dst_size = glGetUniformLocation(s_program, "u_dst_size");
+#endif
     glGenVertexArrays(1, &s_vao);
     glBindVertexArray(s_vao);
     glGenBuffers(1, &s_vbo);
@@ -207,6 +253,7 @@ void canvas_internal_size(int *w43, int *h)
 static void surface_free(struct surface *s)
 {
     if (s->fbo != 0) {
+        ign_forget_texture(s->copy);
         glDeleteFramebuffers(1, &s->fbo);
         glDeleteTextures(1, &s->tex);
         glDeleteTextures(1, &s->copy);
@@ -421,6 +468,9 @@ static void bind(struct surface *s)
     glBindVertexArray(s_vao);
     glUniform2f(s_u_lsize, s->lw + 2 * s->mx, s->lh + 2 * s->my);
     glUniform2f(s_u_off, s->mx, s->my);
+#ifdef IGN_GL_VITA
+    glUniform2f(s_u_dst_size, (float)s->pw, (float)s->ph);
+#endif
 }
 
 /* Logical to physical, margins included. */
@@ -486,7 +536,7 @@ void canvas_clear(u8 *key, u8 index, size_t bytes)
         return;
     }
     glBindFramebuffer(GL_FRAMEBUFFER, s->fbo);
-    glClearColor(index / 255.0f, 0, 0, 0);
+    glClearColor(IGN_INDEX_F(index), 0, 0, 0);
     glClear(GL_COLOR_BUFFER_BIT);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
@@ -541,10 +591,11 @@ void canvas_put(u8 *dst, const u8 *pixels, int pitch)
     if (s->mx != 0 || s->my != 0) {
         /* A whole screen put: the margins take its first pixel's
          * colour, the picture's ground. */
-        glClearColor((s->margin >= 0 ? s->margin : pixels[0]) / 255.0f, 0, 0, 0);
+        glClearColor(IGN_INDEX_F(s->margin >= 0 ? s->margin : pixels[0]), 0, 0, 0);
         glClear(GL_COLOR_BUFFER_BIT);
     }
     glUniform1i(s_u_mode, 0);
+    src_size(s->lw, s->lh);
     quad(0, 0, (float)s->lw, (float)s->lh, 0, 0, (float)s->lw, (float)s->lh);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
@@ -677,8 +728,7 @@ static void snapshot_rect(struct surface *s, float x0, float y0, float x1, float
         return;
     }
     glActiveTexture(GL_TEXTURE3);
-    glBindTexture(GL_TEXTURE_2D, s->copy);
-    glCopyTexSubImage2D(GL_TEXTURE_2D, 0, px0, py0, px0, py0, px1 - px0, py1 - py0);
+    ign_copy_rect(s->fbo, s->copy, px0, py0, px1 - px0, py1 - py0);
 }
 
 /* Binds the table and, if it can blend, the pixels under the
@@ -728,6 +778,7 @@ int canvas_sprite(const u8 *pixels, int w, int h, int stride, s32 x, s32 y, s32 
     tex = sprite_tex(pixels, w, h, stride);
     bind(s);
     scissor(s);
+    src_size(w, h);
     if (m == NULL) {
         use_table(s, g_gfx_color_table, fx, fy, fx + w, fy + h);
         glActiveTexture(GL_TEXTURE0);
@@ -793,6 +844,7 @@ int canvas_blend_rect(const u8 *src, int x0, int y0, int x1, int y1, u8 *dst, in
         return 1;
     }
     upload_src(src + y0 * src_pitch + x0, w, h, src_pitch);
+    src_size(w, h);
     use_table(d, table, (float)dx, (float)dy, (float)(dx + w), (float)(dy + h));
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, s_upload);
@@ -810,6 +862,7 @@ void canvas_remap(u8 *dst, const u8 *levels, const u8 *table)
     }
     upload_src(levels, d->lw, d->lh, d->lw);
     bind(d);
+    src_size(d->lw, d->lh);
     use_table(d, table, -d->mx, -d->my, d->lw + d->mx, d->lh + d->my);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, s_upload);
@@ -853,8 +906,7 @@ unsigned canvas_snapshot(const u8 *key)
     }
     glBindFramebuffer(GL_FRAMEBUFFER, s->fbo);
     glActiveTexture(GL_TEXTURE3);
-    glBindTexture(GL_TEXTURE_2D, s->copy);
-    glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, s->pw, s->ph);
+    ign_copy_rect(s->fbo, s->copy, 0, 0, s->pw, s->ph);
     glActiveTexture(GL_TEXTURE0);
     return s->copy;
 }

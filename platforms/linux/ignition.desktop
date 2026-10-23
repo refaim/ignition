@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Ignition
+Comment=A reimplementation of the 1997 racer
+Exec=ignition
+Icon=ignition
+Terminal=false
+Categories=Game;ActionGame;

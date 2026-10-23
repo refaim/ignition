@@ -42,6 +42,7 @@
 #include <psp2/io/stat.h>
 #include <psp2/kernel/modulemgr.h>
 #include <psp2/kernel/sysmem.h>
+#include <psp2/kernel/processmgr.h>
 #include <psp2/shacccg.h>
 
 #include <stddef.h>
@@ -647,9 +648,35 @@ static void end_scene(void)
     }
 }
 
+/* Counts of the costly work, logged every two seconds, to find where a
+ * slow frame goes on the console. */
+static struct {
+    int frames, scenes, finishes, uploads, reads, copies;
+    SceUInt64 since;
+} s_stats;
+
+static void stats_frame(void)
+{
+    SceUInt64 now = sceKernelGetProcessTimeWide();
+
+    s_stats.frames++;
+    if (s_stats.since == 0) {
+        s_stats.since = now;
+    } else if (now - s_stats.since >= 2000000) {
+        double secs = (now - s_stats.since) / 1e6, n = s_stats.frames;
+
+        printf("gxm: %.1f fps; a frame: %.1f scenes, %.1f copies, %.1f waits, %.1f uploads, "
+               "%.1f reads\n", n / secs, s_stats.scenes / n, s_stats.copies / n,
+               s_stats.finishes / n, s_stats.uploads / n, s_stats.reads / n);
+        memset(&s_stats, 0, sizeof(s_stats));
+        s_stats.since = now;
+    }
+}
+
 /* Waits for the GPU to finish everything. */
 static void finish(void)
 {
+    s_stats.finishes++;
     end_scene();
     sceGxmFinish(s_ctx);
 }
@@ -664,6 +691,7 @@ static void set_viewport(int w, int h, int flip)
 /* Begins a scene on target t (0 the screen). */
 static int begin_scene(unsigned t)
 {
+    s_stats.scenes++;
     struct target *g;
     struct texture *c;
     SceGxmRenderTarget *rt;
@@ -816,6 +844,7 @@ void rnd_present(void)
     s_back = (s_back + 1) % DISPLAY_BUFFERS;
     s_slot = (s_slot + 1) % FRAMES;
     slot_begin(s_slot);
+    stats_frame();
 }
 
 /* ------------------------------------------------------------ shaders */
@@ -1351,6 +1380,7 @@ unsigned rnd_texture(int format, int w, int h, const void *pixels, int pitch)
 
 void rnd_texture_set(unsigned tex, int w, int h, const void *pixels, int pitch)
 {
+    s_stats.uploads++;
     struct texture *r = tex_get(tex);
     u8 *data;
 
@@ -1666,6 +1696,7 @@ void rnd_clear(const float *rgba, int depth)
 
 void rnd_read(int x, int y, int w, int h, int format, void *out, int pitch)
 {
+    s_stats.reads++;
     int row;
 
     finish();
@@ -1744,6 +1775,7 @@ static void copy_into(unsigned dst, unsigned src, int dw, int dh, int x, int y, 
 
 void rnd_copy(unsigned tex, int x, int y, int w, int h)
 {
+    s_stats.copies++;
     struct texture *d = tex_get(tex);
     struct target *g = tgt_get(s_bound);
 

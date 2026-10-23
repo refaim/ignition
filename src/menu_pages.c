@@ -539,8 +539,12 @@ int menu_page_handler_a(void)
         struct menu_item *track = &page(PAGE_CD)->items[2];
 
         track->max = g_cd_track_count > 25 ? 25 : g_cd_track_count;
+        /* A saved track past the disc's last: the original presses
+         * RIGHT (0x40a108) to wrap it round, on whatever page is up, which
+         * on the language page walks the flags to the last one. The port
+         * wraps the setting itself. */
         if (track->max < settings_get(SET_CD_TRACK)) {
-            g_menu.key_pressed[0xcd] = 1;
+            settings_set(SET_CD_TRACK, track->min);
         }
     }
     g_joysticks[0].enabled = settings_get(0x123) > 0;

@@ -1,7 +1,8 @@
 /*
- * platform_common.h - host code shared by platform_macos.m and
- * platform_sdl.c: the DirectInput-style key queue, scripted key presses,
- * gamepad buttons as keys, and finding the game data.
+ * platform_common.h - host code shared by every host but the Vita's
+ * (macOS, Linux, Windows, the web, Android, iOS): the DirectInput-style
+ * key queue, scripted key presses, gamepad buttons as keys, and finding
+ * the game data.
  */
 
 #ifndef IGN_PLATFORM_COMMON_H

@@ -1,6 +1,6 @@
 /*
- * platform_common.c - host code shared by platform_macos.m and
- * platform_sdl.c. See platform_common.h.
+ * platform_common.c - host code shared by every host but the Vita's.
+ * See platform_common.h.
  */
 
 #include <dirent.h>

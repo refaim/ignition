@@ -19,17 +19,26 @@ three laps, computer drivers, effects, sound, the HUD and the results.
 - About 70% of the game's code is ported. [docs/PROGRESS.md](docs/PROGRESS.md)
   lists every routine of `IGN_WIN.EXE` and its status.
 - Split-screen two-player races work. Network play is not ported.
-- Joystick input is not ported. The keyboard works.
+- The original's joystick code is not ported. The keyboard works, and on
+  every platform but macOS a gamepad presses the game's keys.
 
 ### Platforms
 
 | Platform | Host | Renderer | Status |
 |---|---|---|---|
 | macOS | Cocoa (`src/platform_macos.m`) | OpenGL 3.2 (`src/rnd_gl.c`) | Playable |
+| Linux, Steam Deck | X11, GLX, ALSA (`src/platform_linux.c`) | OpenGL 3.2 (`src/rnd_gl.c`) | Runs; tested under Xvfb with Mesa. See [platforms/linux](platforms/linux/README.md). |
+| Windows x86_64 | Win32, WGL, waveOut, XInput (`src/platform_windows.c`) | OpenGL 3.2 (`src/rnd_gl.c`) | Runs under Wine; not yet run on Windows. See [platforms/windows](platforms/windows/README.md). |
+| Web | Emscripten, WebGL 2, Web Audio (`src/platform_web.c`) | OpenGL ES 3.0 (`src/rnd_gl.c`) | Runs in Chrome. See [platforms/web](platforms/web/README.md). |
+| Android | NativeActivity, EGL, AAudio (`src/platform_android.c`) | OpenGL ES 3.0 (`src/rnd_gl.c`) | See [platforms/android](platforms/android/README.md). |
+| iOS, iPadOS | UIKit, OpenGL ES, AudioUnit (`src/platform_ios.m`) | OpenGL ES 3.0 (`src/rnd_gl.c`) | Runs in the simulator. See [platforms/ios](platforms/ios/README.md). |
 | PlayStation Vita | VitaSDK (`src/platform_vita.c`) | GXM (`src/rnd_gxm.c`) | Builds; not yet run on hardware. See [docs/vita.md](docs/vita.md). |
 
 The hosts use only each system's own APIs. The project has no third-party
-dependencies.
+dependencies; `src/third_party/` holds only Khronos' OpenGL headers.
+[docs/platforms.md](docs/platforms.md) explains how the platforms share the
+code and why DOS, Windows 9x, the PSP and the Analogue Pocket are not
+ported.
 
 ### Rendering
 
@@ -60,6 +69,10 @@ The game reads its files from `disc/`, and plays the CD music from the disc
 image's audio tracks. To use another folder, pass `--data DIR` and
 `--cue FILE`.
 
+The packaged builds need no extract step: put the disc image next to the
+program (or in the folder each platform's guide names), and the game copies
+the files out of it at the first start.
+
 ## Build
 
 You need Xcode's command line tools on macOS. To build and run the game:
@@ -69,6 +82,18 @@ make        # builds ./ignition and the extract tool
 make run    # builds, then starts the game
 make test   # runs the tests that need no game data
 make clean
+```
+
+The other platforms build from the same Makefile. Each one's guide lists
+the tools it needs:
+
+```bash
+make linux          # Linux and the Steam Deck: build-linux/ignition
+make windows        # Windows, cross-built with MinGW-w64: build-windows/ignition.exe
+make web            # the browser, with Emscripten: build-web/dist/
+make android        # Android: build-android/ignition.apk
+make ios-sim        # iOS, for the simulator
+make ios            # iOS: build-ios/ignition.ipa, unsigned
 ```
 
 For the PlayStation Vita, see [docs/vita.md](docs/vita.md):
@@ -88,6 +113,7 @@ make vita-deploy   # copies it to a Vita
 | `--software` | Draws the 2D on the CPU. |
 | `--view FILE.PIC` | Shows one of the game's pictures. |
 | `--text TEXT` | Shows `TEXT` in the game's menu font. |
+| `--version` | Prints this port's version. |
 
 These options are for testing:
 
@@ -106,6 +132,24 @@ saves a screenshot 30 seconds in:
     --press 6500:1c --press 8000:1c --press 9500:1c --press 11000:1c \
     --shot 30000:race.tga
 ```
+
+## Versions and releases
+
+The port's version is in [VERSION](VERSION). The game logs it after the
+original's own version line ("Ignition version 6.53 initiated"), and
+`./ignition --version` prints it. [CHANGELOG.md](CHANGELOG.md) lists the
+changes in each version.
+
+GitHub Actions builds every platform on each push and pull request
+(`.github/workflows/ci.yml`). Pushing a tag `vX.Y.Z` that matches `VERSION`
+builds the packages and publishes a GitHub release with that version's
+section of the changelog (`.github/workflows/release.yml`). To make a
+release:
+
+1. Set the new version in `VERSION`.
+2. Move the entries under `[Unreleased]` in `CHANGELOG.md` into a new
+   `## [X.Y.Z] - YYYY-MM-DD` section.
+3. Commit, then tag `vX.Y.Z` and push the tag.
 
 ## How the port is made
 

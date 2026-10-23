@@ -25,6 +25,12 @@ make run    # builds, then starts the game
 make test   # runs the tests that need no game data
 ```
 
+The other platforms build with `make linux`, `make windows`, `make web`,
+`make android`, `make ios` and `make vita`. [docs/platforms.md](docs/platforms.md)
+explains how they share the code, and each platform's guide under
+`platforms/` lists its tools. CI builds every platform on each pull request;
+it cannot run the game, as the game data is not public.
+
 [README.md](README.md) lists the command line options. `--press`, `--shot`
 and `--autopilot` let you run the game without touching it, which is useful
 to test a change.
@@ -68,7 +74,9 @@ There is no test suite for the game itself. Before you open a pull request:
 2. Keep each pull request to one fix or feature.
 3. Write commit subjects in the imperative ("Fix the lap count after a
    respawn"), and explain why in the body.
-4. Open the pull request against `main`.
+4. Add a line under `[Unreleased]` in [CHANGELOG.md](CHANGELOG.md) for
+   anything a player would notice.
+5. Open the pull request against `main`.
 
 By contributing, you agree that your contribution is licensed under the
 project's [GNU General Public License v3.0](LICENSE).

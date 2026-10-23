@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "canvas.h"
 #include "cd.h"
 #include "game.h"
 #include "lisa/file.h"
@@ -240,22 +241,45 @@ static void read_settings(void)
     g_views = g_two_players + 1;
 }
 
-/* 0x418a60: the loading bar, `percent` of the way. */
-void race_progress(int percent)
+/* In NATIVE the loading screen is the port's own: the back buffer is a
+ * GPU surface with the menus' margins, on black instead of the level's
+ * 320 x 200 picture, with the same panels and bar at the menus' scale.
+ * It is drawn whole for each step of the bar. */
+static int native_loading(void)
 {
-    int w = g_screen_width, third = w / 3, row, x, len;
+    return canvas_hardware() && canvas_resolution() == CANVAS_NATIVE;
+}
 
-    for (row = 0; row < 27; row++) {
-        for (x = 0x68; x < 0x127; x++) {
-            g_back_buffer[row * w + x] = g_level_pic[0x34e + row * w + x];
-        }
-    }
+static void draw_loading(int percent);
+
+static void progress_bar(int percent)
+{
+    int w = g_screen_width, third = w / 3, len;
+
     len = (int)((text_width(s_loading[language() % 6], g_fonts_menu[1]) + 20) * percent
                 * 0.011899999999999999);
     blend_rect(g_race_buffer, 0, 0x32, third + len, 0x4b, g_back_buffer, 0, 4, g_level_pan,
                0x140, w);
     blend_rect(g_race_buffer, third + len, 0x64, 0x140, 0x7d, g_back_buffer, third + len, 4,
                g_level_pan, 0x140, w);
+}
+
+/* 0x418a60: the loading bar, `percent` of the way. */
+void race_progress(int percent)
+{
+    int w = g_screen_width, row, x;
+
+    if (canvas_is_gpu(g_back_buffer)) {
+        draw_loading(percent);
+        present_back_buffer();
+        return;
+    }
+    for (row = 0; row < 27; row++) {
+        for (x = 0x68; x < 0x127; x++) {
+            g_back_buffer[row * w + x] = g_level_pic[0x34e + row * w + x];
+        }
+    }
+    progress_bar(percent);
     present_back_buffer();
 }
 
@@ -269,28 +293,37 @@ static void race_target(void)
 
 /* 0x418650: the loading screen: the level's picture, the track's name
  * and "LOADING" on panels, blended in. */
-static void loading_screen(void)
+static void draw_loading(int percent)
 {
     int w = g_screen_width, h = g_screen_height, third = w / 3, i;
     const s32 *r = g_position_icon_rect;
     struct sprite_pos pos;
     const char *title = s_track_titles[g_track % 7];
     const char *loading = s_loading[language() % 6];
-    int title_w, loading_w;
+    int title_w, loading_w, gpu = canvas_is_gpu(g_back_buffer), mx = 0, my = 0;
 
-    memcpy(g_back_buffer, g_level_pic + 0x34e, (size_t)w * h);
+    if (gpu) {
+        float fx, fy;
+
+        canvas_extent(g_back_buffer, &fx, &fy);
+        mx = (int)fx;
+        my = (int)fy;
+        canvas_clear(g_back_buffer, 0, (size_t)w * h);
+    } else {
+        memcpy(g_back_buffer, g_level_pic + 0x34e, (size_t)w * h);
+    }
     video_set_palette(g_level_col + 8);
     g_gfx_color_table = g_level_pan;
     set_target(g_back_buffer, w, w, h, 8);
-    pos.x = 0;
-    pos.y = 0;
+    pos.x = -mx << 8;
+    pos.y = -my << 8;
     sprite_draw(g_position_icons[0], &pos, NULL);
-    pos.x = (w - r[2]) << 8;
+    pos.x = (w - r[2] + mx) << 8;
     sprite_draw(g_position_icons[1], &pos, NULL);
-    pos.x = 0;
-    pos.y = (h - r[3]) << 8;
+    pos.x = -mx << 8;
+    pos.y = (h - r[3] + my) << 8;
     sprite_draw(g_position_icons[2], &pos, NULL);
-    pos.x = (w - r[2]) << 8;
+    pos.x = (w - r[2] + mx) << 8;
     sprite_draw(g_position_icons[3], &pos, NULL);
     memset(g_race_buffer, 0, 0x75300);
 
@@ -302,8 +335,12 @@ static void loading_screen(void)
     panels_clear();
     set_target(g_race_buffer, 0x140, 0x140, 0x1e0, 8);
     text_draw(title, g_fonts_menu[1], third + 13, 0x1e);
-    for (i = 0; i < w * h; i++) {
-        g_back_buffer[i] = g_level_pan[g_race_buffer[i] << 8 | g_back_buffer[i]];
+    if (gpu) {
+        canvas_blend_rect(g_race_buffer, 0, 0, w, h, g_back_buffer, 0, 0, g_level_pan, 0x140);
+    } else {
+        for (i = 0; i < w * h; i++) {
+            g_back_buffer[i] = g_level_pan[g_race_buffer[i] << 8 | g_back_buffer[i]];
+        }
     }
     memset(g_race_buffer, 0, (size_t)w * h);
 
@@ -325,7 +362,15 @@ static void loading_screen(void)
     pos.x = 0x2c00;
     pos.y = 0x100;
     sprite_draw(g_bolt_icon, &pos, NULL);
-    race_progress(0);
+    progress_bar(percent);
+}
+
+static void loading_screen(void)
+{
+    if (native_loading()) {
+        canvas_register(g_back_buffer, 320, 200);
+    }
+    draw_loading(0);
     present_back_buffer();
 }
 

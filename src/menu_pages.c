@@ -558,7 +558,12 @@ int menu_page_handler_a(void)
     }
     if (cur != page(PAGE_LANGUAGE) && cur != page(13) && cur != page(14)
         && cur != page(PAGE_BEST_TIMES) && cur != page(PAGE_NETWORK) && intro_done) {
-        draw_sprite_at(g_sprite_logo, 0x4b, 2);
+        float mx, my;
+
+        /* In NATIVE the logo goes up into the margin, to the window's
+         * top, and the page below it has the height to itself. */
+        canvas_extent(g_menu_screen, &mx, &my);
+        draw_sprite_at(g_sprite_logo, 0x4b, 2 - (int)my);
     }
     panel = idle_seq((int)(fe_4be598 - 1080.0) / 0xa8);
     if (panel == -2) {

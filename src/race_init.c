@@ -487,6 +487,9 @@ void race_init_hud(void)
     int size = g_screen_size, i;
     s32 w = modes[size][0], h = modes[size][1], fx = focal[size][0], fy = focal[size][1];
 
+    /* The loading screen's surface (NATIVE) is done with. */
+    canvas_unregister(g_back_buffer);
+
     if (race_cfg(0x10b) == CANVAS_NATIVE && size == 2) {
         /* 800 x 600's sprites and focal length, the focal scaled to the
          * height so the view sees as much up and down. */

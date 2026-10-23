@@ -76,12 +76,13 @@ enum { P_CLEAR = RND_PROGRAMS, P_COPY, PROGRAMS };
     "    }\n"
 
 /* Texel t of page `page` of a slot laid out as tiles, grid.x to a row,
- * grid.yz one over the texture's size. */
+ * grid.yz one over the texture's size. (`row` is a keyword in the Vita's
+ * Cg; the shaders do not name anything that.) */
 #define PAGES_TEXEL \
     "float pages_texel(sampler2D pages, float3 grid, float page, float2 t) {\n" \
-    "    float row = floor((page + 0.5) / grid.x);\n" \
-    "    float col = page - row * grid.x;\n" \
-    "    float2 at = (float2(col, row) * 256.0 + t + 0.5) * grid.yz;\n" \
+    "    float tile_y = floor((page + 0.5) / grid.x);\n" \
+    "    float tile_x = page - tile_y * grid.x;\n" \
+    "    float2 at = (float2(tile_x, tile_y) * 256.0 + t + 0.5) * grid.yz;\n" \
     "    return floor(tex2D(pages, at).r * 255.0 + 0.5);\n" \
     "}\n"
 
@@ -109,13 +110,13 @@ static const char s_canvas_f[] =
     "    float2 t = clamp(floor(v_uv), float2(0.0, 0.0), u_src_size - 1.0);\n"
     "    float s = floor(tex2D(u_src, (t + 0.5) / u_src_size).r * 255.0 + 0.5);\n"
     "    if (u_mode > 0.5) {\n"
-    "        float2 row = tex2D(u_rows, float2((s + 0.5) / 256.0, 0.5)).rg;\n"
-    "        float cls = floor(row.r * 255.0 + 0.5);\n"
+    "        float2 kind = tex2D(u_rows, float2((s + 0.5) / 256.0, 0.5)).rg;\n"
+    "        float cls = floor(kind.r * 255.0 + 0.5);\n"
     "        if (cls < 0.5) {\n"
     "            discard;\n"
     "        }\n"
     "        if (cls < 1.5) {\n"
-    "            s = floor(row.g * 255.0 + 0.5);\n"
+    "            s = floor(kind.g * 255.0 + 0.5);\n"
     "        } else {\n"
     "            s = table_of(u_table, u_dst, u_dst_size, frag, s);\n"
     "        }\n"

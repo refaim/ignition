@@ -407,8 +407,9 @@ sample, delta coded, at 22050 Hz) and `.RW8` (signed 8 bit at
   as 3 s32, then 44 byte faces: u32 flags (`0x00110011` on the menu
   cars), 3 s32 vertex indices, 3 pairs of s32 u, v in 8.8 texels, and
   a s32 whose high word is the texture page.
-- `.TEX`: 64 bytes, then 256 x 256 pages of 8 bit texels, loaded at a
-  64 KB boundary.
+- `.TEX`: 256 x 256 pages of 8 bit texels from the start, no header;
+  some files end with zero padding or a part page. Loaded at a 64 KB
+  boundary. See docs/formats.md.
 
 ### Menu background files
 

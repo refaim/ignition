@@ -176,6 +176,8 @@ function names its address in a comment, for example `/* 0x422680 */`.
   generated from the executable by `tools/gen_race_data.py` and
   `tools/gen_menu_data.py`.
 - `tools/progress.py` writes [docs/PROGRESS.md](docs/PROGRESS.md).
+- [docs/formats.md](docs/formats.md) describes the game's files, and
+  [docs/engine.md](docs/engine.md) how the engine and its tracks work.
 
 The disassembly and the IDA database are not in this repository.
 

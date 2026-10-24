@@ -8,7 +8,9 @@
  *   0x08  u16  height
  *   0x0a  u16  x, u16 y    position the picture was cut from (unused)
  *   0x12  u16  8, bits per pixel
- *   0x4e  768  palette, 256 x RGB, 8 bits a channel
+ *   0x40  u32  0x308, the palette block's size; 0x44 u32 0
+ *   0x48  768  palette, 256 x RGB, 8 bits a channel
+ *   0x348 u32  width x height + 6; 0x34c u16 1
  *   0x34e      width x height pixels, rows top to bottom
  *
  * The game reads pixels from 0x34e with a stride of the width (for
@@ -23,7 +25,7 @@
 
 enum {
     PIC_MAGIC = 0x9500,
-    PIC_PALETTE = 0x4e,
+    PIC_PALETTE = 0x48,
     PIC_PIXELS = 0x34e
 };
 

@@ -127,13 +127,13 @@ class Picture:
 
 def read_pic(path, clear=None):
     """A .PIC: a 0x40-byte header (width at +6, height at +8), an 8-byte
-    colour header and 256 colours of 8 bits, then the pixels. Index
-    `clear` is see-through."""
+    colour header, 256 colours of 8 bits at 0x48, a 6-byte pixel header,
+    then the pixels at 0x34e. Index `clear` is see-through."""
     with open(path, "rb") as f:
         d = f.read()
     w, h = struct.unpack_from("<HH", d, 6)
     pal = [tuple(d[0x48 + 3 * i:0x4b + 3 * i]) for i in range(256)]
-    px = d[0x348:0x348 + w * h]
+    px = d[0x34e:0x34e + w * h]
     return Picture(w, h, [None if p == clear else pal[p] for p in px])
 
 

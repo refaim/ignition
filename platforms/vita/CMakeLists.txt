@@ -65,13 +65,25 @@ target_link_libraries(ignition
     c
 )
 
-# LiveArea art, drawn by tools/vita_sce_sys.py.
+# LiveArea art, by tools/vita_sce_sys.py: from the game's own pictures
+# when an extracted disc is found (IGN_DISC, default the first
+# data/*/disc), else drawn.
+if(NOT DEFINED IGN_DISC)
+    file(GLOB DISCS ${ROOT}/data/*/disc)
+    list(SORT DISCS)
+    list(LENGTH DISCS n)
+    set(IGN_DISC "")
+    if(n GREATER 0)
+        list(GET DISCS 0 IGN_DISC)
+    endif()
+endif()
 set(SYS ${CMAKE_CURRENT_BINARY_DIR}/sce_sys)
 add_custom_command(
     OUTPUT ${SYS}/icon0.png ${SYS}/livearea/contents/bg.png ${SYS}/livearea/contents/startup.png
-    COMMAND python3 ${ROOT}/tools/vita_sce_sys.py ${SYS}
+    COMMAND python3 ${ROOT}/tools/vita_sce_sys.py ${SYS} "${IGN_DISC}"
     DEPENDS ${ROOT}/tools/vita_sce_sys.py
-    COMMENT "LiveArea art")
+    COMMENT "LiveArea art"
+    VERBATIM)
 add_custom_target(ignition_sce_sys DEPENDS ${SYS}/icon0.png)
 
 # Compiled shaders, once there are some: packaged as app0:shaders/*.gxp.

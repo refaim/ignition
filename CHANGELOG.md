@@ -4,6 +4,13 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- A championship no longer quits after its second race: the end of a race frees what the race loaded.
+- NATIVE's menus sit closer under the logo, with their rows spread out, and the last options (RESET GHOST CAR and its YES / NO) draw in full.
+
+### Added
+- The Vita's LiveArea bubble, backdrop and gate are made from the game's installer picture and logo when the build finds an extracted disc.
+
 ## [0.1.0] - 2026-10-23
 
 The first version: the front end and single-player races are playable from

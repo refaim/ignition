@@ -24,8 +24,16 @@ make vita                      # -> build-vita/ignition.vpk (title IGNT00001)
 
 `make vita-clean` removes `build-vita/`.
 
-The LiveArea images are drawn by `tools/vita_sce_sys.py`, so the package
-holds no art from the game.
+`tools/vita_sce_sys.py` makes the LiveArea images: the bubble, the
+backdrop and the gate. With an extracted disc under `data/`, it makes them
+from the game's installer picture (`INSTALL.PIC`) and logo
+(`BALTAZAR/DATA/IGN_LOGO.PIC`). To use another disc, configure with
+`-DIGN_DISC=DIR`. Without a disc, the tool draws a road at dusk instead,
+so CI's packages hold no art from the game.
+
+The LiveArea keeps the images it had when the package was installed. To
+see new ones, install the `.vpk` again with VitaShell, or use "Refresh
+LiveArea".
 
 ## Install
 

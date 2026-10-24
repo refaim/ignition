@@ -132,10 +132,17 @@ int cd_open(void)
     if (s_open) {
         return 1;
     }
-    if (s_cue[0] == '\0' || !cdimage_open(s_cue, vfs_root())) {
+    if (s_cue[0] == '\0') {
+        fprintf(stderr, "cd: no .cue next to %s: no CD music\n", vfs_root());
         return 0;
     }
-    audio_init();
+    if (!cdimage_open(s_cue, vfs_root())) {
+        fprintf(stderr, "cd: %s does not open: no CD music\n", s_cue);
+        return 0;
+    }
+    if (!audio_init()) {
+        fprintf(stderr, "cd: no audio output\n");
+    }
     s_open = 1;
     s_on = 1;
     return 1;
@@ -221,14 +228,18 @@ int cd_play_track(int track)
     stream_close();
     s_fp = fopen(path, "rb");
     if (s_fp == NULL || fseek(s_fp, offset, SEEK_SET) != 0) {
+        fprintf(stderr, "cd: track %d: cannot read %s\n", track, path);
         stream_close();
         return 0;
     }
     s_stream = audio_cd_open();
     if (s_stream == NULL) {
+        fprintf(stderr, "cd: track %d: no audio output\n", track);
         stream_close();
         return 0;
     }
+    fprintf(stderr, "cd: track %d, %u:%02u\n", track, frames / AUDIO_RATE / 60,
+            frames / AUDIO_RATE % 60);
     s_left = frames;
     s_swap = big;
     s_playing_track = track;

@@ -11,8 +11,10 @@
 #include <string.h>
 
 #include "anim_tex.h"
+#include "canvas.h"
 #include "cd.h"
 #include "game.h"
+#include "gl3d.h"
 #include "input.h"
 #include "lisa/file.h"
 #include "lisa/font.h"
@@ -1286,4 +1288,9 @@ void race_end(void)
     memset(g_back_buffer, 0, 0x1d4c0 * 4);
     present_back_buffer();
     mem_pool_destroy(g_race_pool);
+    /* The port's: the GPU's copies of the race's textures, tables and
+     * meshes are kept by their addresses, which the next race's may
+     * reuse. */
+    gl3d_flush();
+    canvas_forget_tables();
 }

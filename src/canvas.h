@@ -74,6 +74,9 @@ int canvas_sprite(const u8 *pixels, int w, int h, int stride, s32 x, s32 y, s32 
                   const s32 *m);
 /* Forgets the GPU copy of a sprite's pixels. */
 void canvas_forget(const u8 *pixels);
+/* Drops the tables' GPU copies, kept by the tables' addresses: for when
+ * the memory they were in is freed (a race's end). */
+void canvas_forget_tables(void);
 
 /* blend_rect onto a surface: dst = table[src << 8 | dst] over the
  * rectangle (x0, y0)..(x1, y1) of src, put at (dx, dy). src may be a

@@ -573,6 +573,20 @@ static unsigned sprite_tex(const u8 *pixels, int w, int h, int stride)
     return old->tex;
 }
 
+void canvas_forget_tables(void)
+{
+    int i;
+
+    if (!s_ready) {
+        return;
+    }
+    for (i = 0; i < s_table_count; i++) {
+        rnd_texture_free(s_tables[i].tex);
+        rnd_texture_free(s_tables[i].rows);
+    }
+    s_table_count = 0;
+}
+
 void canvas_forget(const u8 *pixels)
 {
     int i;

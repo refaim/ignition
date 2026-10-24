@@ -101,7 +101,7 @@ the keyboard in the menu, the buttons follow.
 | D-pad left/right, left stick | arrows | steer | arrows | |
 | D-pad up/down | arrows | gear up / gear down | arrows | |
 | R / L (trigger or shoulder) | | accelerate / brake | | |
-| Cross | Return | action (boost) | Return | Yes |
+| Cross | Return | action (boost); on the results, Return | Return | Yes |
 | Circle | Escape | | Escape | No |
 | Triangle | | look back | | |
 | Start | Return | Escape (pause) | Escape | Escape |

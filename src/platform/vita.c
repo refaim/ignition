@@ -14,7 +14,7 @@
  *   race    left / right        steer (player 1's keys, g_race_cfg+0x17f)
  *           d-pad up / down     gear up / gear down
  *           R      accelerate   L         brake
- *           Cross  action       Triangle  look back
+ *           Cross  action (Return on the results)   Triangle  look back
  *           Start  Escape (pause)          Select    Return (go on)
  *   paused  Cross  Return        Circle    Escape (back to the race)
  *   Y/N box Cross  Yes           Circle    No
@@ -39,8 +39,8 @@
 #include "dik.h"
 #include "game.h"
 #include "platform/platform.h"
-#include "race/race.h"
 #include "race/init.h"
+#include "race/race.h"
 #include "rnd.h"
 
 /* newlib's heap: the game's pools and the decoded data. rnd_gxm.c
@@ -269,7 +269,8 @@ static void pad_keys(u32 b, int lx, int ly, u8 *keys)
             want(keys, l, k[3]);
             want(keys, pad_up, k[4]);
             want(keys, pad_down, k[5]);
-            want(keys, cross, k[6]);
+            /* On the results Cross goes on, as Return does. */
+            want(keys, cross, r_5530a8 > 0 ? DIK_RETURN : k[6]);
             want(keys, triangle, k[7]);
         }
     }

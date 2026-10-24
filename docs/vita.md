@@ -98,12 +98,12 @@ the keyboard in the menu, the buttons follow.
 
 | Vita | Menus | Race | Race paused | Y/N question |
 |---|---|---|---|---|
-| D-pad, left stick | arrows | left/right steer, up/down arrows | arrows | |
-| Cross | Return | accelerate | Return | Yes |
-| Square | | brake | | |
-| Circle | Escape | action | Escape | No |
+| D-pad left/right, left stick | arrows | steer | arrows | |
+| D-pad up/down | arrows | gear up / gear down | arrows | |
+| R / L (trigger or shoulder) | | accelerate / brake | | |
+| Cross | Return | action (boost) | Return | Yes |
+| Circle | Escape | | Escape | No |
 | Triangle | | look back | | |
-| R / L | | gear up / gear down | | |
 | Start | Return | Escape (pause) | Escape | Escape |
 | Select | Escape | Return (go on) | Return | Return |
 

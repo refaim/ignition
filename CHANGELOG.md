@@ -5,7 +5,8 @@ All notable changes to this project are documented in this file.
 ## [Unreleased]
 
 ### Changed
-- The race effects (smoke, sparks, explosions, nitro, rain) are drawn at 60% of the original's size.
+- Vita race controls: the right and left triggers accelerate and brake, Cross is the action (boost), the d-pad's up and down change gear, and the d-pad or left stick steers.
+- The race effects (smoke, sparks, explosions, nitro, rain) are drawn at 40% of the original's size.
 
 ### Fixed
 - On the Vita, a re-created sprite no longer shows its old picture: the language page's selected flag now follows the selection.

@@ -121,7 +121,7 @@ static void sprite_mesh(s32 *m, s32 vx, s32 vy, s32 vz)
 /* The effects' scale from 320 x 200, x and y (0x552d80, 0x552f5c),
  * times FX_SIZE / 10: the port draws the effects smaller than the
  * original, which on the Vita also means fewer of them overlapping. */
-enum { FX_SIZE = 6 };
+enum { FX_SIZE = 4 };
 
 static s32 fx_scale_x(void)
 {

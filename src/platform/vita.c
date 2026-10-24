@@ -12,10 +12,9 @@
  *   menus   d-pad / left stick  arrows       Cross, Start   Return
  *           Circle, Select      Escape
  *   race    left / right        steer (player 1's keys, g_race_cfg+0x17f)
- *           up / down           the arrow keys (the pause menu)
- *           Cross  accelerate   Square    brake
- *           R      gear up      L         gear down
- *           Circle action       Triangle  look back
+ *           d-pad up / down     gear up / gear down
+ *           R      accelerate   L         brake
+ *           Cross  action       Triangle  look back
  *           Start  Escape (pause)          Select    Return (go on)
  *   paused  Cross  Return        Circle    Escape (back to the race)
  *   Y/N box Cross  Yes           Circle    No
@@ -227,7 +226,7 @@ static void pad_keys(u32 b, int lx, int ly, u8 *keys)
     int up = (b & SCE_CTRL_UP) || ly < 128 - STICK_PUSH;
     int down = (b & SCE_CTRL_DOWN) || ly > 128 + STICK_PUSH;
     int cross = (b & SCE_CTRL_CROSS) != 0, circle = (b & SCE_CTRL_CIRCLE) != 0;
-    int square = (b & SCE_CTRL_SQUARE) != 0, triangle = (b & SCE_CTRL_TRIANGLE) != 0;
+    int triangle = (b & SCE_CTRL_TRIANGLE) != 0;
     int l = (b & (SCE_CTRL_L1 | SCE_CTRL_LTRIGGER)) != 0;
     int r = (b & (SCE_CTRL_R1 | SCE_CTRL_RTRIGGER)) != 0;
     int start = (b & SCE_CTRL_START) != 0, select = (b & SCE_CTRL_SELECT) != 0;
@@ -246,27 +245,31 @@ static void pad_keys(u32 b, int lx, int ly, u8 *keys)
         /* Player 1: left, right, accelerate, brake, gear up, gear down,
          * action, look back. */
         const u8 *k = g_race_cfg + 0x17f;
+        int pad_up = (b & SCE_CTRL_UP) != 0, pad_down = (b & SCE_CTRL_DOWN) != 0;
 
-        want(keys, up, DIK_UP);
-        want(keys, down, DIK_DOWN);
         want(keys, start, DIK_ESCAPE);
         want(keys, select, DIK_RETURN);
         if (g_race_5285c8 == 1) {
             want(keys, cross, yes_key());
             want(keys, circle, DIK_N);
         } else if (r_494990 != 0) {
+            /* The pause menu and the boxes. */
+            want(keys, up, DIK_UP);
+            want(keys, down, DIK_DOWN);
             want(keys, left, DIK_LEFT);
             want(keys, right, DIK_RIGHT);
             want(keys, cross, DIK_RETURN);
             want(keys, circle, DIK_ESCAPE);
         } else {
+            /* Steering on the d-pad or the left stick, the triggers for
+             * the pedals, the d-pad's up and down for the gears. */
             want(keys, left, k[0]);
             want(keys, right, k[1]);
-            want(keys, cross, k[2]);
-            want(keys, square, k[3]);
-            want(keys, r, k[4]);
-            want(keys, l, k[5]);
-            want(keys, circle, k[6]);
+            want(keys, r, k[2]);
+            want(keys, l, k[3]);
+            want(keys, pad_up, k[4]);
+            want(keys, pad_down, k[5]);
+            want(keys, cross, k[6]);
             want(keys, triangle, k[7]);
         }
     }

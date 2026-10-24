@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "canvas.h"
 #include "lisa/texture.h"
 
 enum { TEX_GROW = 1000 };
@@ -54,6 +55,9 @@ static char *dup_name(const char *name)
 
 static void release(struct tex_desc *t)
 {
+    /* The GPU's copy is keyed by the pixels' address, which malloc may
+     * hand out again for the next sprite. */
+    canvas_forget(t->pixels);
     free(t->name);
     free(t->pixels);
 }

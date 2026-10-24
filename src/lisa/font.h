@@ -73,5 +73,7 @@ int text_width(const char *text, int font);
 /* Draws `text` into the 2D target with its top at `y`. Returns 1, 2 for
  * a disabled font, FONT_ERR_BAD_FONT for an unknown one. */
 int text_draw(const char *text, int font, int x, int y);
+/* The same, `scale` times as big (the port's). */
+int text_draw_scaled(const char *text, int font, int x, int y, int scale);
 
 #endif /* IGN_LISA_FONT_H */

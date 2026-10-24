@@ -226,7 +226,15 @@ int text_width(const char *text, int font)
 /* 0x456660 */
 int text_draw(const char *text, int font, int x, int y)
 {
+    return text_draw_scaled(text, font, x, y, 1);
+}
+
+/* The port's: text_draw with each glyph and its advance `scale` times
+ * as big, for NATIVE's larger 2D. */
+int text_draw_scaled(const char *text, int font, int x, int y, int scale)
+{
     const struct font *f;
+    struct sprite_xform xf;
     s32 pen;
     size_t i;
 
@@ -242,7 +250,7 @@ int text_draw(const char *text, int font, int x, int y)
         s32 end = x;
 
         for (i = 0; text[i] != '\0'; i++) {
-            end += advance(f, (unsigned char)text[i]);
+            end += advance(f, (unsigned char)text[i]) * scale;
         }
         if (f->align == FONT_ALIGN_CENTER) {
             pen = x + (x - end) / 2;
@@ -260,13 +268,15 @@ int text_draw(const char *text, int font, int x, int y)
 
             /* A fixed font centres a narrow glyph in its cell. */
             if (!f->proportional && f->widths[g] != (s16)f->cell_width) {
-                left += ((s16)f->cell_width - f->widths[g]) / 2;
+                left += ((s16)f->cell_width - f->widths[g]) / 2 * scale;
             }
             pos.x = left << 8;
             pos.y = y << 8;
-            sprite_draw(f->glyphs[g], &pos, NULL);
+            xf.scale = (float)scale;
+            xf.angle = 0.0f;
+            sprite_draw(f->glyphs[g], &pos, scale == 1 ? NULL : &xf);
         }
-        pen += advance(f, c);
+        pen += advance(f, c) * scale;
     }
     return 1;
 }

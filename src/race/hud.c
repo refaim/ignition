@@ -25,6 +25,7 @@
 #include "race/contact.h"
 #include "race/data.h"
 #include "race/hud.h"
+#include "race/misc.h"
 #include "race/init.h"
 #include "startup.h"
 
@@ -630,7 +631,7 @@ void race_hud(int view, int second)
 void race_draw_messages(void)
 {
     struct race_msg *m = (struct race_msg *)r_552f24;
-    int i, font = g_fonts_menu[r_527f2c];
+    int i, font = g_fonts_menu[r_527f2c], scale = race_box_scaled() ? 2 : 1;
 
     if (m == NULL) {
         return;
@@ -651,8 +652,10 @@ void race_draw_messages(void)
 
             x = (d->view_x1 - d->view_x0) / 2 + d->view_x0;
         }
+        /* NATIVE draws them at the menus' size, as its boxes. */
         g_fonts[font].align = FONT_ALIGN_CENTER;
-        text_draw(m[i].text, font, x, (5 - r_527f2c) * (i + 1) * 8 + g_drivers[0].view_y1);
+        text_draw_scaled(m[i].text, font, x,
+                         (5 - r_527f2c) * (i + 1) * 8 * scale + g_drivers[0].view_y1, scale);
         g_fonts[font].align = FONT_ALIGN_LEFT;
     }
 }

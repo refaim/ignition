@@ -16,6 +16,7 @@
 #include "game.h"
 #include "input.h"
 #include "lisa/font.h"
+#include "prof.h"
 #include "race/race.h"
 #include "race/camera.h"
 #include "race/cars.h"
@@ -125,6 +126,7 @@ static void race_step(double dt)
 {
     int i, finished;
 
+    prof_frame();
     g_race_clock += dt;
     r_563d80 = dt;
     race_countdown();
@@ -174,7 +176,10 @@ static void race_step(double dt)
     for (i = 0; i < g_driver_count; i++) {
         race_car_center(i);
     }
+    prof_begin(PROF_PHYSICS);
     race_physics(r_563d80);
+    prof_end(PROF_PHYSICS);
+    prof_begin(PROF_CARS);
     for (r_5285c0 = 0; r_5285c0 < g_driver_count; r_5285c0++) {
         struct car *c = &g_cars[r_5285c0];
 
@@ -203,9 +208,13 @@ static void race_step(double dt)
     if (g_race_mode == 2 && r_552e48 == -1.0 && r_553068 == 1 && r_5530b8 == 0) {
         race_play_ghost();
     }
+    prof_end(PROF_CARS);
+    prof_begin(PROF_PRESENT);
     present_back_buffer();
+    prof_end(PROF_PRESENT);
 
     /* The fixed steps, one a tick. */
+    prof_begin(PROF_TICKS);
     for (r_54f9a0_acc += dt; r_54f9a0_acc >= 1.0; r_54f9a0_acc -= 1.0) {
         race_car_visuals();
         if (!r_563da0 && !r_5daff0) {
@@ -235,7 +244,10 @@ static void race_step(double dt)
         race_animate_objects();
     }
     r_563d48_last = (s32)(g_frame_time - r_525e48) * 0.036;
+    prof_end(PROF_TICKS);
+    prof_begin(PROF_VIEW);
     race_view(dt);
+    prof_end(PROF_VIEW);
 }
 
 /* 0x4173fb */

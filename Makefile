@@ -45,7 +45,7 @@ CORE_SRC := $(SRCDIR)/app.c $(SRCDIR)/game.c $(SRCDIR)/stubs.c $(SRCDIR)/net.c $
             $(SRCDIR)/menu/engine.c $(SRCDIR)/menu/data.c $(SRCDIR)/settings.c $(SRCDIR)/frontend/frontend.c $(SRCDIR)/frontend/state.c \
             $(SRCDIR)/menu/panels.c $(SRCDIR)/menu/pages.c $(SRCDIR)/audio.c $(SRCDIR)/cd.c $(SRCDIR)/sound.c $(SRCDIR)/cdp.c \
             $(SRCDIR)/video.c $(SRCDIR)/gfx.c $(SRCDIR)/rnd_gl.c $(SRCDIR)/vfs.c $(SRCDIR)/main.c \
-            $(SRCDIR)/cdimage.c
+            $(SRCDIR)/cdimage.c $(SRCDIR)/prof.c
 
 WARN := -Wall -Wextra -Wno-unused-parameter
 

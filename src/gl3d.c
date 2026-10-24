@@ -18,6 +18,7 @@
 
 #include "canvas.h"
 #include "gl3d.h"
+#include "prof.h"
 #include "rnd.h"
 
 enum {
@@ -82,6 +83,7 @@ struct dyn {
 };
 
 static struct dyn s_dyns[MAX_DYN];
+static const struct dyn *s_order[MAX_DYN];   /* far to near */
 static int s_dyn_count;
 static const u8 *s_tables_shd, *s_tables_fixed;     /* 0x63b5f0, 0x63c5f4 */
 static struct { const s32 *begin, *end; } s_dyn_ranges[8];    /* meshes always drawn anew */
@@ -149,6 +151,176 @@ static int cells_touch(const int r[4], int mark)
         }
     }
     return 0;
+}
+
+/* Layers, where copies are dear (GXM: rnd_batch_copies). A face through
+ * a table reads what is under it, so it must come after everything
+ * earlier that it overlaps has been written out: one layer above them.
+ * Any other face only has to be drawn after the earlier faces it
+ * overlaps: in the highest of their layers, after them. Drawn layer by
+ * layer, each in the original order, with a copy before each layer but
+ * the first, the frame is the same as with a copy before every face
+ * through a table; but there is a copy a layer, not one a face.
+ *
+ * Faces overlap when their triangles share area: those that only meet
+ * at an edge, as a mesh's neighbours do, do not (the GPU gives an edge's
+ * pixels to one of them). A grid of cells finds the faces to test. */
+enum { LCELL = 32 };
+
+struct geo {
+    float x[6], y[6];           /* one or two triangles */
+    int tris;
+    int whole;                  /* behind the eye: all of the frame */
+    int r[4];                   /* pixels x0, y0, x1, y1 */
+};
+
+static struct geo *s_geo;
+static int *s_layers, *s_seen;
+static int s_layers_cap, s_stamp;
+static int *s_head, s_head_cap, s_gw, s_gh;
+static struct { int face, next; } *s_nodes;
+static int s_nodes_n, s_nodes_cap;
+
+static int *layers_for(int count)
+{
+    if (count > s_layers_cap) {
+        free(s_layers);
+        free(s_seen);
+        free(s_geo);
+        s_layers_cap = count;
+        s_layers = malloc((size_t)count * sizeof(*s_layers));
+        s_seen = calloc((size_t)count, sizeof(*s_seen));
+        s_geo = malloc((size_t)count * sizeof(*s_geo));
+        s_stamp = 0;
+    }
+    return s_layers;
+}
+
+static void grid_reset(int w, int h)
+{
+    s_gw = (w + LCELL - 1) / LCELL;
+    s_gh = (h + LCELL - 1) / LCELL;
+    if (s_gw * s_gh > s_head_cap) {
+        free(s_head);
+        s_head_cap = s_gw * s_gh;
+        s_head = malloc((size_t)s_head_cap * sizeof(*s_head));
+    }
+    memset(s_head, 0xff, (size_t)s_gw * s_gh * sizeof(*s_head));
+    s_nodes_n = 0;
+}
+
+/* Projections of triangle t (x, y) onto the axis normal to edge a..b. */
+static void project(const float *x, const float *y, float nx, float ny, float *lo, float *hi)
+{
+    int k;
+
+    *lo = *hi = x[0] * nx + y[0] * ny;
+    for (k = 1; k < 3; k++) {
+        float p = x[k] * nx + y[k] * ny;
+
+        *lo = p < *lo ? p : *lo;
+        *hi = p > *hi ? p : *hi;
+    }
+}
+
+/* Whether two triangles share area: no edge of either separates them. */
+static int tris_overlap(const float *ax, const float *ay, const float *bx, const float *by)
+{
+    const float *tx[2] = { ax, bx }, *ty[2] = { ay, by };
+    int t, k;
+
+    for (t = 0; t < 2; t++) {
+        for (k = 0; k < 3; k++) {
+            float nx = ty[t][(k + 1) % 3] - ty[t][k], ny = tx[t][k] - tx[t][(k + 1) % 3];
+            float alo, ahi, blo, bhi, eps;
+
+            if (nx == 0.0f && ny == 0.0f) {
+                continue;
+            }
+            project(ax, ay, nx, ny, &alo, &ahi);
+            project(bx, by, nx, ny, &blo, &bhi);
+            eps = 1e-3f * (fabsf(nx) + fabsf(ny));
+            if (ahi <= blo + eps || bhi <= alo + eps) {
+                return 0;
+            }
+        }
+    }
+    return 1;
+}
+
+static int faces_overlap(const struct geo *a, const struct geo *b)
+{
+    int i, j;
+
+    if (a->whole || b->whole) {
+        return 1;
+    }
+    if (a->r[2] <= b->r[0] || b->r[2] <= a->r[0] || a->r[3] <= b->r[1] || b->r[3] <= a->r[1]) {
+        return 0;
+    }
+    for (i = 0; i < a->tris; i++) {
+        for (j = 0; j < b->tris; j++) {
+            if (tris_overlap(a->x + 3 * i, a->y + 3 * i, b->x + 3 * j, b->y + 3 * j)) {
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
+/* Face i's layer (s_geo[i], through a table or not), from the earlier
+ * faces it overlaps; then it is entered in the grid. */
+static int layer_of(int i, int through_table)
+{
+    const struct geo *g = &s_geo[i];
+    int x, y, best = 0;
+    int cx0 = g->r[0] / LCELL, cy0 = g->r[1] / LCELL;
+    int cx1 = (g->r[2] - 1) / LCELL, cy1 = (g->r[3] - 1) / LCELL;
+
+    if (g->whole) {
+        cx0 = cy0 = 0;
+        cx1 = s_gw - 1;
+        cy1 = s_gh - 1;
+    }
+    cx0 = cx0 < 0 ? 0 : cx0;
+    cy0 = cy0 < 0 ? 0 : cy0;
+    cx1 = cx1 >= s_gw ? s_gw - 1 : cx1;
+    cy1 = cy1 >= s_gh ? s_gh - 1 : cy1;
+    if (++s_stamp == 0) {
+        memset(s_seen, 0, (size_t)s_layers_cap * sizeof(*s_seen));
+        s_stamp = 1;
+    }
+    for (y = cy0; y <= cy1; y++) {
+        for (x = cx0; x <= cx1; x++) {
+            int n;
+
+            for (n = s_head[y * s_gw + x]; n >= 0; n = s_nodes[n].next) {
+                int j = s_nodes[n].face;
+
+                /* Only a face above the best so far can raise it. */
+                if (s_seen[j] == s_stamp || s_layers[j] <= best) {
+                    continue;
+                }
+                s_seen[j] = s_stamp;
+                if (faces_overlap(g, &s_geo[j])) {
+                    best = s_layers[j] > best ? s_layers[j] : best;
+                }
+            }
+        }
+    }
+    s_layers[i] = through_table ? best + 1 : best;
+    for (y = cy0; y <= cy1; y++) {
+        for (x = cx0; x <= cx1; x++) {
+            if (s_nodes_n == s_nodes_cap) {
+                s_nodes_cap = s_nodes_cap ? s_nodes_cap * 2 : 4096;
+                s_nodes = realloc(s_nodes, (size_t)s_nodes_cap * sizeof(*s_nodes));
+            }
+            s_nodes[s_nodes_n].face = i;
+            s_nodes[s_nodes_n].next = s_head[y * s_gw + x];
+            s_head[y * s_gw + x] = s_nodes_n++;
+        }
+    }
+    return s_layers[i];
 }
 
 static void init(void)
@@ -732,9 +904,13 @@ static void collect(const struct scene *sc, const struct scene_obj *o, const flo
 
 static int dyn_far_first(const void *a, const void *b)
 {
-    const struct dyn *p = a, *q = b;
+    const struct dyn *p = *(const struct dyn *const *)a, *q = *(const struct dyn *const *)b;
 
-    return p->depth < q->depth ? 1 : p->depth > q->depth ? -1 : 0;
+    /* Equal depths keep the order the faces came in. */
+    if (p->depth != q->depth) {
+        return p->depth < q->depth ? 1 : -1;
+    }
+    return p < q ? -1 : p > q ? 1 : 0;
 }
 
 /* The pixels a face covers, from its clip space vertices. */
@@ -770,6 +946,38 @@ static int dyn_rect(const struct dyn *d, int r[4])
     return r[2] > r[0] && r[3] > r[1];
 }
 
+/* Faces gathered for one draw: their vertices, one after the other. */
+static float *s_batch;
+static int s_batch_cap;
+
+static int batch_add(int n, const struct dyn *d)
+{
+    if (n + d->count > s_batch_cap) {
+        s_batch_cap = (n + d->count) * 2;
+        s_batch = realloc(s_batch, (size_t)s_batch_cap * DYN_FLOATS * sizeof(float));
+    }
+    memcpy(s_batch + (size_t)n * DYN_FLOATS, d->v, (size_t)d->count * DYN_FLOATS * sizeof(float));
+    return n + d->count;
+}
+
+/* n vertices of faces that share first's texture and table. */
+static void draw_batch(const struct dyn *first, int n)
+{
+    int use_table = first->table != NULL;
+    float u = (float)use_table;
+
+    if (use_table) {
+        rnd_texture_unit(2, s_dyn_dst);
+        rnd_texture_unit(1, table_get(first->table));
+    }
+    rnd_depth(RND_DEPTH_LEQUAL, !use_table);
+    rnd_offset(use_table);
+    rnd_texture_unit(0, first->tex);
+    rnd_uniform(RND_U_USE_TABLE, &u);
+    rnd_stream(s_batch, n);
+    rnd_draw(RND_TRIANGLES, 0, n);
+}
+
 /* Back to front, each through its table over a copy of what is under
  * it. Where copies are dear, one copy of the whole frame serves the
  * faces after it until one of them covers what was drawn since. */
@@ -788,12 +996,83 @@ static void draw_dyns(void)
         s_dyn_dst_w = s_w;
         s_dyn_dst_h = s_h;
     }
-    qsort(s_dyns, (size_t)s_dyn_count, sizeof(s_dyns[0]), dyn_far_first);
+    /* The faces' order, sorted rather than the faces themselves, which
+     * are big. */
+    prof_begin(PROF_SORT);
+    for (i = 0; i < s_dyn_count; i++) {
+        s_order[i] = &s_dyns[i];
+    }
+    qsort(s_order, (size_t)s_dyn_count, sizeof(s_order[0]), dyn_far_first);
+    prof_end(PROF_SORT);
     cells_reset(s_w, s_h);
     rnd_use(RND_DYN);
     rnd_cull(RND_CULL_OFF);
+    if (batch) {
+        int *layer = layers_for(s_dyn_count), top = 0, l;
+
+        prof_begin(PROF_LAYERS);
+        grid_reset(s_w, s_h);
+        for (i = 0; i < s_dyn_count; i++) {
+            const struct dyn *d = s_order[i];
+            struct geo *g = &s_geo[i];
+            int k;
+
+            if (!dyn_rect(d, g->r)) {
+                /* Off the frame: through a table it is not drawn. */
+                layer[i] = d->table != NULL ? -1 : 0;
+                continue;
+            }
+            g->whole = 0;
+            g->tris = d->count / 3;
+            for (k = 0; k < d->count; k++) {
+                float w = d->v[k][3];
+
+                if (w <= 0.0f) {
+                    g->whole = 1;
+                    break;
+                }
+                g->x[k] = (d->v[k][0] / w + 1.0f) * 0.5f * s_w;
+                g->y[k] = (d->v[k][1] / w + 1.0f) * 0.5f * s_h;
+            }
+            layer_of(i, d->table != NULL);
+            top = layer[i] > top ? layer[i] : top;
+        }
+        prof_end(PROF_LAYERS);
+        for (l = 0; l <= top; l++) {
+            if (l > 0) {
+                rnd_copy(s_dyn_dst, 0, 0, s_w, s_h);
+            }
+            /* The layer's faces in order, those in a row that share a
+             * texture and a table in one draw. */
+            for (i = 0; i < s_dyn_count; i++) {
+                int j, n;
+
+                if (layer[i] != l) {
+                    continue;
+                }
+                n = 0;
+                for (j = i; j < s_dyn_count; j++) {
+                    const struct dyn *d = s_order[j];
+
+                    if (layer[j] != l) {
+                        continue;
+                    }
+                    if (d->tex != s_order[i]->tex || d->table != s_order[i]->table) {
+                        break;
+                    }
+                    n = batch_add(n, d);
+                    layer[j] = -2;
+                }
+                draw_batch(s_order[i], n);
+            }
+        }
+        rnd_offset(0);
+        rnd_depth(RND_DEPTH_OFF, 1);
+        s_dyn_count = 0;
+        return;
+    }
     for (i = 0; i < s_dyn_count; i++) {
-        const struct dyn *d = &s_dyns[i];
+        const struct dyn *d = s_order[i];
         int use_table = d->table != NULL, r[4], on;
         float u = (float)use_table;
 
@@ -833,6 +1112,7 @@ static void draw_dyns(void)
 void gl3d_draw(const struct scene *sc, struct scene_obj *const *objs, int count, double ox,
                double oy)
 {
+    prof_begin(PROF_MESHES);
     int i;
 
     rnd_use(RND_MESH);
@@ -867,7 +1147,10 @@ void gl3d_draw(const struct scene *sc, struct scene_obj *const *objs, int count,
     }
     rnd_cull(RND_CULL_OFF);
     rnd_depth(RND_DEPTH_OFF, 1);
+    prof_end(PROF_MESHES);
+    prof_begin(PROF_DYNS);
     draw_dyns();
+    prof_end(PROF_DYNS);
 }
 
 void gl3d_end(u8 *screen, int pitch)
@@ -928,6 +1211,11 @@ static int cmd_mode(int type)
 
 /* A command's pixels: x0, y0, x1, y1, the end excluded, a pixel more
  * all round. */
+static int cmd_opaque(const struct raster_cmd *c)
+{
+    return c->type == RASTER_TEXTURE || c->type == RASTER_FLAT;
+}
+
 static void cmd_rect(const struct raster_cmd *c, int r[4])
 {
     float x0 = c->x[0], x1 = c->x[0], y0 = c->y[0], y1 = c->y[0];
@@ -1048,6 +1336,62 @@ void gl3d_raster(u8 *target, int w, int h, int pitch, const struct raster_cmd *c
     rnd_depth(RND_DEPTH_OFF, 1);
     rnd_cull(RND_CULL_OFF);
     cells_reset(w, h);
+
+    if (batch) {
+        /* The cells take in NATIVE's margins, which the faces reach. */
+        int *layer = layers_for(count), top = 0, l;
+        int mx = (int)ceilf(off[0]), my = (int)ceilf(off[1]);
+
+        grid_reset(w + 2 * mx, h + 2 * my);
+        for (i = 0; i < count; i++) {
+            struct geo *g = &s_geo[i];
+
+            cmd_rect(&cmds[i], g->r);
+            g->r[0] += mx;
+            g->r[1] += my;
+            g->r[2] += mx;
+            g->r[3] += my;
+            g->whole = 0;
+            g->tris = 1;
+            for (k = 0; k < 3; k++) {
+                g->x[k] = cmds[i].x[k];
+                g->y[k] = cmds[i].y[k];
+            }
+            layer_of(i, !cmd_opaque(&cmds[i]));
+            top = layer[i] > top ? layer[i] : top;
+        }
+        for (l = 0; l <= top; l++) {
+            if (l > 0) {
+                unsigned copy;
+
+                if (gpu) {
+                    copy = canvas_snapshot(target);
+                } else {
+                    rnd_copy(s_raster_dst, 0, 0, w, h);
+                    copy = s_raster_dst;
+                }
+                rnd_texture_unit(2, copy);
+            }
+            for (i = 0; i < count; i += run) {
+                run = 1;
+                if (layer[i] != l) {
+                    continue;
+                }
+                if (cmd_opaque(&cmds[i])) {
+                    while (i + run < count && layer[i + run] == l && cmd_opaque(&cmds[i + run])) {
+                        run++;
+                    }
+                } else {
+                    rnd_texture_unit(1, table_get(cmds[i].table));
+                }
+                rnd_draw(RND_TRIANGLES, i * 3, run * 3);
+            }
+        }
+        if (!gpu) {
+            rnd_read(0, 0, w, h, RND_R8, target, pitch);
+        }
+        return;
+    }
 
     /* Opaque commands go in runs; one through a table reads what is
      * under it, from a copy of the frame taken after whatever it

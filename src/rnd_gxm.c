@@ -486,6 +486,7 @@ struct texture {
     int cols, rows;             /* pages: the tiles' layout */
     int drawn;                  /* the GPU draws into it */
     unsigned copy_target;       /* a target to copy into it */
+    unsigned alias;             /* read as this texture instead (rnd_copy) */
 };
 
 struct target {
@@ -512,9 +513,15 @@ static SceGxmSyncObject *s_display_sync[DISPLAY_BUFFERS];
 static SceGxmDepthStencilSurface s_display_depth;
 static int s_back, s_front;
 
+/* Render targets by size. A render target holds the driver's memory for
+ * SCENES_PER_RT scenes in flight; a scene past that waits for the GPU to
+ * finish an earlier one. A frame has many scenes (each copy ends one),
+ * so each size has a ring of RT_RING targets, taken in turn. */
+enum { RT_RING = 8, SCENES_PER_RT = 8 };
+
 static struct {
-    int w, h;
-    SceGxmRenderTarget *rt;
+    int w, h, next;
+    SceGxmRenderTarget *rt[RT_RING];
 } s_rts[16];
 static int s_rt_count;
 
@@ -541,6 +548,18 @@ static struct {
     float u[UNIFORMS][FLOATS_MAX];
 } s_prog[PROGRAMS];
 
+/* What the context was last given, so that a draw sets only what
+ * changed. A new scene starts it afresh. */
+static struct {
+    int valid;
+    int depth_func, depth_write, cull, offset, screen;
+    int prog;                   /* programs set, or -1 */
+    int uprog;                  /* the uniforms' program, or -1 */
+    float u[UNIFORMS][FLOATS_MAX];
+    const struct texture *tex[UNITS];
+    const u8 *data[UNITS];
+} s_cur;
+
 static int s_use;
 static unsigned s_units[UNITS];
 static const void *s_stream;    /* rnd_stream's vertices, in the arena */
@@ -563,6 +582,15 @@ static int s_mesh_count, s_mesh_lo[FRAMES], s_mesh_hi[FRAMES];
 static struct texture *tex_get(unsigned t)
 {
     return t != 0 && t < s_ntex && s_tex[t].live ? &s_tex[t] : NULL;
+}
+
+/* The texture a draw reads for t: the target it stands for after
+ * rnd_copy. */
+static struct texture *read_as(struct texture *t)
+{
+    struct texture *a = t != NULL && t->alias != 0 ? tex_get(t->alias) : NULL;
+
+    return a != NULL ? a : t;
 }
 
 static struct target *tgt_get(unsigned t)
@@ -597,11 +625,13 @@ static void display_callback(const void *data)
 static SceGxmRenderTarget *render_target(int w, int h)
 {
     SceGxmRenderTargetParams p;
-    int i;
+    int i, k;
 
     for (i = 0; i < s_rt_count; i++) {
         if (s_rts[i].w == w && s_rts[i].h == h) {
-            return s_rts[i].rt;
+            k = s_rts[i].next;
+            s_rts[i].next = (k + 1) % RT_RING;
+            return s_rts[i].rt[k];
         }
     }
     if (s_rt_count == (int)(sizeof(s_rts) / sizeof(s_rts[0]))) {
@@ -611,16 +641,19 @@ static SceGxmRenderTarget *render_target(int w, int h)
     memset(&p, 0, sizeof(p));
     p.width = (u32)w;
     p.height = (u32)h;
-    p.scenesPerFrame = 1;
+    p.scenesPerFrame = SCENES_PER_RT;
     p.multisampleMode = SCE_GXM_MULTISAMPLE_NONE;
     p.driverMemBlock = -1;
-    if (sceGxmCreateRenderTarget(&p, &s_rts[s_rt_count].rt) < 0) {
-        fprintf(stderr, "gxm: no render target of %d x %d\n", w, h);
-        return NULL;
+    for (k = 0; k < RT_RING; k++) {
+        if (sceGxmCreateRenderTarget(&p, &s_rts[s_rt_count].rt[k]) < 0) {
+            fprintf(stderr, "gxm: no render target of %d x %d\n", w, h);
+            return NULL;
+        }
     }
     s_rts[s_rt_count].w = w;
     s_rts[s_rt_count].h = h;
-    return s_rts[s_rt_count++].rt;
+    s_rts[s_rt_count].next = 1 % RT_RING;
+    return s_rts[s_rt_count++].rt[0];
 }
 
 static void *depth_alloc(int w, int h, int *aw, int *ah)
@@ -651,9 +684,18 @@ static void end_scene(void)
 /* Counts of the costly work, logged every two seconds, to find where a
  * slow frame goes on the console. */
 static struct {
-    int frames, scenes, finishes, uploads, reads, copies;
-    SceUInt64 since;
+    int frames, scenes, finishes, uploads, reads, copies, draws;
+    SceUInt64 since, begin_us, wait_us, queue_us, draw_us, fill_us, mesh_us, stream_us;
+    u32 mesh_bytes, stream_bytes;
 } s_stats;
+
+/* Microseconds spent in a call that may block on the GPU. */
+#define TIMED(field, call) \
+    do { \
+        SceUInt64 t0_ = sceKernelGetProcessTimeWide(); \
+        call; \
+        s_stats.field += sceKernelGetProcessTimeWide() - t0_; \
+    } while (0)
 
 static void stats_frame(void)
 {
@@ -665,9 +707,20 @@ static void stats_frame(void)
     } else if (now - s_stats.since >= 2000000) {
         double secs = (now - s_stats.since) / 1e6, n = s_stats.frames;
 
-        printf("gxm: %.1f fps; a frame: %.1f scenes, %.1f copies, %.1f waits, %.1f uploads, "
-               "%.1f reads\n", n / secs, s_stats.scenes / n, s_stats.copies / n,
-               s_stats.finishes / n, s_stats.uploads / n, s_stats.reads / n);
+        double ms = secs * 1000.0 / n, begin = s_stats.begin_us / 1000.0 / n;
+        double wait = s_stats.wait_us / 1000.0 / n;
+
+        printf("gxm: %.1f fps; a frame: %.0f draws, %.1f scenes, %.1f copies, %.1f waits, %.1f uploads, "
+               "%.1f reads; %.1f ms: %.1f the game, %.1f starting scenes, %.1f waiting for "
+               "the GPU, %.1f queueing the display, %.1f in draws, %.1f filling textures, "
+               "%.1f copying %.0f KB of meshes, %.1f copying %.0f KB of vertices\n",
+               n / secs, s_stats.draws / n, s_stats.scenes / n, s_stats.copies / n,
+               s_stats.finishes / n, s_stats.uploads / n, s_stats.reads / n, ms,
+               ms - begin - wait - s_stats.queue_us / 1000.0 / n - s_stats.draw_us / 1000.0 / n,
+               begin, wait, s_stats.queue_us / 1000.0 / n, s_stats.draw_us / 1000.0 / n,
+               s_stats.fill_us / 1000.0 / n, s_stats.mesh_us / 1000.0 / n,
+               s_stats.mesh_bytes / 1024.0 / n, s_stats.stream_us / 1000.0 / n,
+               s_stats.stream_bytes / 1024.0 / n);
         memset(&s_stats, 0, sizeof(s_stats));
         s_stats.since = now;
     }
@@ -678,7 +731,7 @@ static void finish(void)
 {
     s_stats.finishes++;
     end_scene();
-    sceGxmFinish(s_ctx);
+    TIMED(wait_us, sceGxmFinish(s_ctx));
 }
 
 static void set_viewport(int w, int h, int flip)
@@ -692,6 +745,8 @@ static void set_viewport(int w, int h, int flip)
 static int begin_scene(unsigned t)
 {
     s_stats.scenes++;
+    memset(&s_cur, 0, sizeof(s_cur));
+    s_cur.prog = s_cur.uprog = -1;
     struct target *g;
     struct texture *c;
     SceGxmRenderTarget *rt;
@@ -700,8 +755,13 @@ static int begin_scene(unsigned t)
     end_scene();
     if (t == 0) {
         rt = render_target(SCREEN_W, SCREEN_H);
-        if (rt == NULL || sceGxmBeginScene(s_ctx, 0, rt, NULL, NULL, s_display_sync[s_back],
-                                           &s_display_surface[s_back], &s_display_depth) < 0) {
+        int r = -1;
+
+        if (rt != NULL) {
+            TIMED(begin_us, r = sceGxmBeginScene(s_ctx, 0, rt, NULL, NULL, s_display_sync[s_back],
+                                                 &s_display_surface[s_back], &s_display_depth));
+        }
+        if (r < 0) {
             return 0;
         }
         set_viewport(s_screen_w, s_screen_h, 1);
@@ -749,9 +809,14 @@ static int begin_scene(unsigned t)
         }
         ds = &s_scratch;
     }
-    if (sceGxmBeginScene(s_ctx, 0, rt, NULL, NULL, NULL, &g->surface, ds) < 0) {
-        fprintf(stderr, "gxm: scene on %d x %d failed\n", c->w, c->h);
-        return 0;
+    {
+        int r;
+
+        TIMED(begin_us, r = sceGxmBeginScene(s_ctx, 0, rt, NULL, NULL, NULL, &g->surface, ds));
+        if (r < 0) {
+            fprintf(stderr, "gxm: scene on %d x %d failed\n", c->w, c->h);
+            return 0;
+        }
     }
     c->drawn = 1;
     set_viewport(c->w, c->h, 0);
@@ -779,7 +844,7 @@ static void slot_begin(int slot)
         n.address = &s_notes[slot];
         n.value = s_fence[slot];
         while (s_notes[slot] != s_fence[slot]) {
-            sceGxmNotificationWait(&n);
+            TIMED(wait_us, sceGxmNotificationWait(&n));
         }
         s_fence[slot] = 0;
     }
@@ -789,8 +854,10 @@ static void slot_begin(int slot)
     s_grave[slot].n = 0;
     s_arena[slot].used = 0;
     if (s_mesh_hi[slot] > s_mesh_lo[slot] && s_mesh_gpu[slot] != NULL) {
-        memcpy((float *)s_mesh_gpu[slot] + s_mesh_lo[slot] * 8, s_mesh + s_mesh_lo[slot] * 8,
-               (size_t)(s_mesh_hi[slot] - s_mesh_lo[slot]) * 8 * sizeof(float));
+        s_stats.mesh_bytes += (u32)(s_mesh_hi[slot] - s_mesh_lo[slot]) * 8 * sizeof(float);
+        TIMED(mesh_us, memcpy((float *)s_mesh_gpu[slot] + s_mesh_lo[slot] * 8,
+                              s_mesh + s_mesh_lo[slot] * 8,
+                              (size_t)(s_mesh_hi[slot] - s_mesh_lo[slot]) * 8 * sizeof(float)));
     }
     s_mesh_lo[slot] = s_mesh_hi[slot] = 0;
 }
@@ -839,7 +906,7 @@ void rnd_present(void)
     s_in_scene = 0;
     sceGxmPadHeartbeat(&s_display_surface[s_back], s_display_sync[s_back]);
     d.address = s_display[s_back];
-    sceGxmDisplayQueueAddEntry(s_display_sync[s_front], s_display_sync[s_back], &d);
+    TIMED(queue_us, sceGxmDisplayQueueAddEntry(s_display_sync[s_front], s_display_sync[s_back], &d));
     s_front = s_back;
     s_back = (s_back + 1) % DISPLAY_BUFFERS;
     s_slot = (s_slot + 1) % FRAMES;
@@ -1372,7 +1439,7 @@ unsigned rnd_texture(int format, int w, int h, const void *pixels, int pitch)
         r->live = 0;
         return 0;
     }
-    fill(r->data, r->stride, format, w, h, pixels, pitch);
+    TIMED(fill_us, fill(r->data, r->stride, format, w, h, pixels, pitch));
     r->cols = r->rows = 1;
     tex_init(r);
     return t;
@@ -1387,10 +1454,11 @@ void rnd_texture_set(unsigned tex, int w, int h, const void *pixels, int pitch)
     if (r == NULL) {
         return;
     }
+    r->alias = 0;
     if (r->drawn && w == r->w && h == r->h) {
         /* The GPU draws into it: fill it in place once it is done. */
         finish();
-        fill(r->data, r->stride, r->format, w, h, pixels, pitch);
+        TIMED(fill_us, fill(r->data, r->stride, r->format, w, h, pixels, pitch));
         return;
     }
     /* New memory, as draws still to run may read the old. */
@@ -1403,7 +1471,7 @@ void rnd_texture_set(unsigned tex, int w, int h, const void *pixels, int pitch)
     r->w = w;
     r->h = h;
     r->stride = stride_of(r->format, w);
-    fill(r->data, r->stride, r->format, w, h, pixels, pitch);
+    TIMED(fill_us, fill(r->data, r->stride, r->format, w, h, pixels, pitch));
     tex_init(r);
 }
 
@@ -1530,6 +1598,13 @@ static void set_uniforms(int p)
     void *vb = NULL, *fb = NULL;
     int i;
 
+    /* The buffers reserved last serve the draws after them. */
+    if (s_cur.uprog == p && memcmp(s_cur.u, s_prog[p].u, sizeof(s_cur.u)) == 0) {
+        return;
+    }
+    s_cur.uprog = p;
+    memcpy(s_cur.u, s_prog[p].u, sizeof(s_cur.u));
+
     if (sceGxmProgramGetDefaultUniformBufferSize(s_prog[p].vgxp) > 0) {
         sceGxmReserveVertexDefaultUniformBuffer(s_ctx, &vb);
     }
@@ -1571,7 +1646,7 @@ static void derive_uniforms(int p)
     u[0] = t != NULL ? (float)t->cols : 1.0f;
     u[1] = 1.0f / (u[0] * 256.0f);
     u[2] = 1.0f / ((t != NULL ? (float)t->rows : 1.0f) * 256.0f);
-    t = tex_get(s_units[p == RND_CANVAS ? 3 : 2]);
+    t = read_as(tex_get(s_units[p == RND_CANVAS ? 3 : 2]));
     u = s_prog[p].u[U_DST_SIZE];
     u[0] = t != NULL ? (float)t->w : 1.0f;
     u[1] = t != NULL ? (float)t->h : 1.0f;
@@ -1583,6 +1658,17 @@ static void set_state(int depth_func, int depth_write, int cull, int offset)
         SCE_GXM_DEPTH_FUNC_ALWAYS, SCE_GXM_DEPTH_FUNC_LESS, SCE_GXM_DEPTH_FUNC_LESS_EQUAL
     };
     SceGxmCullMode mode = SCE_GXM_CULL_NONE;
+
+    if (s_cur.valid && s_cur.depth_func == depth_func && s_cur.depth_write == depth_write
+        && s_cur.cull == cull && s_cur.offset == offset && s_cur.screen == (s_scene == 0)) {
+        return;
+    }
+    s_cur.valid = 1;
+    s_cur.depth_func = depth_func;
+    s_cur.depth_write = depth_write;
+    s_cur.cull = cull;
+    s_cur.offset = offset;
+    s_cur.screen = s_scene == 0;
 
     sceGxmSetFrontDepthFunc(s_ctx, funcs[depth_func]);
     sceGxmSetFrontDepthWriteEnable(s_ctx, depth_func != RND_DEPTH_OFF && depth_write
@@ -1613,10 +1699,15 @@ static void bind_textures(int p, const unsigned *units)
         if (s_prog[p].unit_index[i] < 0) {
             continue;
         }
-        t = tex_get(units[i]);
+        t = read_as(tex_get(units[i]));
         if (t == NULL) {
             t = tex_get(s_dummy);
         }
+        if (s_cur.tex[i] == t && s_cur.data[i] == t->data) {
+            continue;
+        }
+        s_cur.tex[i] = t;
+        s_cur.data[i] = t->data;
         sceGxmSetFragmentTexture(s_ctx, (u32)s_prog[p].unit_index[i], &t->t);
     }
 }
@@ -1633,18 +1724,25 @@ static void draw(int p, const void *verts, int prim, int count, const unsigned *
         return;
     }
     set_state(depth_func, depth_write, cull, offset);
-    sceGxmSetVertexProgram(s_ctx, s_prog[p].vp);
-    sceGxmSetFragmentProgram(s_ctx, s_prog[p].fp);
     while (count > 0) {
         /* Triangles split at a multiple of three. */
         int n = count > MAX_INDEX ? MAX_INDEX : count;
 
+        if (s_cur.prog != p) {
+            /* The uniforms' buffers are sized by the programs set. */
+            sceGxmSetVertexProgram(s_ctx, s_prog[p].vp);
+            sceGxmSetFragmentProgram(s_ctx, s_prog[p].fp);
+            s_cur.prog = p;
+            s_cur.uprog = -1;
+            memset(s_cur.tex, 0, sizeof(s_cur.tex));
+        }
         set_uniforms(p);
         bind_textures(p, units);
         sceGxmSetVertexStream(s_ctx, 0, v);
-        sceGxmDraw(s_ctx, prim == RND_STRIP ? SCE_GXM_PRIMITIVE_TRIANGLE_STRIP
+        s_stats.draws++;
+        TIMED(draw_us, sceGxmDraw(s_ctx, prim == RND_STRIP ? SCE_GXM_PRIMITIVE_TRIANGLE_STRIP
                                            : SCE_GXM_PRIMITIVE_TRIANGLES,
-                   SCE_GXM_INDEX_FORMAT_U16, s_indices, (u32)n);
+                   SCE_GXM_INDEX_FORMAT_U16, s_indices, (u32)n));
         v += (size_t)n * stride;
         count -= n;
     }
@@ -1773,20 +1871,28 @@ static void copy_into(unsigned dst, unsigned src, int dw, int dh, int x, int y, 
     s_bound = saved;
 }
 
+/* A copy is only ever read as the pixels under a blend. The GPU draws a
+ * scene in its own tile memory and writes it out when the scene ends, so
+ * a scene that reads its target as a texture sees the target as the
+ * scene began: what a copy taken then holds. So `tex` reads the target
+ * itself, and the scene ends, so that what was drawn so far is written
+ * out. This costs one scene, where a copy costs two and the copy's
+ * drawing. */
 void rnd_copy(unsigned tex, int x, int y, int w, int h)
 {
     s_stats.copies++;
     struct texture *d = tex_get(tex);
     struct target *g = tgt_get(s_bound);
 
+    (void)x;
+    (void)y;
     if (d == NULL || g == NULL || w <= 0 || h <= 0) {
         return;
     }
-    if (d->copy_target == 0) {
-        d->copy_target = rnd_target(tex, 0);
+    d->alias = g->color;
+    if (s_in_scene && s_scene == s_bound) {
+        end_scene();
     }
-    copy_into(d->copy_target, g->color, d->w, d->h, x, y, w, h, (float)x, (float)y,
-              (float)(x + w), (float)(y + h));
 }
 
 void rnd_blit(unsigned src, unsigned dst, int sw, int sh, int dw, int dh)
@@ -1847,7 +1953,8 @@ void rnd_stream(const float *verts, int count)
     s_stream = NULL;
     p = arena_alloc(bytes);
     if (p != NULL) {
-        memcpy(p, verts, bytes);
+        s_stats.stream_bytes += bytes;
+        TIMED(stream_us, memcpy(p, verts, bytes));
     }
     s_stream = p;
     s_stream_bytes = bytes;
@@ -1894,8 +2001,9 @@ void rnd_mesh_write(int first, int count, const float *verts)
     }
     memcpy(s_mesh + (size_t)first * 8, verts, (size_t)count * 8 * sizeof(float));
     if (s_mesh_gpu[s_slot] != NULL) {
-        memcpy((float *)s_mesh_gpu[s_slot] + (size_t)first * 8, verts,
-               (size_t)count * 8 * sizeof(float));
+        s_stats.mesh_bytes += (u32)count * 8 * sizeof(float);
+        TIMED(mesh_us, memcpy((float *)s_mesh_gpu[s_slot] + (size_t)first * 8, verts,
+                              (size_t)count * 8 * sizeof(float)));
     }
     /* The other frames' copies take it when their frame comes round. */
     for (i = 0; i < FRAMES; i++) {

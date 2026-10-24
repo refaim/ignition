@@ -47,6 +47,8 @@ target_include_directories(ignition PRIVATE ${SRC})
 # -fsigned-char: the game is x86 code, where char is signed.
 target_compile_options(ignition PRIVATE
     -O2 -fsigned-char -Wall -Wextra -Wno-unused-parameter -Wno-format-truncation)
+# IGN_PROF: the frame's parts timed in the log (src/prof.h).
+target_compile_definitions(ignition PRIVATE IGN_PROF)
 # Room after the code for the module info vita-elf-create appends (the
 # SDK's linker script reads __sce_headroom).
 target_link_options(ignition PRIVATE -Wl,--defsym,__sce_headroom=0x4000)

@@ -12,6 +12,7 @@
 #include <string.h>
 
 #include "lisa/sprite.h"
+#include "prof.h"
 #include "race/race.h"
 #include "race/cars.h"
 #include "race/contact.h"
@@ -191,8 +192,12 @@ static int lights_on(void)
  * resolution. */
 static void draw_3d(int x0, int x1, int first)
 {
+    prof_begin(PROF_GATHER);
     scene_gather_view();
+    prof_end(PROF_GATHER);
+    prof_begin(PROF_3D);
     race_draw_view(g_scene, g_scene_visible, g_scene->obj_count, x0, x1, first);
+    prof_end(PROF_3D);
 }
 
 /* The view's place on the screen: the 3D is drawn over the whole
@@ -423,7 +428,9 @@ void race_view(double dt)
         scene_obj_unlink(lights);
     }
     if ((g_cars[0].f528 == 0 || r_54f980 <= 120.0) && r_5532b0 == 0) {
+        prof_begin(PROF_HUD);
         race_hud(g_view_car, 0);
+        prof_end(PROF_HUD);
     }
 
     if (split) {

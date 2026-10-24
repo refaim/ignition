@@ -11,6 +11,7 @@
 #include "game.h"
 #include "platform/platform.h"
 #include "gl3d.h"
+#include "prof.h"
 #include "lisa/log.h"
 #include "lisa/mem.h"
 #include "race/race.h"
@@ -529,7 +530,9 @@ void race_draw_view(const struct scene *sc, struct scene_obj *const *objs, int n
     }
     gl3d_draw(sc, objs, n, ox, 0);
     gl3d_view_columns(0, 0);
+    prof_begin(PROF_VIEW_END);
     gl3d_view_end();
+    prof_end(PROF_VIEW_END);
     video_set_layer(gl3d_view_texture(), s_clear);
 }
 

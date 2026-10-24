@@ -123,12 +123,25 @@ what OpenGL does:
   in the target's memory between scenes. Depth is stored at the end of a
   scene and loaded again at the start of the next one.
 - **Reading the pixel under a face.** The colour tables need the pixel a
-  face covers, so the shaders read a copy of the target. A copy is a scene
-  of its own: a quad that reads the target and draws into the copy. That
-  ends the target's scene and begins two more. Faces through a table share
-  one copy of the whole frame until one of them covers something drawn
-  since (`rnd_batch_copies`; on macOS each face copies its own rectangle,
-  as before).
+  face covers, and the Vita's runtime Cg compiler cannot read the target
+  in a shader (`FRAGCOLOR` and `__regformat` are not accepted). The GPU
+  draws a scene in tile memory and writes it out at the scene's end, so a
+  scene that samples its own target sees the target as the scene began.
+  `rnd_copy` therefore copies nothing: it ends the scene, and the "copy"
+  texture reads the target itself (`alias` in `struct texture`). That is
+  one scene a copy.
+- **Fewer copies.** Faces through a table go in layers (`layer_of` in
+  `gl3d.c`): a face through a table goes one layer above the earlier faces
+  whose triangles share area with it, any other face into the highest of
+  their layers. Drawn layer by layer, with a copy before each, the frame is
+  the same as with a copy before every face. Within a layer, faces in a
+  row with the same texture and table go in one draw. On macOS each face
+  copies its own rectangle, as before.
+- **Render targets.** A render target holds the driver's memory for 8
+  scenes in flight; a scene past that waits for the GPU. Each target size
+  has a ring of 8 render targets, taken in turn.
+- **Draw state.** A draw sets only the programs, uniforms, textures and
+  depth state that changed since the last one in the scene.
 - **Clears.** GXM has no clear. Colour is cleared with a quad. Depth is
   cleared by beginning a scene that does not load it.
 - **Scissor.** GXM's region clip works on whole tiles, so the scissor is a
@@ -155,6 +168,12 @@ what OpenGL does:
   notification that is waited on before its slot is used again.
 - **Display.** Three buffers in CDRAM, shown by the display queue from
   `plat_present`, at the vertical blank.
+
+- **Log.** Every two seconds the log has the frame rate and a frame's
+  draws, scenes, copies and the time spent in the game, starting scenes,
+  waiting for the GPU or the display, and filling textures and vertex
+  memory. The Vita build also defines `IGN_PROF`, which adds the race
+  frame's parts (`src/prof.h`).
 
 ## Not done
 

@@ -167,7 +167,7 @@ int plat_next_key_event(int *key, int *down)
     return 1;
 }
 
-enum { SCHEDULED = 32 };
+enum { SCHEDULED = 256 };
 
 static struct { u32 ms, hold; int key; int state; } s_scheduled[SCHEDULED];
 static int s_scheduled_count;

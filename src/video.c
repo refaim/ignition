@@ -154,13 +154,28 @@ int video_set_palette(const u8 *rgb)
     return 1;
 }
 
+/* Scheduled screenshots, taken in the order given. */
+enum { SHOTS = 32 };
+static struct {
+    u32 ms;
+    char path[1024];
+} s_shots[SHOTS];
+static int s_shot_count, s_shot_next;
 static u32 s_shot_ms;
 static char s_shot_path[1024];
 
 void video_schedule_shot(u32 ms, const char *path)
 {
-    s_shot_ms = ms;
-    snprintf(s_shot_path, sizeof(s_shot_path), "%s", path);
+    if (s_shot_count < SHOTS) {
+        s_shots[s_shot_count].ms = ms;
+        snprintf(s_shots[s_shot_count].path, sizeof(s_shots[0].path), "%s", path);
+        s_shot_count++;
+    }
+    if (s_shot_path[0] == '\0' && s_shot_next < s_shot_count) {
+        s_shot_ms = s_shots[s_shot_next].ms;
+        snprintf(s_shot_path, sizeof(s_shot_path), "%s", s_shots[s_shot_next].path);
+        s_shot_next++;
+    }
 }
 
 /* With a 3D layer the shot is the drawable, at its size. */
@@ -256,6 +271,11 @@ void video_present(void)
             write_shot();
         }
         s_shot_path[0] = '\0';
+        if (s_shot_next < s_shot_count) {
+            s_shot_ms = s_shots[s_shot_next].ms;
+            snprintf(s_shot_path, sizeof(s_shot_path), "%s", s_shots[s_shot_next].path);
+            s_shot_next++;
+        }
     }
     plat_present();
 }

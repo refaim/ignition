@@ -8,7 +8,7 @@
 #
 # Or "make vita" from the top. Needs VitaSDK ($VITASDK, or ~/vitasdk);
 # its system libraries only. Compiles ../../src directly; the Vita parts
-# are src/platform_vita.c and src/rnd_gxm.c (GXM). See docs/vita.md.
+# are src/platform/vita.c and src/rnd_gxm.c (GXM). See docs/vita.md.
 
 cmake_minimum_required(VERSION 3.16)
 
@@ -37,10 +37,10 @@ set(SRC ${ROOT}/src)
 
 # Every engine file, the Vita host instead of the others, and the GXM
 # renderer instead of the OpenGL one.
-file(GLOB IGN_SOURCES ${SRC}/*.c ${SRC}/lisa/*.c)
-list(FILTER IGN_SOURCES EXCLUDE REGEX "/platform_[a-z]+\\.c$")
+file(GLOB IGN_SOURCES ${SRC}/*.c ${SRC}/lisa/*.c ${SRC}/race/*.c ${SRC}/menu/*.c
+     ${SRC}/frontend/*.c)
 list(FILTER IGN_SOURCES EXCLUDE REGEX "/rnd_gl\\.c$")
-list(APPEND IGN_SOURCES ${SRC}/platform_vita.c)
+list(APPEND IGN_SOURCES ${SRC}/platform/vita.c)
 
 add_executable(ignition ${IGN_SOURCES})
 target_include_directories(ignition PRIVATE ${SRC})

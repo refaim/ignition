@@ -1,25 +1,25 @@
 # Platforms
 
 Every build runs the same engine (`src/`). Each platform adds one host
-file behind `src/platform.h`, written on that system's own APIs, and one
+file behind `src/platform/platform.h`, written on that system's own APIs, and one
 renderer behind `src/rnd.h`. There are no third-party libraries.
 
 | Platform | Host | System APIs | Renderer | Build | Guide |
 | --- | --- | --- | --- | --- | --- |
-| macOS | `platform_macos.m` | Cocoa, CoreAudio | `rnd_gl.c`, OpenGL 3.2 core | `make` | [README](../README.md#build) |
-| Linux, Steam Deck | `platform_linux.c` | X11, GLX, ALSA, joystick API | `rnd_gl.c`, OpenGL 3.2 core | `make linux` | [linux](../platforms/linux/README.md), [steamdeck](../platforms/steamdeck/README.md) |
-| Windows x86_64 | `platform_windows.c` | Win32, WGL, waveOut, XInput | `rnd_gl.c`, OpenGL 3.2 core | `make windows` | [windows](../platforms/windows/README.md) |
-| Web | `platform_web.c` | Emscripten HTML5, WebGL 2, Web Audio | `rnd_gl.c`, OpenGL ES 3.0 | `make web` | [web](../platforms/web/README.md) |
-| Android | `platform_android.c` | NativeActivity, EGL, AAudio | `rnd_gl.c`, OpenGL ES 3.0 | `make android` | [android](../platforms/android/README.md) |
-| iOS, iPadOS | `platform_ios.m` | UIKit, OpenGL ES, GameController, AudioUnit | `rnd_gl.c`, OpenGL ES 3.0 | `make ios` | [ios](../platforms/ios/README.md) |
-| PlayStation Vita | `platform_vita.c` | VitaSDK | `rnd_gxm.c`, GXM | `make vita` | [vita.md](vita.md) |
+| macOS | `platform/macos.m` | Cocoa, CoreAudio | `rnd_gl.c`, OpenGL 3.2 core | `make` | [README](../README.md#build) |
+| Linux, Steam Deck | `platform/linux.c` | X11, GLX, ALSA, joystick API | `rnd_gl.c`, OpenGL 3.2 core | `make linux` | [linux](../platforms/linux/README.md), [steamdeck](../platforms/steamdeck/README.md) |
+| Windows x86_64 | `platform/windows.c` | Win32, WGL, waveOut, XInput | `rnd_gl.c`, OpenGL 3.2 core | `make windows` | [windows](../platforms/windows/README.md) |
+| Web | `platform/web.c` | Emscripten HTML5, WebGL 2, Web Audio | `rnd_gl.c`, OpenGL ES 3.0 | `make web` | [web](../platforms/web/README.md) |
+| Android | `platform/android.c` | NativeActivity, EGL, AAudio | `rnd_gl.c`, OpenGL ES 3.0 | `make android` | [android](../platforms/android/README.md) |
+| iOS, iPadOS | `platform/ios.m` | UIKit, OpenGL ES, GameController, AudioUnit | `rnd_gl.c`, OpenGL ES 3.0 | `make ios` | [ios](../platforms/ios/README.md) |
+| PlayStation Vita | `platform/vita.c` | VitaSDK | `rnd_gxm.c`, GXM | `make vita` | [vita.md](vita.md) |
 
 ## Shared code
 
-- `src/platform_common.c`: the DirectInput-style key queue, the
+- `src/platform/common.c`: the DirectInput-style key queue, the
   scripted key presses (`--press`), the gamepad-to-key mapping, and
   finding the game data. Every host but the Vita's uses it.
-- `src/platform_touch.c`: the on-screen pad for touch screens (web,
+- `src/platform/touch.c`: the on-screen pad for touch screens (web,
   Android, iOS), drawn through `rnd.h`.
 - `src/rnd_gl.c` runs on three kinds of OpenGL (see `src/rnd_gl.h`):
   the system's OpenGL 3.2 headers on macOS; OpenGL 3.2 through function

@@ -6,7 +6,7 @@
 
 #include "app.h"
 #include "input.h"
-#include "platform.h"
+#include "platform/platform.h"
 
 struct joystick g_joysticks[2];    /* 0x4ba9f0 */
 u8 g_key_down[256];         /* 0x50de60 */

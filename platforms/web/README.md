@@ -1,7 +1,7 @@
 # Ignition in the browser
 
 The web build is the same engine in WebAssembly. The host is
-`src/platform_web.c`, on Emscripten's own APIs: WebGL 2 on the page's
+`src/platform/web.c`, on Emscripten's own APIs: WebGL 2 on the page's
 canvas, the keyboard, gamepad and touch events, and Web Audio.
 
 You import the files of your own copy of the game into the browser's

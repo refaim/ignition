@@ -1,6 +1,6 @@
 # Ignition on Windows
 
-The Windows host is `src/platform_windows.c`: a Win32 window with a WGL
+The Windows host is `src/platform/windows.c`: a Win32 window with a WGL
 OpenGL 3.2 core context, the keyboard, XInput gamepads and waveOut
 audio. `ignition.exe` is one file; it needs only the DLLs that come with
 Windows. It runs on 64-bit Windows 10 and later, and under Wine.

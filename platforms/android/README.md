@@ -1,6 +1,6 @@
 # Ignition on Android
 
-The Android host is `src/platform_android.c`, on the NDK: a
+The Android host is `src/platform/android.c`, on the NDK: a
 NativeActivity through `android_native_app_glue`, an EGL OpenGL ES 3.0
 context, keys, gamepads and touch from the input queue, and AAudio. The
 APK has no Java code. It needs Android 8.0 (API 26) or later, on arm64

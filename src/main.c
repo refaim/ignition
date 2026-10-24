@@ -20,7 +20,7 @@
  * original did (Alt+R switches). --version prints this port's version.
  *
  * Without --data the host looks for the game (plat_find_data in
- * platform_common.h).
+ * platform/common.h).
  */
 
 #include <stdio.h>
@@ -37,13 +37,13 @@
 #include "lisa/log.h"
 #include "lisa/mem.h"
 #include "pic.h"
-#include "platform.h"
+#include "platform/platform.h"
 #ifndef __vita__
-#include "platform_common.h"
+#include "platform/common.h"
 #endif
 #include "startup.h"
 #include "vfs.h"
-#include "race_init.h"
+#include "race/init.h"
 #include "version.h"
 #include "video.h"
 

@@ -9,7 +9,7 @@
 #include "app.h"
 #include "canvas.h"
 #include "gfx.h"
-#include "platform.h"
+#include "platform/platform.h"
 #include "video.h"
 #include "lisa/sprite.h"
 #include "stubs.h"

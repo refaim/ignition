@@ -11,7 +11,7 @@
 
 #include <string.h>
 
-#include "menu.h"
+#include "menu/menu.h"
 #include "types.h"
 
 enum {

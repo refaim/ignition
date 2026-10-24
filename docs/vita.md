@@ -7,7 +7,7 @@ operations, `src/rnd.h`, with one backend for each host:
 - `src/rnd_gl.c`: OpenGL 3.2 core, on macOS.
 - `src/rnd_gxm.c`: GXM, the Vita's own GPU API.
 
-The host is `src/platform_vita.c` (buttons, clock, audio, log). The build
+The host is `src/platform/vita.c` (buttons, clock, audio, log). The build
 uses VitaSDK's system libraries only.
 
 Status: the package builds, and in Vita3K it gets as far as loading the

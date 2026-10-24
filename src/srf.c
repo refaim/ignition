@@ -14,9 +14,9 @@
 #include <string.h>
 
 #include "lisa/log.h"
-#include "race.h"
-#include "race_cars.h"
-#include "race_init.h"
+#include "race/race.h"
+#include "race/cars.h"
+#include "race/init.h"
 #include "scene.h"
 #include "srf.h"
 

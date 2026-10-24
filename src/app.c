@@ -7,7 +7,7 @@
 #include "game.h"
 #include "input.h"
 #include "lisa/lisa.h"
-#include "platform.h"
+#include "platform/platform.h"
 #include "stubs.h"
 #include "video.h"
 

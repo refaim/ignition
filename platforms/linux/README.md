@@ -1,6 +1,6 @@
 # Ignition on Linux
 
-The Linux host is `src/platform_linux.c`: an X11 window with a GLX
+The Linux host is `src/platform/linux.c`: an X11 window with a GLX
 OpenGL 3.2 core context, the keyboard, gamepads through the kernel's
 joystick API (`/dev/input/js*`) and ALSA audio. It is also the Steam
 Deck build; see [../steamdeck/README.md](../steamdeck/README.md).

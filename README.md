@@ -26,13 +26,13 @@ three laps, computer drivers, effects, sound, the HUD and the results.
 
 | Platform | Host | Renderer | Status |
 |---|---|---|---|
-| macOS | Cocoa (`src/platform_macos.m`) | OpenGL 3.2 (`src/rnd_gl.c`) | Playable |
-| Linux, Steam Deck | X11, GLX, ALSA (`src/platform_linux.c`) | OpenGL 3.2 (`src/rnd_gl.c`) | Runs; tested under Xvfb with Mesa. See [platforms/linux](platforms/linux/README.md). |
-| Windows x86_64 | Win32, WGL, waveOut, XInput (`src/platform_windows.c`) | OpenGL 3.2 (`src/rnd_gl.c`) | Runs under Wine; not yet run on Windows. See [platforms/windows](platforms/windows/README.md). |
-| Web | Emscripten, WebGL 2, Web Audio (`src/platform_web.c`) | OpenGL ES 3.0 (`src/rnd_gl.c`) | Runs in Chrome. See [platforms/web](platforms/web/README.md). |
-| Android | NativeActivity, EGL, AAudio (`src/platform_android.c`) | OpenGL ES 3.0 (`src/rnd_gl.c`) | See [platforms/android](platforms/android/README.md). |
-| iOS, iPadOS | UIKit, OpenGL ES, AudioUnit (`src/platform_ios.m`) | OpenGL ES 3.0 (`src/rnd_gl.c`) | Runs in the simulator. See [platforms/ios](platforms/ios/README.md). |
-| PlayStation Vita | VitaSDK (`src/platform_vita.c`) | GXM (`src/rnd_gxm.c`) | Builds; not yet run on hardware. See [docs/vita.md](docs/vita.md). |
+| macOS | Cocoa (`src/platform/macos.m`) | OpenGL 3.2 (`src/rnd_gl.c`) | Playable |
+| Linux, Steam Deck | X11, GLX, ALSA (`src/platform/linux.c`) | OpenGL 3.2 (`src/rnd_gl.c`) | Runs; tested under Xvfb with Mesa. See [platforms/linux](platforms/linux/README.md). |
+| Windows x86_64 | Win32, WGL, waveOut, XInput (`src/platform/windows.c`) | OpenGL 3.2 (`src/rnd_gl.c`) | Runs under Wine; not yet run on Windows. See [platforms/windows](platforms/windows/README.md). |
+| Web | Emscripten, WebGL 2, Web Audio (`src/platform/web.c`) | OpenGL ES 3.0 (`src/rnd_gl.c`) | Runs in Chrome. See [platforms/web](platforms/web/README.md). |
+| Android | NativeActivity, EGL, AAudio (`src/platform/android.c`) | OpenGL ES 3.0 (`src/rnd_gl.c`) | See [platforms/android](platforms/android/README.md). |
+| iOS, iPadOS | UIKit, OpenGL ES, AudioUnit (`src/platform/ios.m`) | OpenGL ES 3.0 (`src/rnd_gl.c`) | Runs in the simulator. See [platforms/ios](platforms/ios/README.md). |
+| PlayStation Vita | VitaSDK (`src/platform/vita.c`) | GXM (`src/rnd_gxm.c`) | Builds; not yet run on hardware. See [docs/vita.md](docs/vita.md). |
 
 The hosts use only each system's own APIs. The project has no third-party
 dependencies; `src/third_party/` holds only Khronos' OpenGL headers.
@@ -158,12 +158,15 @@ behaves the same way: the same fixed-point maths, struct layouts and
 rounding, and the original's quirks unless a fix is noted. Every ported
 function names its address in a comment, for example `/* 0x422680 */`.
 
-- `src/` holds the game, named by the original's modules where they are
-  known (`race_*.c` for the race, `menu_*.c` and `frontend.c` for the
-  menus).
+- `src/` holds the game, in folders by the original's modules where they
+  are known:
+  - `src/race/`: the race
+  - `src/menu/` and `src/frontend/`: the menus
+  - `src/platform/`: one host for each system
+  - `src/lisa/`: the original's Lisa 2 library
 - `src/structs/` holds the structs, generated from `tools/structs/*.def`
   by `tools/gen_structs.py`, with an assert for every field's offset.
-- `src/race_data.c` and `src/menu_data.c` hold the original's tables,
+- `src/race/data.c` and `src/menu/data.c` hold the original's tables,
   generated from the executable by `tools/gen_race_data.py` and
   `tools/gen_menu_data.py`.
 - `tools/progress.py` writes [docs/PROGRESS.md](docs/PROGRESS.md).

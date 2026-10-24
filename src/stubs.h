@@ -60,9 +60,9 @@ extern s32 g_net_players;           /* 0x50f7a8 */
 void race_end(void);                /* 0x420870 */
 
 #include "net.h"
-#include "menubg.h"
-#include "menucar.h"
+#include "menu/bg.h"
+#include "menu/car.h"
 #include "scene.h"
-#include "race.h"
+#include "race/race.h"
 
 #endif /* IGN_STUBS_H */

@@ -3,7 +3,7 @@
 #------------------------------------------------------------------------------
 #
 # Built per ABI by build.sh with the NDK's toolchain file: libignition.so,
-# the engine and src/platform_android.c (NativeActivity, EGL with OpenGL
+# the engine and src/platform/android.c (NativeActivity, EGL with OpenGL
 # ES 3.0, AAudio) with the NDK's android_native_app_glue. Nothing else.
 
 cmake_minimum_required(VERSION 3.16)
@@ -13,11 +13,11 @@ set(IGN_VERSION "0.0.0" CACHE STRING "This port's version, e.g. 0.1.0")
 
 set(ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../..)
 set(SRC ${ROOT}/src)
-file(GLOB IGN_SOURCES ${SRC}/*.c ${SRC}/lisa/*.c)
-list(FILTER IGN_SOURCES EXCLUDE REGEX "/platform_[a-z]+\\.c$")
+file(GLOB IGN_SOURCES ${SRC}/*.c ${SRC}/lisa/*.c ${SRC}/race/*.c ${SRC}/menu/*.c
+     ${SRC}/frontend/*.c)
 list(FILTER IGN_SOURCES EXCLUDE REGEX "/rnd_gxm\\.c$")
-list(APPEND IGN_SOURCES ${SRC}/platform_android.c ${SRC}/platform_common.c
-     ${SRC}/platform_touch.c)
+list(APPEND IGN_SOURCES ${SRC}/platform/android.c ${SRC}/platform/common.c
+     ${SRC}/platform/touch.c)
 
 set(GLUE ${ANDROID_NDK}/sources/android/native_app_glue)
 add_library(ignition SHARED ${IGN_SOURCES} ${GLUE}/android_native_app_glue.c)

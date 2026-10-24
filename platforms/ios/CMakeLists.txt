@@ -7,7 +7,7 @@
 #   cmake --build build-ios --config Release -- -sdk iphoneos CODE_SIGNING_ALLOWED=NO
 #
 # `make ios-sim` and `make ios` wrap these; see README.md. Compiles
-# ../../src directly: the engine and src/platform_ios.m (UIKit, OpenGL ES
+# ../../src directly: the engine and src/platform/ios.m (UIKit, OpenGL ES
 # 3.0, GameController, RemoteIO). Only Apple's frameworks.
 
 cmake_minimum_required(VERSION 3.20)
@@ -30,17 +30,17 @@ endif()
 
 set(ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../..)
 set(SRC ${ROOT}/src)
-file(GLOB IGN_SOURCES ${SRC}/*.c ${SRC}/lisa/*.c)
-list(FILTER IGN_SOURCES EXCLUDE REGEX "/platform_[a-z]+\\.c$")
+file(GLOB IGN_SOURCES ${SRC}/*.c ${SRC}/lisa/*.c ${SRC}/race/*.c ${SRC}/menu/*.c
+     ${SRC}/frontend/*.c)
 list(FILTER IGN_SOURCES EXCLUDE REGEX "/rnd_gxm\\.c$")
-list(APPEND IGN_SOURCES ${SRC}/platform_ios.m ${SRC}/platform_common.c ${SRC}/platform_touch.c)
+list(APPEND IGN_SOURCES ${SRC}/platform/ios.m ${SRC}/platform/common.c ${SRC}/platform/touch.c)
 
 add_executable(Ignition MACOSX_BUNDLE ${IGN_SOURCES})
 set_property(TARGET Ignition PROPERTY C_STANDARD 99)
 target_include_directories(Ignition PRIVATE ${SRC})
 target_compile_definitions(Ignition PRIVATE
     IGN_GLES GLES_SILENCE_DEPRECATION _DEFAULT_SOURCE IGN_VERSION="${IGN_VERSION}")
-# platform_ios.m has the app's main and runs main.c's under this name.
+# platform/ios.m has the app's main and runs main.c's under this name.
 set_source_files_properties(${SRC}/main.c PROPERTIES COMPILE_DEFINITIONS main=ign_main)
 
 # -fsigned-char: the game is x86 code, where char is signed.

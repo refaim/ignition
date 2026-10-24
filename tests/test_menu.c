@@ -10,8 +10,8 @@
 #include "input.h"
 #include "lisa/sprite.h"
 #include "lisa/texture.h"
-#include "menu.h"
-#include "menu_engine.h"
+#include "menu/menu.h"
+#include "menu/engine.h"
 #include "startup.h"
 
 static int s_failed;

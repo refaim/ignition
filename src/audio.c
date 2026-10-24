@@ -12,7 +12,7 @@
 
 #include "audio.h"
 #include "sound.h"
-#include "platform.h"
+#include "platform/platform.h"
 
 struct cd_stream {
     s16 *pcm;

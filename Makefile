@@ -1,19 +1,19 @@
 # Ignition - reconstructed engine
 #
 # The engine core is plain C99; each host is one native file behind
-# src/platform.h, and every host but the Vita's draws with OpenGL
+# src/platform/platform.h, and every host but the Vita's draws with OpenGL
 # through src/rnd_gl.c:
 #
-#   make                 the native build: macOS (src/platform_macos.m,
-#                        Cocoa) or Linux (src/platform_linux.c, X11 + GLX)
+#   make                 the native build: macOS (src/platform/macos.m,
+#                        Cocoa) or Linux (src/platform/linux.c, X11 + GLX)
 #   make linux           Linux, also the Steam Deck build: build-linux/
-#   make windows         Windows x86_64 (src/platform_windows.c, Win32 + WGL),
+#   make windows         Windows x86_64 (src/platform/windows.c, Win32 + WGL),
 #                        cross-built with MinGW-w64: build-windows/
 #   make web             WebAssembly and WebGL 2 with Emscripten
-#                        (src/platform_web.c): build-web/dist/
-#   make android         Android APK (src/platform_android.c, NDK, no Gradle)
-#   make ios / ios-sim   iOS and iPadOS (src/platform_ios.m, Xcode)
-#   make vita            PlayStation Vita (src/platform_vita.c,
+#                        (src/platform/web.c): build-web/dist/
+#   make android         Android APK (src/platform/android.c, NDK, no Gradle)
+#   make ios / ios-sim   iOS and iPadOS (src/platform/ios.m, Xcode)
+#   make vita            PlayStation Vita (src/platform/vita.c,
 #                        src/rnd_gxm.c, docs/vita.md)
 #
 # No third-party libraries: only each system's own APIs, and Khronos'
@@ -38,12 +38,12 @@ else
 HOST ?= linux
 endif
 
-CORE_SRC := $(SRCDIR)/app.c $(SRCDIR)/game.c $(SRCDIR)/stubs.c $(SRCDIR)/net.c $(SRCDIR)/canvas.c $(SRCDIR)/scene.c $(SRCDIR)/gl3d.c $(SRCDIR)/menucar.c $(SRCDIR)/menubg.c $(SRCDIR)/race_load.c $(SRCDIR)/race_track.c $(SRCDIR)/race_world.c $(SRCDIR)/race_cars.c $(SRCDIR)/phys.c $(SRCDIR)/race_phys.c $(SRCDIR)/anim_tex.c $(SRCDIR)/race_ai.c $(SRCDIR)/srf.c $(SRCDIR)/race_contact.c $(SRCDIR)/race_fx.c $(SRCDIR)/race_respawn.c $(SRCDIR)/race_camera.c $(SRCDIR)/race_view.c $(SRCDIR)/race_misc.c $(SRCDIR)/race_hud.c $(SRCDIR)/race_results.c $(SRCDIR)/race_sound.c $(SRCDIR)/race_control.c $(SRCDIR)/race_init.c $(SRCDIR)/race.c $(SRCDIR)/race_frame_stubs.c $(SRCDIR)/race_input.c $(SRCDIR)/race_data.c \
+CORE_SRC := $(SRCDIR)/app.c $(SRCDIR)/game.c $(SRCDIR)/stubs.c $(SRCDIR)/net.c $(SRCDIR)/canvas.c $(SRCDIR)/scene.c $(SRCDIR)/gl3d.c $(SRCDIR)/menu/car.c $(SRCDIR)/menu/bg.c $(SRCDIR)/race/load.c $(SRCDIR)/race/track.c $(SRCDIR)/race/world.c $(SRCDIR)/race/cars.c $(SRCDIR)/phys.c $(SRCDIR)/race/phys.c $(SRCDIR)/anim_tex.c $(SRCDIR)/race/ai.c $(SRCDIR)/srf.c $(SRCDIR)/race/contact.c $(SRCDIR)/race/fx.c $(SRCDIR)/race/respawn.c $(SRCDIR)/race/camera.c $(SRCDIR)/race/view.c $(SRCDIR)/race/misc.c $(SRCDIR)/race/hud.c $(SRCDIR)/race/results.c $(SRCDIR)/race/sound.c $(SRCDIR)/race/control.c $(SRCDIR)/race/init.c $(SRCDIR)/race/race.c $(SRCDIR)/race/frame_stubs.c $(SRCDIR)/race/input.c $(SRCDIR)/race/data.c \
             $(SRCDIR)/lisa/lisa.c $(SRCDIR)/lisa/log.c $(SRCDIR)/lisa/mem.c $(SRCDIR)/lisa/file.c \
             $(SRCDIR)/lisa/exit.c $(SRCDIR)/lisa/gfx.c $(SRCDIR)/lisa/texture.c $(SRCDIR)/lisa/sprite.c \
             $(SRCDIR)/lisa/font.c $(SRCDIR)/startup.c $(SRCDIR)/input.c \
-            $(SRCDIR)/menu_engine.c $(SRCDIR)/menu_data.c $(SRCDIR)/settings.c $(SRCDIR)/frontend.c $(SRCDIR)/frontend_state.c \
-            $(SRCDIR)/menu_panels.c $(SRCDIR)/menu_pages.c $(SRCDIR)/audio.c $(SRCDIR)/cd.c $(SRCDIR)/sound.c $(SRCDIR)/cdp.c \
+            $(SRCDIR)/menu/engine.c $(SRCDIR)/menu/data.c $(SRCDIR)/settings.c $(SRCDIR)/frontend/frontend.c $(SRCDIR)/frontend/state.c \
+            $(SRCDIR)/menu/panels.c $(SRCDIR)/menu/pages.c $(SRCDIR)/audio.c $(SRCDIR)/cd.c $(SRCDIR)/sound.c $(SRCDIR)/cdp.c \
             $(SRCDIR)/video.c $(SRCDIR)/gfx.c $(SRCDIR)/rnd_gl.c $(SRCDIR)/vfs.c $(SRCDIR)/main.c \
             $(SRCDIR)/cdimage.c
 
@@ -51,8 +51,8 @@ WARN := -Wall -Wextra -Wno-unused-parameter
 
 ifeq ($(HOST),macos)
 # MACOS_ARCH="-arch arm64 -arch x86_64" makes a universal binary (CI).
-MAC_SRC  := $(SRCDIR)/platform_macos.m
-HOST_C   := $(SRCDIR)/platform_common.c
+MAC_SRC  := $(SRCDIR)/platform/macos.m
+HOST_C   := $(SRCDIR)/platform/common.c
 
 CC        := clang
 CFLAGS    := -std=c99 -D_POSIX_C_SOURCE=200809L -D_DARWIN_C_SOURCE $(WARN) -g -O1 -I$(SRCDIR) $(MACOS_ARCH)
@@ -72,15 +72,15 @@ endif
 CFLAGS   := $(TOOL_CFLAGS) -g -I$(SRCDIR)/third_party
 
 ifeq ($(HOST),linux)
-HOST_C   := $(SRCDIR)/platform_linux.c $(SRCDIR)/platform_common.c
+HOST_C   := $(SRCDIR)/platform/linux.c $(SRCDIR)/platform/common.c
 LDFLAGS  := -lX11 -lGL -lasound -lpthread -lm
 endif
 ifeq ($(HOST),windows)
-HOST_C   := $(SRCDIR)/platform_windows.c $(SRCDIR)/platform_common.c
+HOST_C   := $(SRCDIR)/platform/windows.c $(SRCDIR)/platform/common.c
 LDFLAGS  := -mwindows -static -lopengl32 -lgdi32 -lwinmm -luser32
 endif
 ifeq ($(HOST),web)
-HOST_C   := $(SRCDIR)/platform_web.c $(SRCDIR)/platform_common.c $(SRCDIR)/platform_touch.c
+HOST_C   := $(SRCDIR)/platform/web.c $(SRCDIR)/platform/common.c $(SRCDIR)/platform/touch.c
 CFLAGS   += -DIGN_GLES
 LDFLAGS  := $(WEB_LDFLAGS)
 endif
@@ -106,7 +106,7 @@ $(BUILD)/%.o: $(SRCDIR)/%.c $(wildcard $(SRCDIR)/*.h $(SRCDIR)/*/*.h)
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(BUILD)/%.o: $(SRCDIR)/%.m $(wildcard $(SRCDIR)/*.h)
+$(BUILD)/%.o: $(SRCDIR)/%.m $(wildcard $(SRCDIR)/*.h $(SRCDIR)/*/*.h)
 	@mkdir -p $(dir $@)
 	$(CC) $(OBJCFLAGS) -c $< -o $@
 

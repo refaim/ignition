@@ -1,6 +1,6 @@
 # Ignition on iOS and iPadOS
 
-The iOS host is `src/platform_ios.m`, on Apple's frameworks only: UIKit,
+The iOS host is `src/platform/ios.m`, on Apple's frameworks only: UIKit,
 OpenGL ES 3.0 on a `CAEAGLLayer` (which iOS still has but marks as
 deprecated), touch, GameController pads and keyboards, and a RemoteIO
 audio unit. The game runs on its own thread; UIKit keeps the main one.

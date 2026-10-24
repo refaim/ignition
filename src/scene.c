@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "race_data.h"
+#include "race/data.h"
 #include "scene.h"
 
 struct scene *g_scene;                      /* 0x63c5f0 */

@@ -25,8 +25,21 @@ set -e
 TITLE=IGNT00001
 VPK=build-vita/ignition.vpk
 SHADERS=platforms/vita/shaders
-: "${DATA:=$(ls -d data/*/disc 2>/dev/null | head -n 1)}"
+# The first image folder under data/ by name, as the game picks it.
+first_disc() {
+    ls data 2>/dev/null | LC_ALL=C sort | while IFS= read -r n; do
+        if [ -d "data/$n/disc" ]; then
+            echo "data/$n/disc"
+            break
+        fi
+    done
+}
+: "${DATA:=$(first_disc)}"
 : "${VITA_PORT:=1337}"
+# macOS's cp -X leaves out extended attributes, so no "._" files land on
+# the card.
+NOX=
+[ "$(uname)" = Darwin ] && NOX=-X
 
 find_ux0() {
     if [ -n "$VITA_UX0" ]; then
@@ -74,11 +87,22 @@ pull() {
 put() {
     if [ -n "$UX0" ]; then
         mkdir -p "$(dirname "$UX0/$2")"
-        # COPYFILE_DISABLE: no macOS "._" files on the card.
-        COPYFILE_DISABLE=1 cp "$1" "$UX0/$2"
+        cp $NOX "$1" "$UX0/$2"
     else
         curl -s --ftp-create-dirs -T "$1" "$FTP/ux0:/$2"
     fi
+}
+
+# The first image folder (the data's own first) whose .cue has more than
+# one track.
+music_image() {
+    for d in "$(dirname "$DATA")" data/*; do
+        c=$(ls "$d"/*.cue 2>/dev/null | grep -v '/\._' | head -n 1)
+        if [ -n "$c" ] && [ "$(grep -c TRACK "$c")" -gt 1 ]; then
+            echo "$d"
+            return
+        fi
+    done
 }
 
 push() {
@@ -94,14 +118,22 @@ push() {
     if [ -n "$UX0" ] && [ -d "$DATA" ] && [ ! -d "$UX0/data/ignition/disc" ]; then
         echo "vita_deploy: copying the disc to ux0:data/ignition/disc"
         mkdir -p "$UX0/data/ignition"
-        COPYFILE_DISABLE=1 cp -R "$DATA" "$UX0/data/ignition/disc"
+        cp -R $NOX "$DATA" "$UX0/data/ignition/disc"
     elif [ -z "$UX0" ]; then
         echo "vita_deploy: over FTP the disc is not copied; copy $DATA to ux0:data/ignition/disc once"
     fi
     if [ "$VITA_MUSIC" = 1 ]; then
-        for f in "$(dirname "$DATA")"/*.cue "$(dirname "$DATA")"/*.bin; do
-            [ -f "$f" ] && put "$f" "data/ignition/$(basename "$f")"
-        done
+        # The music is on the image's audio tracks: an image of the data
+        # track alone has none, so take the first image that has some.
+        img=$(music_image)
+        if [ -z "$img" ]; then
+            echo "vita_deploy: no disc image under data/ has audio tracks" >&2
+        else
+            for f in "$img"/*.cue "$img"/*.bin; do
+                [ -f "$f" ] && put "$f" "data/ignition/$(basename "$f")"
+            done
+            echo "vita_deploy: CD music from $img"
+        fi
     fi
     if [ -n "$UX0" ]; then
         sync

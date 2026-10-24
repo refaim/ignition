@@ -358,7 +358,7 @@ int menu_redraw_page(void)
  * a shared buffer. */
 const char *format_time(double t)
 {
-    static char text[16];
+    static char text[40];
     int minutes = (int)(t * 0.016666666666666666);
     int whole;
 

@@ -3,6 +3,7 @@
  */
 
 #include "app.h"
+#include "cd.h"
 #include "canvas.h"
 #include "game.h"
 #include "input.h"
@@ -82,6 +83,7 @@ int app_tick(void)
     }
     if (g_app_state == APP_STATE_RUN && !s_done) {
         g_frame_time = app_time_ms();
+        cd_pump();
         game_frame();
         return 1;
     }

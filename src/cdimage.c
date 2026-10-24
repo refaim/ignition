@@ -467,13 +467,11 @@ int cdimage_resolve(const char *name, char *out, size_t out_size)
     return 1;
 }
 
-short *cdimage_read_audio(int track, u32 *frames)
+int cdimage_audio_track(int track, const char **path, long *offset, u32 *frames,
+                        int *big_endian)
 {
     const struct cue_track *t = NULL;
     const struct cue_file *f;
-    short *pcm;
-    FILE *fp;
-    size_t bytes;
     int i;
 
     for (i = 0; s_open && i < s_track_count; i++) {
@@ -482,33 +480,14 @@ short *cdimage_read_audio(int track, u32 *frames)
         }
     }
     if (t == NULL || t->length <= 0) {
-        return NULL;
+        return 0;
     }
     f = &s_files[t->file];
-    bytes = (size_t)t->length * SECTOR_RAW;
-    pcm = malloc(bytes);
-    fp = fopen(f->path, "rb");
-    if (pcm == NULL || fp == NULL
-        || fseek(fp, f->data_start + t->start * SECTOR_RAW, SEEK_SET) != 0) {
-        free(pcm);
-        if (fp != NULL) {
-            fclose(fp);
-        }
-        return NULL;
-    }
-    bytes = fread(pcm, 1, bytes, fp);
-    fclose(fp);
-    if (f->big_endian) {
-        u8 *b = (u8 *)pcm;
-        size_t k;
-        for (k = 0; k + 1 < bytes; k += 2) {
-            u8 tmp = b[k];
-            b[k] = b[k + 1];
-            b[k + 1] = tmp;
-        }
-    }
-    *frames = (u32)(bytes / 4);
-    return pcm;
+    *path = f->path;
+    *offset = f->data_start + t->start * SECTOR_RAW;
+    *frames = (u32)((size_t)t->length * SECTOR_RAW / 4);
+    *big_endian = f->big_endian;
+    return 1;
 }
 
 int cdimage_extract_all(void)

@@ -1,9 +1,11 @@
 /*
  * audio.c - the mixer.
  *
- * The platform calls mix() on its audio thread. The game thread hands
- * over a new CD buffer through s_cd_next; the audio thread picks it up,
- * and the game thread frees what the audio thread let go of.
+ * The platform calls mix() on its audio thread. The CD music is a
+ * stream: a ring of samples the game thread fills from the disc image
+ * (cd.c) and the audio thread plays. The game thread hands over a new
+ * stream through s_cd_next; the audio thread picks it up, and the game
+ * thread frees what the audio thread let go of.
  */
 
 #include <stdatomic.h>
@@ -14,15 +16,19 @@
 #include "sound.h"
 #include "platform/platform.h"
 
+/* Four seconds of 16 bit stereo: enough that a frame's wait, or a slow
+ * read, does not run it dry. */
+enum { RING_FRAMES = 4 * AUDIO_RATE };
+
 struct cd_stream {
-    s16 *pcm;
-    u32 frames;
+    _Atomic u32 r, w;           /* frames read and written, ever */
+    atomic_int ended;           /* no more will be written */
+    s16 pcm[RING_FRAMES * 2];
 };
 
 static _Atomic(struct cd_stream *) s_cd_next;  /* game to audio */
 static _Atomic(struct cd_stream *) s_cd_done;  /* audio to game, to free */
 static struct cd_stream *s_cd;                 /* audio thread only */
-static u32 s_cd_pos;                           /* audio thread only */
 static atomic_int s_cd_playing;
 static atomic_int s_cd_mute;
 static int s_open;
@@ -35,10 +41,12 @@ static int s_channels;
 static atomic_int s_active[MAX_VOICES];
 static atomic_int s_master = 0x10000;
 
+/* Handed over in place of a stream: the music stops. */
+static struct cd_stream s_stop;
+
 static void stream_free(struct cd_stream *s)
 {
-    if (s != NULL) {
-        free(s->pcm);
+    if (s != &s_stop) {
         free(s);
     }
 }
@@ -148,29 +156,30 @@ static void mix(float *out, s32 frames, void *user)
     if (next != NULL) {
         struct cd_stream *old = s_cd;
 
-        s_cd = next->pcm != NULL ? next : NULL;
-        s_cd_pos = 0;
-        if (next->pcm == NULL) {
-            stream_free(next);
-        }
+        s_cd = next != &s_stop ? next : NULL;
         if (old != NULL) {
             stream_free(atomic_exchange(&s_cd_done, old));
         }
     }
     for (i = 0; i < frames; i++) {
-        float l = 0.0f, r = 0.0f;
+        out[2 * i] = out[2 * i + 1] = 0.0f;
+    }
+    if (s_cd != NULL) {
+        u32 rd = atomic_load(&s_cd->r), avail = atomic_load(&s_cd->w) - rd;
+        int mute = atomic_load(&s_cd_mute);
 
-        if (s_cd != NULL && s_cd_pos < s_cd->frames) {
-            if (!atomic_load(&s_cd_mute)) {
-                l = s_cd->pcm[2 * s_cd_pos] * (1.0f / 32768.0f);
-                r = s_cd->pcm[2 * s_cd_pos + 1] * (1.0f / 32768.0f);
-            }
-            if (++s_cd_pos == s_cd->frames) {
-                atomic_store(&s_cd_playing, 0);
+        for (i = 0; i < frames && avail > 0; i++, rd++, avail--) {
+            const s16 *p = s_cd->pcm + 2 * (rd % RING_FRAMES);
+
+            if (!mute) {
+                out[2 * i] = p[0] * (1.0f / 32768.0f);
+                out[2 * i + 1] = p[1] * (1.0f / 32768.0f);
             }
         }
-        out[2 * i] = l;
-        out[2 * i + 1] = r;
+        atomic_store(&s_cd->r, rd);
+        if (avail == 0 && atomic_load(&s_cd->ended)) {
+            atomic_store(&s_cd_playing, 0);
+        }
     }
     if (s_voices != NULL) {
         mix_voices(out, frames);
@@ -233,30 +242,51 @@ void audio_shutdown(void)
     collect();
 }
 
-static void hand_over(s16 *pcm, u32 frames)
+static void hand_over(struct cd_stream *s)
 {
-    struct cd_stream *s = malloc(sizeof(*s));
-
     collect();
-    s->pcm = pcm;
-    s->frames = frames;
-    atomic_store(&s_cd_playing, pcm != NULL && frames > 0);
-    stream_free(atomic_exchange(&s_cd_next, s));
+    atomic_store(&s_cd_playing, s != NULL);
+    stream_free(atomic_exchange(&s_cd_next, s != NULL ? s : &s_stop));
 }
 
-void audio_cd_play(s16 *pcm, u32 frames)
+struct cd_stream *audio_cd_open(void)
 {
-    if (!s_open) {
-        free(pcm);
-        return;
+    struct cd_stream *s;
+
+    if (!s_open || (s = calloc(1, sizeof(*s))) == NULL) {
+        return NULL;
     }
-    hand_over(pcm, frames);
+    hand_over(s);
+    return s;
+}
+
+u32 audio_cd_room(const struct cd_stream *s)
+{
+    return RING_FRAMES - (atomic_load(&s->w) - atomic_load(&s->r));
+}
+
+void audio_cd_write(struct cd_stream *s, const s16 *pcm, u32 frames)
+{
+    u32 w = atomic_load(&s->w), k;
+
+    for (k = 0; k < frames; k++, w++) {
+        s16 *p = s->pcm + 2 * (w % RING_FRAMES);
+
+        p[0] = pcm[2 * k];
+        p[1] = pcm[2 * k + 1];
+    }
+    atomic_store(&s->w, w);
+}
+
+void audio_cd_end(struct cd_stream *s)
+{
+    atomic_store(&s->ended, 1);
 }
 
 void audio_cd_stop(void)
 {
     if (s_open) {
-        hand_over(NULL, 0);
+        hand_over(NULL);
     }
 }
 

@@ -43,9 +43,10 @@ int cdimage_track_is_audio(int track);
 s32 cdimage_track_start(int track);
 s32 cdimage_disc_frames(void);
 
-/* Audio track `track` (1 based, as on the disc) as 16 bit stereo samples
- * at 44.1 kHz. Returns a malloc'd buffer the caller frees, or NULL when
- * the track is missing or not audio. `frames` receives the frame count. */
-short *cdimage_read_audio(int track, u32 *frames);
+/* Where audio track `track` is: its file, the byte its samples start at
+ * and its length in frames of 16 bit stereo; big_endian when the file
+ * holds them so. 0 when there is no such track. */
+int cdimage_audio_track(int track, const char **path, long *offset, u32 *frames,
+                        int *big_endian);
 
 #endif /* IGN_CDIMAGE_H */

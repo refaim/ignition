@@ -53,6 +53,44 @@ static int write_wav(const char *path, const short *pcm, u32 frames)
     return fclose(f) == 0 && ok;
 }
 
+/* A whole audio track as 16 bit stereo, malloc'd. */
+static short *read_track(int track, u32 *frames)
+{
+    const char *file;
+    long offset;
+    int big;
+    short *pcm;
+    FILE *fp;
+    size_t got, k;
+
+    if (!cdimage_audio_track(track, &file, &offset, frames, &big)) {
+        return NULL;
+    }
+    pcm = malloc((size_t)*frames * 4);
+    fp = fopen(file, "rb");
+    if (pcm == NULL || fp == NULL || fseek(fp, offset, SEEK_SET) != 0) {
+        free(pcm);
+        if (fp != NULL) {
+            fclose(fp);
+        }
+        return NULL;
+    }
+    got = fread(pcm, 4, *frames, fp);
+    fclose(fp);
+    *frames = (u32)got;
+    if (big) {
+        unsigned char *b = (unsigned char *)pcm;
+
+        for (k = 0; k + 1 < got * 4; k += 2) {
+            unsigned char t = b[k];
+
+            b[k] = b[k + 1];
+            b[k + 1] = t;
+        }
+    }
+    return pcm;
+}
+
 int main(int argc, char **argv)
 {
     char path[1024];
@@ -79,7 +117,7 @@ int main(int argc, char **argv)
         if (!cdimage_track_is_audio(track)) {
             continue;
         }
-        pcm = cdimage_read_audio(track, &frames);
+        pcm = read_track(track, &frames);
         if (pcm == NULL) {
             fprintf(stderr, "track %02d: read failed\n", track);
             continue;

@@ -709,10 +709,12 @@ int menu_page_handler_a(void)
         float fx, fy;
         int mx, my;
 
-        /* The corners of the screen, or of NATIVE's margins. */
+        /* The corners of the screen, or of NATIVE's margins, which need
+         * not be whole menu pixels: rounded out, so that the corners
+         * reach the screen's edges. */
         canvas_extent(g_menu_screen, &fx, &fy);
-        mx = (int)fx;
-        my = (int)fy;
+        mx = (int)ceilf(fx);
+        my = (int)ceilf(fy);
         draw_sprite_at(g_position_icons[0], -mx, -my);
         draw_sprite_at(g_position_icons[1], mode[0] - r[2] + mx, -my);
         draw_sprite_at(g_position_icons[2], -mx, mode[1] - r[3] + my);

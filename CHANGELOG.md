@@ -9,6 +9,8 @@ All notable changes to this project are documented in this file.
 - The race effects (smoke, sparks, explosions, nitro, rain) are drawn at 40% of the original's size.
 
 ### Fixed
+- CD music plays on the Vita: tracks stream from the disc image instead of being read whole into memory.
+- The menu's corner vignette reaches the screen's edges when NATIVE's margins are not whole menu pixels (the Vita).
 - On the Vita, the next race in a championship no longer shows the last track's textures and colours.
 - NATIVE's race messages (LAP RECORD, TRACK RECORD and the like) are drawn at the menus' size, as its HUD.
 - On the Vita, a re-created sprite no longer shows its old picture: the language page's selected flag now follows the selection.

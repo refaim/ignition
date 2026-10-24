@@ -34,6 +34,57 @@ static int s_open;
 static int s_on = 1;
 static int s_playing_track;
 
+/* The track being streamed: its file, read up to the mixer's ring. */
+static FILE *s_fp;
+static u32 s_left;              /* frames still to read */
+static int s_swap;              /* big endian samples */
+static struct cd_stream *s_stream;
+
+static void stream_close(void)
+{
+    if (s_fp != NULL) {
+        fclose(s_fp);
+        s_fp = NULL;
+    }
+    s_stream = NULL;
+    s_left = 0;
+}
+
+/* Tops up the mixer's ring from the track's file; the main loop calls it
+ * every pass. */
+void cd_pump(void)
+{
+    enum { CHUNK = 4096 };
+    static s16 buf[CHUNK * 2];
+
+    while (s_stream != NULL && s_left > 0) {
+        u32 room = audio_cd_room(s_stream), n = s_left < CHUNK ? s_left : CHUNK;
+        size_t got;
+
+        if (room < n) {
+            return;
+        }
+        got = fread(buf, 4, n, s_fp);
+        if (s_swap) {
+            u8 *b = (u8 *)buf;
+            size_t k;
+
+            for (k = 0; k < got * 4; k += 2) {
+                u8 t = b[k];
+
+                b[k] = b[k + 1];
+                b[k + 1] = t;
+            }
+        }
+        audio_cd_write(s_stream, buf, (u32)got);
+        s_left = got < n ? 0 : s_left - n;
+    }
+    if (s_stream != NULL) {
+        audio_cd_end(s_stream);
+        stream_close();
+    }
+}
+
 /* Finds a .cue next to the data folder (the image's folder holds the
  * extracted disc as disc/). */
 static void find_cue(void)
@@ -93,6 +144,7 @@ int cd_open(void)
 /* 0x4580a0 */
 int cd_close(void)
 {
+    stream_close();
     audio_cd_stop();
     cdimage_close();
     s_open = 0;
@@ -157,25 +209,38 @@ int cd_read_tracks(void)
 /* 0x457ed0 */
 int cd_play_track(int track)
 {
-    s16 *pcm;
+    const char *path;
+    long offset;
     u32 frames;
+    int big;
 
-    if (track > g_cd_track_count || track < 1 || !s_open) {
+    if (track > g_cd_track_count || track < 1 || !s_open
+        || !cdimage_audio_track(track, &path, &offset, &frames, &big)) {
         return 0;
     }
-    pcm = cdimage_read_audio(track, &frames);
-    if (pcm == NULL) {
+    stream_close();
+    s_fp = fopen(path, "rb");
+    if (s_fp == NULL || fseek(s_fp, offset, SEEK_SET) != 0) {
+        stream_close();
         return 0;
     }
+    s_stream = audio_cd_open();
+    if (s_stream == NULL) {
+        stream_close();
+        return 0;
+    }
+    s_left = frames;
+    s_swap = big;
     s_playing_track = track;
-    audio_cd_play(pcm, frames);
     audio_cd_mute(!s_on);
+    cd_pump();
     return 1;
 }
 
 /* 0x457fc0 */
 int cd_stop_play(void)
 {
+    stream_close();
     audio_cd_stop();
     s_playing_track = 0;
     return 1;

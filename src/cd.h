@@ -24,5 +24,7 @@ int cd_set_volume(int volume);
 int cd_read_tracks(void);
 int cd_play_track(int track);
 int cd_stop_play(void);
+/* Keeps the playing track streaming; called each pass of the main loop. */
+void cd_pump(void);
 
 #endif /* IGN_CD_H */

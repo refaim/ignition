@@ -672,3 +672,38 @@ void race_age_messages(void)
         }
     }
 }
+
+static void free_sprites(struct sprite **s, int n)
+{
+    int i;
+
+    for (i = 0; i < n; i++) {
+        if (s[i] != NULL) {
+            sprite_create(NULL, s[i]);
+            s[i] = NULL;
+        }
+    }
+}
+
+/* 0x420990: the HUD's sprites freed at the race's end. */
+void race_hud_free(void)
+{
+    free_sprites(g_hud_panels, 4);
+    free_sprites(&g_hud_needle_cap, 1);
+    free_sprites(g_hud_gears, 9);
+    free_sprites(g_hud_boost, 3);
+    free_sprites(g_hud_lights, 4);
+    free_sprites(g_hud_signs16, 16);
+    free_sprites(g_race_5286f4, 6);
+    free_sprites(g_race_52870c, 12);
+    free_sprites(g_hud_knockout, 10);
+    free_sprites(g_hud_car_icons, 12);
+    free_sprites(g_hud_bar, 2);
+    free_sprites(&g_hud_leader, 1);
+    free_sprites(g_hud_places4, 4);
+    free_sprites(&g_race_5287e8, 1);
+    free_sprites(g_race_5287b8, 3);
+    free_sprites(g_race_5287c4, 3);
+    free_sprites(g_race_5287d0, 3);
+    free_sprites(g_race_5287dc, 3);
+}

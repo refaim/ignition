@@ -96,5 +96,4 @@ int net_send_settings(void *state, void *settings)
 
 
 
-STUB_VOID(0x420870, race_end)
 

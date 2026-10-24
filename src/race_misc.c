@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "anim_tex.h"
 #include "cd.h"
 #include "game.h"
 #include "input.h"
@@ -25,6 +26,7 @@
 #include "race_fx.h"
 #include "race_camera.h"
 #include "race_cars.h"
+#include "race_ai.h"
 #include "race_contact.h"
 #include "race_control.h"
 #include "race_data.h"
@@ -37,6 +39,7 @@
 #include "sound.h"
 #include "startup.h"
 #include "stubs.h"
+#include "video.h"
 
 extern s32 r_563c04, r_54f988, r_54f978, r_563c18, r_5532ac, r_563ce4, r_54f9a8;
 extern s32 r_6036f0[8], r_552f54, r_563c60, r_5530a8, r_54f9d0, r_5db038, r_5daff8;
@@ -1253,4 +1256,34 @@ void race_joystick(void)
             r_563c60 = 1;
         }
     }
+}
+
+/* 0x420870: frees everything a race loaded, so the next one can load. */
+void race_end(void)
+{
+    int i;
+
+    video_set_palette(startup_black_palette());
+    memset(g_back_buffer, 0, 0x1d4c0 * 4);
+    present_back_buffer();
+    cd_stop_play();
+    if (g_srf.file != NULL) {           /* 0x4127a0 */
+        mem_free(0, g_srf.file);
+        g_srf.file = NULL;
+    }
+    race_hud_free();
+    race_free_ai_track();
+    scene_free();
+    sound_close();
+    race_save_settings();
+    mem_free(0, g_level_pic);
+    g_level_pic = NULL;
+    for (i = 0; i < 9; i++) {
+        font_unload(g_race_fonts[i]);
+    }
+    anim_tex_free();
+    file_write("ign_win.btz", g_race_cfg, 0x597);
+    memset(g_back_buffer, 0, 0x1d4c0 * 4);
+    present_back_buffer();
+    mem_pool_destroy(g_race_pool);
 }

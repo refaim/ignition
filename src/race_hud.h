@@ -47,4 +47,6 @@ void race_draw_messages(void);
 /* 0x441210 */
 void race_age_messages(void);
 
+void race_hud_free(void);
+
 #endif /* IGN_RACE_HUD_H */

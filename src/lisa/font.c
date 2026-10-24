@@ -85,6 +85,15 @@ static int font_free(int font)
     return 1;
 }
 
+/* Frees a loaded font's slot and glyph sprites (0x456470). */
+int font_unload(int font)
+{
+    if (font < 0 || font >= FONT_MAX || g_fonts[font].used != 1) {
+        return 0;
+    }
+    return font_free(font);
+}
+
 /* 0x456210 */
 static int font_exit(s32 user)
 {

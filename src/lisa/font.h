@@ -61,6 +61,8 @@ int font_init(void);
 
 /* Loads a font file. Returns its handle, or -1 with g_file_error set. */
 int font_load(const char *name, int unused);
+/* Frees a font font_load made; its handle can be taken again. */
+int font_unload(int font);
 
 /* Makes a font from a file image; the image can be freed after. */
 int font_parse(const u8 *data, int unused);

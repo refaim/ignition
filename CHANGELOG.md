@@ -4,11 +4,23 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-24
+
+The Vita becomes playable, championships play through, and NATIVE's
+menus, results and messages are laid out at the menus' size.
+
 ### Changed
+- The Vita renders much faster: a copy for the colour tables is a scene break instead of two scenes, see-through faces are drawn in overlap layers and batched, render targets take 8 scenes each in a ring, and draws set only the state that changed.
 - Vita race controls: the right and left triggers accelerate and brake, Cross is the action (boost), the d-pad's up and down change gear, and the d-pad or left stick steers.
 - The race effects (smoke, sparks, explosions, nitro, rain) are drawn at 40% of the original's size.
+- The game finds its data in the first `data/*/disc` folder by name, whatever the disc image's folder is called.
+- The sources are grouped in folders by module: `src/race/`, `src/menu/`, `src/frontend/` and `src/platform/`.
 
 ### Fixed
+- On the Vita, Cross goes on from the results.
+- The first frame of a new track no longer shows the last track's view.
+- `--view` shows a picture's colours right: the `.PIC` palette is at 0x48.
+- The Vita deploy copies the CD music from a disc image that has audio tracks, and leaves no macOS `._` files on the card.
 - CD music plays on the Vita: tracks stream from the disc image instead of being read whole into memory.
 - The menu's corner vignette reaches the screen's edges when NATIVE's margins are not whole menu pixels (the Vita).
 - On the Vita, the next race in a championship no longer shows the last track's textures and colours.
@@ -19,6 +31,7 @@ All notable changes to this project are documented in this file.
 - NATIVE's menus sit closer under the logo, with their rows spread out, and the last options (RESET GHOST CAR and its YES / NO) draw in full.
 
 ### Added
+- `docs/formats.md`, a reference of the game's file formats, and `docs/engine.md`, how the engine and its tracks work.
 - The Vita's LiveArea bubble, backdrop and gate are made from the game's installer picture and logo when the build finds an extracted disc.
 
 ## [0.1.0] - 2026-10-23

@@ -13,8 +13,9 @@ copy of the game.
 
 ## Status
 
-The front end and single-player races are playable from start to finish:
-three laps, computer drivers, effects, sound, the HUD and the results.
+The front end, single races and whole championships are playable from
+start to finish: three laps, computer drivers, effects, sound, CD music,
+the HUD and the results.
 
 - About 70% of the game's code is ported. [docs/PROGRESS.md](docs/PROGRESS.md)
   lists every routine of `IGN_WIN.EXE` and its status.
@@ -32,7 +33,7 @@ three laps, computer drivers, effects, sound, the HUD and the results.
 | Web | Emscripten, WebGL 2, Web Audio (`src/platform/web.c`) | OpenGL ES 3.0 (`src/rnd_gl.c`) | Runs in Chrome. See [platforms/web](platforms/web/README.md). |
 | Android | NativeActivity, EGL, AAudio (`src/platform/android.c`) | OpenGL ES 3.0 (`src/rnd_gl.c`) | See [platforms/android](platforms/android/README.md). |
 | iOS, iPadOS | UIKit, OpenGL ES, AudioUnit (`src/platform/ios.m`) | OpenGL ES 3.0 (`src/rnd_gl.c`) | Runs in the simulator. See [platforms/ios](platforms/ios/README.md). |
-| PlayStation Vita | VitaSDK (`src/platform/vita.c`) | GXM (`src/rnd_gxm.c`) | Builds; not yet run on hardware. See [docs/vita.md](docs/vita.md). |
+| PlayStation Vita | VitaSDK (`src/platform/vita.c`) | GXM (`src/rnd_gxm.c`) | Playable on hardware; races drop below 36 frames a second where effects pile up. See [docs/vita.md](docs/vita.md). |
 
 The hosts use only each system's own APIs. The project has no third-party
 dependencies; `src/third_party/` holds only Khronos' OpenGL headers.
@@ -50,7 +51,12 @@ The RESOLUTION menu offers those three modes and one more, **NATIVE**:
   shape, so a wide window sees more of the track at the sides.
 - The menus keep their 4:3 layout at a whole-number scale, and the track
   behind them fills the window.
-- The race HUD sits at the window's edges.
+- The race HUD sits at the window's edges, and the race's messages, boxes
+  and results are drawn at the menus' size.
+
+Races run at the original's rate of 36 frames a second, as its game logic
+steps 36 times a second. The race effects (smoke, sparks, explosions,
+nitro and rain) are drawn at 40% of the original's size.
 
 `--software` (or Alt+R in the game) switches the 2D drawing back to the CPU,
 as the original does it. The 3D is always drawn on the GPU.
@@ -61,7 +67,7 @@ The game data is not in this repository. You need a disc image (`.cue` and
 `.bin` files) of your own copy of Ignition.
 
 1. Put the disc image in its own folder under `data/`, for example
-   `data/Ignition (USA) (En,Es,It,Sv) (Rerelease)/`.
+   `data/Ignition/`.
 2. Run `make extract`. The tool copies the files from each disc image in
    `data/` into a `disc/` folder next to the image.
 

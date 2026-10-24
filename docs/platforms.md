@@ -36,7 +36,7 @@ renderer behind `src/rnd.h`. There are no third-party libraries.
 Without `--data`, every host except the Vita's looks in this order:
 
 1. the folder in `$IGNITION_DATA`;
-2. the repository's layout, `data/Ignition (USA) (En,Es,It,Sv) (Rerelease)/disc`
+2. the repository's layout: the first `data/*/disc` folder, by name
    (what `make extract` makes);
 3. a `disc/` folder next to the program (next to the AppImage file for
    an AppImage), or a disc image (`.cue` and `.bin`) there, which is

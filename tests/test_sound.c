@@ -6,10 +6,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "platform/common.h"
 #include "sound.h"
 #include "vfs.h"
 
-#define DEFAULT_DATA "data/Ignition (USA) (En,Es,It,Sv) (Rerelease)/disc"
+#define DEFAULT_DATA "data/Ignition/disc"
 
 static int s_failed;
 
@@ -47,7 +48,7 @@ int main(int argc, char **argv)
 {
     const struct sound_sample *s;
 
-    vfs_set_root(argc > 1 ? argv[1] : DEFAULT_DATA);
+    vfs_set_root(argc > 1 ? argv[1] : plat_find_data(DEFAULT_DATA));
 
     CHECK(sound_load_group("LEVELS\\CANADA\\SOUND", 1, 0) == 1);
     s = sound_sample_of(1, 0, 4);       /* 04_WATER.PAT */

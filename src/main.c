@@ -51,7 +51,7 @@
 /* The extracted disc; the .cue and .bin for the music sit next to it. */
 #define DEFAULT_DATA "ux0:data/ignition/disc"
 #else
-#define DEFAULT_DATA "data/Ignition (USA) (En,Es,It,Sv) (Rerelease)/disc"
+#define DEFAULT_DATA "data/Ignition/disc"
 #endif
 
 static int view_frame(void *user)

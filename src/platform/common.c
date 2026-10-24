@@ -249,6 +249,34 @@ static int try_base(const char *base, char *out, size_t size)
     return has_game(out);
 }
 
+/* The first folder under data/ (in name order) with a disc/ in it: the
+ * repository's layout, whatever the disc image's folder is called. */
+static int find_in_repo_data(char *out, size_t n)
+{
+    DIR *d = opendir("data");
+    struct dirent *e;
+    char best[512] = "", path[1024];
+
+    if (d == NULL) {
+        return 0;
+    }
+    while ((e = readdir(d)) != NULL) {
+        if (e->d_name[0] == '.') {
+            continue;
+        }
+        snprintf(path, sizeof(path), "data/%s/disc", e->d_name);
+        if (is_dir(path) && (best[0] == '\0' || strcmp(e->d_name, best) < 0)) {
+            snprintf(best, sizeof(best), "%s", e->d_name);
+        }
+    }
+    closedir(d);
+    if (best[0] == '\0') {
+        return 0;
+    }
+    snprintf(out, n, "data/%s/disc", best);
+    return 1;
+}
+
 const char *plat_find_data(const char *fallback)
 {
     static char found[1024];
@@ -261,6 +289,9 @@ const char *plat_find_data(const char *fallback)
     }
     if (is_dir(fallback)) {
         return fallback;
+    }
+    if (find_in_repo_data(found, sizeof(found))) {
+        return found;
     }
     bases[0] = plat_host_exe_dir();
     bases[1] = plat_host_pref_dir();

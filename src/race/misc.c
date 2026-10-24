@@ -1293,4 +1293,7 @@ void race_end(void)
      * reuse. */
     gl3d_flush();
     canvas_forget_tables();
+    /* The next race presents once before it draws its view: not this
+     * race's last view. */
+    video_set_layer(0, NULL);
 }

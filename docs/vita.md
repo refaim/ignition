@@ -10,9 +10,10 @@ operations, `src/rnd.h`, with one backend for each host:
 The host is `src/platform/vita.c` (buttons, clock, audio, log). The build
 uses VitaSDK's system libraries only.
 
-Status: the package builds, and in Vita3K it gets as far as loading the
-shaders. It has not run on a Vita yet, so the Cg shaders have not been
-through the device's compiler.
+Status: playable on a Vita, menus and races, at up to the game's own 36
+frames a second. The shaders are compiled by the console's
+`libshacccg.suprx` at the first start and kept. Vita3K on macOS cannot run
+it (its Metal backend has no triangle fans).
 
 ## Build
 
@@ -157,7 +158,9 @@ what OpenGL does:
 
 ## Not done
 
-- Not run on hardware. The Cg shaders have not been compiled yet.
+- Races drop below 36 frames a second where many see-through faces
+  (smoke, shadows, glass) overlap, as each overlap needs a scene of its
+  own (see "Renderer").
 - The race's 2D is drawn on the CPU. Its HUD triangles go through the GPU
   and are read back each frame, which waits for the GPU twice a frame.
 - The game's joystick (`g_joysticks`, analog steering) is not fed from

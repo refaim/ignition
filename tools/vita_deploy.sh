@@ -25,7 +25,7 @@ set -e
 TITLE=IGNT00001
 VPK=build-vita/ignition.vpk
 SHADERS=platforms/vita/shaders
-: "${DATA:=data/Ignition (USA) (En,Es,It,Sv) (Rerelease)/disc}"
+: "${DATA:=$(ls -d data/*/disc 2>/dev/null | head -n 1)}"
 : "${VITA_PORT:=1337}"
 
 find_ux0() {

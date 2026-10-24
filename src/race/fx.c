@@ -118,6 +118,21 @@ static void sprite_mesh(s32 *m, s32 vx, s32 vy, s32 vz)
     memset(m + 6, 0, 8 * sizeof(s32));
 }
 
+/* The effects' scale from 320 x 200, x and y (0x552d80, 0x552f5c),
+ * times FX_SIZE / 10: the port draws the effects smaller than the
+ * original, which on the Vita also means fewer of them overlapping. */
+enum { FX_SIZE = 6 };
+
+static s32 fx_scale_x(void)
+{
+    return r_552d80 / 10 * FX_SIZE;
+}
+
+static s32 fx_scale_y(void)
+{
+    return r_552f5c / 10 * FX_SIZE;
+}
+
 /* The sprite's frame and size: frame f28 / 1024 of the table, the size
  * f30 scaled by the screen (0x552d80, 0x552f5c). */
 static void sprite_frame(s32 *m, const s32 *frames, s32 frame, s32 size)
@@ -130,8 +145,8 @@ static void sprite_frame(s32 *m, const s32 *frames, s32 frame, s32 size)
         m[9] = f[2] << 8;
         m[10] = f[3] << 8;
     }
-    m[12] = (size / 32) * (r_552d80 / 32);
-    m[13] = (size / 32) * (r_552f5c / 32);
+    m[12] = (size / 32) * (fx_scale_x() / 32);
+    m[13] = (size / 32) * (fx_scale_y() / 32);
 }
 
 /* 0x42e2e0: type 1, a turning sprite (smoke). f24 the texture, f28 the
@@ -539,8 +554,8 @@ static void fx_halo(struct race_effect *e, int slot)
         m[8] = 0x5400;
         m[9] = 0x4200;
         m[10] = 0x7500;
-        m[12] = r_552d80 * 150;
-        m[13] = r_552f5c * 150;
+        m[12] = fx_scale_x() * 150;
+        m[13] = fx_scale_y() * 150;
         scene_obj_set_mesh(&g_part_objs[slot], m, 2, 200, 0, 20, 0);
     }
     m[2] = 250 - e->f20 * 8;
@@ -1988,8 +2003,8 @@ static void weather_faces(s32 *m, int drops)
             f[4] = 0x1f00;
             f[5] = 0x9400;
             f[6] = 0;
-            f[7] = r_552d80 * 100;
-            f[8] = r_552f5c * 100;
+            f[7] = fx_scale_x() * 100;
+            f[8] = fx_scale_y() * 100;
         }
     }
 }

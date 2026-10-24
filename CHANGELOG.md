@@ -4,7 +4,11 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### Changed
+- The race effects (smoke, sparks, explosions, nitro, rain) are drawn at 60% of the original's size.
+
 ### Fixed
+- On the Vita, a re-created sprite no longer shows its old picture: the language page's selected flag now follows the selection.
 - A championship no longer quits after its second race: the end of a race frees what the race loaded.
 - NATIVE's track results, track score and totals are drawn at the menus' size.
 - NATIVE's menus sit closer under the logo, with their rows spread out, and the last options (RESET GHOST CAR and its YES / NO) draw in full.

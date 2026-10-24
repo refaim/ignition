@@ -63,5 +63,7 @@ double menu_step_part(void);
 const char *menu_edit_text(void);
 
 int menu_spread_y(int y);
+int menu_lift_y(void);
+int menu_place_y(int y);
 
 #endif /* IGN_MENU_ENGINE_H */

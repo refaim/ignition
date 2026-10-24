@@ -606,22 +606,103 @@ static int screen_x(s16 x)
 }
 
 /* NATIVE's menus have height to spare: the items' rows, given from the
- * screen's centre, are spread 1.3 times as far apart (their sizes kept). */
+ * screen's centre, are spread up to 1.3 times as far apart (their sizes
+ * kept), as far as the page's items stay on its layer: the lowest item's
+ * text goes no lower than 74 below the centre, the highest no higher than
+ * 98 above it. A page whose items already reach further (Options' RESET
+ * GHOST CAR, at 78) keeps the original's spacing. */
 extern u8 *g_menu_screen;
+
+/* A list of text items, the pages the spread and lift apply to; pages
+ * with pictures among their items (the cars, the flags) keep the
+ * original's places, as other sprites are drawn at fixed ones. */
+static int list_page(const struct menu_page *p)
+{
+    int i;
+
+    if (p == NULL || p->items == NULL || p->count == 0) {
+        return 0;
+    }
+    for (i = 0; i < p->count; i++) {
+        const struct menu_visual *v = p->items[i].visuals;
+
+        if (v == NULL || v->text == NULL || v->pixels != NULL) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+static int page_spread(void)
+{
+    const struct menu_page *p = g_menu_view.page;
+    int i, lo = 0, hi = 0, k = 13;
+
+    if (!list_page(p)) {
+        return 10;
+    }
+    for (i = 0; i < p->count; i++) {
+        const struct menu_visual *v = p->items[i].visuals;
+
+        lo = v->text_y < lo ? v->text_y : lo;
+        hi = v->text_y > hi ? v->text_y : hi;
+    }
+    if (hi > 0 && hi * k > 740) {
+        k = 740 / hi;
+    }
+    if (lo < 0 && -lo * k > 980) {
+        k = 980 / -lo;
+    }
+    return k < 10 ? 10 : k;
+}
 
 int menu_spread_y(int y)
 {
     float mx, my;
+    int k;
 
     canvas_extent(g_menu_screen, &mx, &my);
-    return my > 0 ? (y * 13 + (y < 0 ? -5 : 5)) / 10 : y;
+    if (my <= 0) {
+        return y;
+    }
+    k = page_spread();
+    return (y * k + (y < 0 ? -5 : 5)) / 10;
+}
+
+/* And the list is lifted toward the logo, which NATIVE puts at the
+ * window's top: its first item's text to 28 rows from the layer's top,
+ * a gap under the logo, by no more than the margin. */
+int menu_lift_y(void)
+{
+    const struct menu_page *p = g_menu_view.page;
+    float mx, my;
+    int i, lo = 0, lift;
+
+    canvas_extent(g_menu_screen, &mx, &my);
+    if (my <= 0 || !list_page(p)) {
+        return 0;
+    }
+    for (i = 0; i < p->count; i++) {
+        lo = p->items[i].visuals->text_y < lo ? p->items[i].visuals->text_y : lo;
+    }
+    lift = menu_spread_y(lo) + 100 - 28;
+    if (lift > (int)my) {
+        lift = (int)my;
+    }
+    return lift > 0 ? lift : 0;
+}
+
+/* A position given from the screen's centre, spread and lifted. */
+int menu_place_y(int y)
+{
+    return menu_spread_y(y) - menu_lift_y();
 }
 
 static int screen_y(s16 y)
 {
     int half = g_menu.screen_h * g_menu.centre / 2;
 
-    return menu_spread_y(g_menu.scaled ? y * g_menu.screen_h / 0x960 : y) + half;
+    return menu_place_y(g_menu.scaled ? y * g_menu.screen_h / 0x960 : y) + half;
 }
 
 /* 0x411960: draws a visual's sprite and its text, the text through the

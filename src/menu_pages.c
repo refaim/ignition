@@ -119,6 +119,19 @@ static void draw_centred(const char *text, int font, int y)
     text_draw(text, font, 160 - text_width(text, font) / 2, y);
 }
 
+/* A page's band of rows blended in, its ends spread with the items in
+ * NATIVE (menu_spread_y) so the items stay inside it. */
+static void band_rect(int w, int x0, int y0, int x1, int y1, const u8 *tab)
+{
+    int half = g_menu_modes[g_menu_mode_index][1] / 2;
+    int a = menu_place_y(y0 - half) + half, b = menu_place_y(y1 - half) + half;
+
+    a = a < 0 ? 0 : a;
+    b = b > half * 2 ? half * 2 : b;
+
+    blend_rect(g_menu_buffer2, x0, a, x1, b, g_menu_screen, x0, a, tab, w, w);
+}
+
 /* The blended panel layer under the current page (0x40a5e6). */
 static void blend_panels(void)
 {
@@ -133,16 +146,25 @@ static void blend_panels(void)
     } else if (cur == page(PAGE_NETWORK)) {
         blend_rect(g_menu_buffer2, 0x0a, 0, 0x13f, 0xc7, g_menu_screen, 0x0a, 0, tab, w, w);
     } else if (cur == page(22) || cur == page(23) || cur == page(24)) {
-        blend_rect(g_menu_buffer2, 0, 0x40, 0x13f, 0x9f, g_menu_screen, 0, 0x40, tab, w, w);
+        band_rect(w, 0, 0x40, 0x13f, 0x9f, tab);
     } else if (cur == page(17) || cur == page(18)) {
-        blend_rect(g_menu_buffer2, 0, 0x41, 0x140, 0xa8, g_menu_screen, 0, 0x41, tab, w, w);
+        band_rect(w, 0, 0x41, 0x140, 0xa8, tab);
     } else if (cur == page(19) || cur == page(20)) {
-        blend_rect(g_menu_buffer2, 0, 0x41, 0x140, 0xbc, g_menu_screen, 0, 0x41, tab, w, w);
+        band_rect(w, 0, 0x41, 0x140, 0xbc, tab);
     } else if ((v = cur->items[0].visuals) != NULL
                && (fe_4be850 == 0.0 || fe_4be850 >= 1306.8)) {
-        int y = menu_spread_y(v->y) + mode[1] / 2 - 4;
+        int y = menu_place_y(v->y) + mode[1] / 2 - 4;
+        int y1 = y + menu_spread_y(cur->count * 19) + 5;
+        float mx, my;
 
-        blend_rect(g_menu_buffer2, 0, y, 0x13f, y + menu_spread_y(cur->count * 19) + 5,
+        /* A last item low on the page has its panel's foot past the
+         * screen's 200 rows: NATIVE's margin shows it, and the layer has
+         * the rows; otherwise it is cut at the foot. */
+        canvas_extent(g_menu_screen, &mx, &my);
+        if (y1 > mode[1] + (my > 0 ? 40 : 0)) {
+            y1 = mode[1] + (my > 0 ? 40 : 0);
+        }
+        blend_rect(g_menu_buffer2, 0, y, 0x13f, y1,
                    g_menu_screen,
                    0, y, tab, w, w);
     }
@@ -153,7 +175,7 @@ static void blend_panels(void)
 static void panel_for_text(const char *text, int font, s16 tx, s16 ty, int highlight)
 {
     const s32 *mode = g_menu_modes[g_menu_mode_index];
-    int y = menu_spread_y(ty) + mode[1] / 2;
+    int y = menu_place_y(ty) + mode[1] / 2;
 
     panel_add(tx + mode[0] / 2 - 13, y / 19, text_width(text, g_fonts_menu[font]),
               y % 19 - 12, highlight);

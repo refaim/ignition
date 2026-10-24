@@ -417,7 +417,9 @@ int menu_load_assets(void)
     memset(g_menu_white, 0xff, 0x300);
     g_menu_palette_work = malloc(0x300);
     g_menu_buffer1 = calloc(0xfb41, 1);    /* new, uncleared, in the original */
-    g_menu_buffer2 = calloc(0xfb41, 1);
+    /* 0xfb41 bytes in the original; a panel on the last row writes its
+     * corners past 200 rows, so the port gives it 240. */
+    g_menu_buffer2 = calloc(320 * 240, 1);
     /* The background is drawn on the GPU; the page's layer is put
      * together on the CPU and blended over it. */
     canvas_register(g_menu_buffer1, 320, 200);

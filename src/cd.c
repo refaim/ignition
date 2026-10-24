@@ -59,7 +59,9 @@ static void find_cue(void)
     while ((e = readdir(d)) != NULL) {
         size_t n = strlen(e->d_name);
 
-        if (n > 4 && strcasecmp(e->d_name + n - 4, ".cue") == 0) {
+        /* "._" files are macOS's notes on a copied file, not sheets. */
+        if (n > 4 && strncmp(e->d_name, "._", 2) != 0
+            && strcasecmp(e->d_name + n - 4, ".cue") == 0) {
             snprintf(s_cue, sizeof(s_cue), "%s/%s", dir, e->d_name);
             break;
         }

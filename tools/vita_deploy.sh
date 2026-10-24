@@ -74,7 +74,8 @@ pull() {
 put() {
     if [ -n "$UX0" ]; then
         mkdir -p "$(dirname "$UX0/$2")"
-        cp "$1" "$UX0/$2"
+        # COPYFILE_DISABLE: no macOS "._" files on the card.
+        COPYFILE_DISABLE=1 cp "$1" "$UX0/$2"
     else
         curl -s --ftp-create-dirs -T "$1" "$FTP/ux0:/$2"
     fi
@@ -93,7 +94,7 @@ push() {
     if [ -n "$UX0" ] && [ -d "$DATA" ] && [ ! -d "$UX0/data/ignition/disc" ]; then
         echo "vita_deploy: copying the disc to ux0:data/ignition/disc"
         mkdir -p "$UX0/data/ignition"
-        cp -R "$DATA" "$UX0/data/ignition/disc"
+        COPYFILE_DISABLE=1 cp -R "$DATA" "$UX0/data/ignition/disc"
     elif [ -z "$UX0" ]; then
         echo "vita_deploy: over FTP the disc is not copied; copy $DATA to ux0:data/ignition/disc once"
     fi

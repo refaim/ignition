@@ -213,7 +213,8 @@ static int find_cue(const char *dir, char *out, size_t size)
     while (!found && (e = readdir(d)) != NULL) {
         size_t n = strlen(e->d_name);
 
-        if (n > 4 && strcasecmp(e->d_name + n - 4, ".cue") == 0) {
+        if (n > 4 && strncmp(e->d_name, "._", 2) != 0
+            && strcasecmp(e->d_name + n - 4, ".cue") == 0) {
             snprintf(out, size, "%s/%s", dir, e->d_name);
             found = 1;
         }

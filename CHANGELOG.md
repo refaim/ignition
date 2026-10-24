@@ -6,6 +6,7 @@ All notable changes to this project are documented in this file.
 
 ### Fixed
 - A championship no longer quits after its second race: the end of a race frees what the race loaded.
+- NATIVE's track results, track score and totals are drawn at the menus' size.
 - NATIVE's menus sit closer under the logo, with their rows spread out, and the last options (RESET GHOST CAR and its YES / NO) draw in full.
 
 ### Added

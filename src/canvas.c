@@ -706,6 +706,13 @@ int canvas_sprite(const u8 *pixels, int w, int h, int stride, s32 x, s32 y, s32 
 int canvas_blend_rect(const u8 *src, int x0, int y0, int x1, int y1, u8 *dst, int dx, int dy,
                       const u8 *table, int src_pitch)
 {
+    return canvas_blend_scaled(src, x0, y0, x1, y1, dst, dx, dy, x1 - x0, y1 - y0, table,
+                               src_pitch);
+}
+
+int canvas_blend_scaled(const u8 *src, int x0, int y0, int x1, int y1, u8 *dst, int dx, int dy,
+                        int dw, int dh, const u8 *table, int src_pitch)
+{
     struct surface *d = find(dst), *s = find(src);
     int w = x1 - x0, h = y1 - y0;
     unsigned tex;
@@ -713,7 +720,7 @@ int canvas_blend_rect(const u8 *src, int x0, int y0, int x1, int y1, u8 *dst, in
     if (d == NULL) {
         return 0;
     }
-    if (w <= 0 || h <= 0) {
+    if (w <= 0 || h <= 0 || dw <= 0 || dh <= 0) {
         return 1;
     }
     bind(d);
@@ -723,9 +730,9 @@ int canvas_blend_rect(const u8 *src, int x0, int y0, int x1, int y1, u8 *dst, in
         return 1;
     }
     tex = upload_src(src + y0 * src_pitch + x0, w, h, src_pitch);
-    use_table(d, table, (float)dx, (float)dy, (float)(dx + w), (float)(dy + h));
+    use_table(d, table, (float)dx, (float)dy, (float)(dx + dw), (float)(dy + dh));
     rnd_texture_unit(0, tex);
-    quad((float)dx, (float)dy, (float)(dx + w), (float)(dy + h), 0, 0, (float)w, (float)h);
+    quad((float)dx, (float)dy, (float)(dx + dw), (float)(dy + dh), 0, 0, (float)w, (float)h);
     return 1;
 }
 

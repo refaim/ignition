@@ -31,6 +31,7 @@
 #include "race/data.h"
 #include "race/hud.h"
 #include "race/init.h"
+#include "race/misc.h"
 #include "race/results.h"
 #include "startup.h"
 
@@ -119,6 +120,33 @@ static void target_screen(void)
 {
     set_target(g_back_buffer, g_screen_width, g_screen_width, g_screen_height, 8);
     g_gfx_color_table = g_level_pan;
+}
+
+/* NATIVE's results at the menus' size: each pixel of the page 2 wide and
+ * 2.4 tall, as the menus' 320 x 200 is shown at 4:3. */
+#define SX 2
+#define SY 2.4
+
+/* A length down the page, on the screen. */
+static int down(int n)
+{
+    return race_box_scaled() ? (int)(n * SY + 0.5) : n;
+}
+
+/* The page's rectangle (x0, y0)..(x1, y1) onto the screen at y; dx is
+ * where the original puts it across, about the screen's middle. */
+static void put(int x0, int y0, int x1, int y1, int pitch, int dx, int y)
+{
+    int cx = g_screen_width / 2;
+
+    if (race_box_scaled()) {
+        blend_rect_scaled(g_race_buffer, x0, y0, x1, y1, g_back_buffer, cx + (dx - cx) * SX, y,
+                          (x1 - x0) * SX, down(y1 - y0), g_level_pan, pitch, g_screen_width,
+                          g_screen_height);
+    } else {
+        blend_rect(g_race_buffer, x0, y0, x1, y1, g_back_buffer, dx, y, g_level_pan, pitch,
+                   g_screen_width);
+    }
 }
 
 static void panel(int x, int width, int y)
@@ -739,6 +767,25 @@ static void blend_rows(int step, s32 top)
     if (r_553068 == 1 && (double)(r_525e44 / 100) <= r_553090) {
         rows++;
     }
+    if (race_box_scaled() && rows > 0) {
+        /* Under the title, the rows as far apart as fit above the
+         * footer, but no closer than a row's name bar. */
+        int title = down(0x1d), foot = down(16) + 4, tall = down(0x36);
+        int room = g_screen_height - foot - tall;
+
+        dy = down(top - 0x1a);
+        step = down(step);
+        if (rows > 1 && dy + (rows - 1) * step > room) {
+            step = (room - dy) / (rows - 1);
+            if (step < down(0x18)) {
+                step = down(0x18);
+                dy = room - (rows - 1) * step;
+                if (dy < title) {
+                    dy = title;
+                }
+            }
+        }
+    }
     for (row = 0; row < rows; row++, y1 += 0x3c, dy += step) {
         int car = car_at(row + 1);
         int odd = row & 1;
@@ -755,8 +802,7 @@ static void blend_rows(int step, s32 top)
             continue;
         }
         if (r_54f9d0 == row) {
-            blend_rect(g_race_buffer, 0, y1 - 0x36, r_5db038, y1, g_back_buffer, cx - 0xa0, dy,
-                       g_level_pan, 0x140, g_screen_width);
+            put(0, y1 - 0x36, r_5db038, y1, 0x140, cx - 0xa0, dy);
             continue;
         }
         if (g_race_mode == 3) {
@@ -764,14 +810,11 @@ static void blend_rows(int step, s32 top)
                 continue;
             }
             if (odd) {
-                blend_rect(g_race_buffer, 0xcd, y1 - 0x36, 0x109, y1, g_back_buffer, cx + 0x2d,
-                           dy, g_level_pan, 0x140, g_screen_width);
+                put(0xcd, y1 - 0x36, 0x109, y1, 0x140, cx + 0x2d, dy);
             } else {
-                blend_rect(g_race_buffer, 0x37, y1 - 0x36, 0x73, y1, g_back_buffer, cx - 0x69,
-                           dy, g_level_pan, 0x140, g_screen_width);
+                put(0x37, y1 - 0x36, 0x73, y1, 0x140, cx - 0x69, dy);
             }
-            blend_rect(g_race_buffer, 0x69, y1 - 0x27, 0xd7, y1 - 0x0f, g_back_buffer, cx - 0x37,
-                       dy + 0x0f, g_level_pan, 0x140, g_screen_width);
+            put(0x69, y1 - 0x27, 0xd7, y1 - 0x0f, 0x140, cx - 0x37, dy + down(0x0f));
             continue;
         }
         if (r_54f9d0 <= row) {
@@ -779,24 +822,18 @@ static void blend_rows(int step, s32 top)
         }
         if (r_5530a8 == 1) {
             if (odd) {
-                blend_rect(g_race_buffer, 0x10e, y1 - 0x36, 0x140, y1, g_back_buffer, cx + 0x6e,
-                           dy, g_level_pan, 0x140, g_screen_width);
+                put(0x10e, y1 - 0x36, 0x140, y1, 0x140, cx + 0x6e, dy);
             } else {
-                blend_rect(g_race_buffer, 0, y1 - 0x36, 0x32, y1, g_back_buffer, cx - 0xa0, dy,
-                           g_level_pan, 0x140, g_screen_width);
+                put(0, y1 - 0x36, 0x32, y1, 0x140, cx - 0xa0, dy);
             }
-            blend_rect(g_race_buffer, 0x32, y1 - 0x27, 0x10e, y1 - 0x0f, g_back_buffer, cx - 0x6e,
-                       dy + 0x0f, g_level_pan, 0x140, g_screen_width);
+            put(0x32, y1 - 0x27, 0x10e, y1 - 0x0f, 0x140, cx - 0x6e, dy + down(0x0f));
         } else if (r_5530a8 == 3 || r_5530a8 == 5) {
             if (odd) {
-                blend_rect(g_race_buffer, 0xed, y1 - 0x36, 0x122, y1, g_back_buffer, cx + 0x4d,
-                           dy, g_level_pan, 0x140, g_screen_width);
+                put(0xed, y1 - 0x36, 0x122, y1, 0x140, cx + 0x4d, dy);
             } else {
-                blend_rect(g_race_buffer, 0x1e, y1 - 0x36, 0x50, y1, g_back_buffer, cx - 0x82,
-                           dy, g_level_pan, 0x140, g_screen_width);
+                put(0x1e, y1 - 0x36, 0x50, y1, 0x140, cx - 0x82, dy);
             }
-            blend_rect(g_race_buffer, 0x50, y1 - 0x27, 0xed, y1 - 0x0f, g_back_buffer, cx - 0x50,
-                       dy + 0x0f, g_level_pan, 0x140, g_screen_width);
+            put(0x50, y1 - 0x27, 0xed, y1 - 0x0f, 0x140, cx - 0x50, dy + down(0x0f));
         }
     }
 }
@@ -893,14 +930,11 @@ int race_results(void)
         if (r_5530a8 < 6 && r_54f978 == 1) {
             int cx = g_screen_width / 2;
 
-            blend_rect(g_race_buffer, 0, 8, 0x140, 0x25, g_back_buffer, cx - 0xa0, 0, g_level_pan,
-                       0x140, g_screen_width);
+            put(0, 8, 0x140, 0x25, 0x140, cx - 0xa0, 0);
             if (g_screen_size == 0) {
-                blend_rect(g_race_buffer, 0, 0x19c, 0x140, 0x1a4, g_back_buffer, cx - 0xa0,
-                           g_screen_height - 8, g_level_pan, 0x140, g_screen_width);
+                put(0, 0x19c, 0x140, 0x1a4, 0x140, cx - 0xa0, g_screen_height - down(8));
             } else {
-                blend_rect(g_race_buffer, 0, 0xd3, 0x280, 0xe3, g_back_buffer, cx - 0x140,
-                           g_screen_height - 16, g_level_pan, 0x280, g_screen_width);
+                put(0, 0xd3, 0x280, 0xe3, 0x280, cx - 0x140, g_screen_height - down(16));
             }
         }
         if (r_5530a8 > 5 && r_5530a8 < 8) {

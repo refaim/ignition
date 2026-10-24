@@ -100,6 +100,31 @@ void blend_rect(const u8 *src, int x0, int y0, int x1, int y1, u8 *dst, int dx, 
     }
 }
 
+/* blend_rect's rectangle stretched to dw x dh at (dx, dy), each pixel
+ * the nearest, clipped to dst's dst_w x dst_h. */
+void blend_rect_scaled(const u8 *src, int x0, int y0, int x1, int y1, u8 *dst, int dx, int dy,
+                       int dw, int dh, const u8 *table, int src_pitch, int dst_w, int dst_h)
+{
+    int r, c, w = x1 - x0, h = y1 - y0;
+
+    if (canvas_blend_scaled(src, x0, y0, x1, y1, dst, dx, dy, dw, dh, table, src_pitch)) {
+        return;
+    }
+    for (r = 0; r < dh; r++) {
+        const u8 *s = src + (y0 + r * h / dh) * src_pitch + x0;
+        u8 *d = dst + (dy + r) * dst_w;
+
+        if (dy + r < 0 || dy + r >= dst_h) {
+            continue;
+        }
+        for (c = 0; c < dw; c++) {
+            if (dx + c >= 0 && dx + c < dst_w) {
+                d[dx + c] = table[s[c * w / dw] << 8 | d[dx + c]];
+            }
+        }
+    }
+}
+
 static const char *mini_text(u32 addr)
 {
     return ui_text(addr + 200 * g_menu_language);

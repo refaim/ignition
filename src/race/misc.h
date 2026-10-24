@@ -25,5 +25,7 @@ void race_pause_menu(void);         /* 0x4383b0 */
 void race_ask_box(void);            /* 0x438880 */
 void race_hot_keys(void);           /* 0x420eb0 */
 void race_joystick(void);           /* 0x441390 */
+/* NATIVE's race boxes and results are blown up to the menus' size. */
+int race_box_scaled(void);
 
 #endif /* IGN_RACE_MISC_H */

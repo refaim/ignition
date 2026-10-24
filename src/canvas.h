@@ -80,6 +80,9 @@ void canvas_forget(const u8 *pixels);
  * surface or a CPU buffer of `src_pitch`. */
 int canvas_blend_rect(const u8 *src, int x0, int y0, int x1, int y1, u8 *dst, int dx, int dy,
                       const u8 *table, int src_pitch);
+/* The same, the rectangle stretched to dw x dh, each pixel the nearest. */
+int canvas_blend_scaled(const u8 *src, int x0, int y0, int x1, int y1, u8 *dst, int dx, int dy,
+                        int dw, int dh, const u8 *table, int src_pitch);
 /* dst = table[level << 8 | dst] for each pixel, `levels` a logical
  * size CPU image. */
 void canvas_remap(u8 *dst, const u8 *levels, const u8 *table);

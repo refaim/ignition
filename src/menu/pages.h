@@ -21,5 +21,7 @@ void draw_sprite_at(const struct sprite *s, int x, int y);
 void draw_sprite_scaled(const struct sprite *s, int x, int y, float scale, float angle);
 void blend_rect(const u8 *src, int x0, int y0, int x1, int y1, u8 *dst, int dx, int dy,
                 const u8 *table, int src_pitch, int dst_pitch);
+void blend_rect_scaled(const u8 *src, int x0, int y0, int x1, int y1, u8 *dst, int dx, int dy,
+                       int dw, int dh, const u8 *table, int src_pitch, int dst_w, int dst_h);
 
 #endif /* IGN_MENU_PAGES_H */

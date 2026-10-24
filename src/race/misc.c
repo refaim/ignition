@@ -509,14 +509,14 @@ static u8 *box_buffer(void)
 /* NATIVE's race screen is the window at half scale (or whole), the
  * menus' 320 x 200 at twice that, 1.2 times as tall: the boxes are
  * blown up to the menus' size, each pixel to 2 x 2.4. */
-static int box_scaled(void)
+int race_box_scaled(void)
 {
     return g_screen_width > 800 || g_screen_height > 600;
 }
 
 static void box_done(u8 *b, int rows, int dy)
 {
-    if (box_scaled()) {
+    if (race_box_scaled()) {
         int w = 640, h = (int)(rows * 2.4 + 0.5), x0 = g_screen_width / 2 - 320;
         int y0 = g_screen_height / 2 - (int)(dy * 2.4 + 0.5), x, y;
 

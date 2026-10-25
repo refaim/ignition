@@ -567,6 +567,9 @@ static void podium(void)
     const struct sprite_xform *xf;
     int tx = g_screen_width / 2 - 0x44;
 
+    /* The rows before leave the page as the target (draw_row), and the
+     * podium's places are the screen's: the port draws it there. */
+    target_screen();
     r_563d70.angle = 0;
     r_563d70.scale = (float)(c->f5d4 * 0.04);
     if (r_563ce0 == 0) {
@@ -651,6 +654,7 @@ static void retry_menu(void)
         s32 x = (g_screen_width / 2 - 0x4c) << 8;
         s32 y = (s32)((sin(r_552f68) * g_screen_height * 0.6 - 51.0) * 256.0);
 
+        target_screen();
         draw_at(g_hud_places4[0], x, y, NULL);
         return;
     }

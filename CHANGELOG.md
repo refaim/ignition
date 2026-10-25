@@ -4,7 +4,13 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- The championship's end shows the podium: the cup or statue, the league completed, the place and the score.
+- A view wider than 4:3 no longer shows black where the track was not gathered: the port gathers a wider disc of cells about the camera.
+
 ### Added
+- GFX OPTIONS has a RENDERER item: HARDWARE draws the 2D on the GPU, SOFTWARE on the CPU as the original. Choosing a resolution sets its default, HARDWARE for NATIVE and SOFTWARE for the original sizes; the choice is kept in `ign_port.cfg`.
+- Choosing one of the original resolutions sizes the window to it (320 x 200 shown at 640 x 480); NATIVE gives the window back its size.
 - The game's joystick controller: with JOYSTICK chosen for a player in the options, the left stick steers with analog control and the triggers (or A and B) accelerate and brake, on the Vita, Windows, Linux and the web.
 
 ## [0.2.0] - 2026-10-24

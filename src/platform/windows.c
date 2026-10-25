@@ -222,6 +222,28 @@ static void set_fullscreen(int on)
     s_fullscreen = on;
 }
 
+void plat_window_size(int width, int height, int *old_width, int *old_height)
+{
+    RECT r;
+
+    *old_width = *old_height = 0;
+    if (s_window == NULL) {
+        return;
+    }
+    GetClientRect(s_window, &r);
+    *old_width = r.right - r.left;
+    *old_height = r.bottom - r.top;
+    if (s_fullscreen) {
+        return;
+    }
+    r.left = r.top = 0;
+    r.right = width;
+    r.bottom = height;
+    AdjustWindowRect(&r, WS_OVERLAPPEDWINDOW, FALSE);
+    SetWindowPos(s_window, NULL, 0, 0, r.right - r.left, r.bottom - r.top,
+                 SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+}
+
 int plat_window_open(const char *title, int width, int height, int fullscreen)
 {
     if (s_window == NULL) {

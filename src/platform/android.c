@@ -265,6 +265,14 @@ static void poll_looper(int ms)
 
 /* ------------------------------------------------------------ display */
 
+/* The screen is the window: nothing to size. */
+void plat_window_size(int width, int height, int *old_width, int *old_height)
+{
+    (void)width;
+    (void)height;
+    *old_width = *old_height = 0;
+}
+
 int plat_window_open(const char *title, int width, int height, int fullscreen)
 {
     static const EGLint config_attrs[] = {

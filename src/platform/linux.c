@@ -89,6 +89,16 @@ static void set_fullscreen(int on)
     s_fullscreen = on;
 }
 
+void plat_window_size(int width, int height, int *old_width, int *old_height)
+{
+    *old_width = s_width;
+    *old_height = s_height;
+    if (s_window == 0 || s_fullscreen) {
+        return;
+    }
+    XResizeWindow(s_display, s_window, (unsigned)width, (unsigned)height);
+}
+
 int plat_window_open(const char *title, int width, int height, int fullscreen)
 {
     if (s_window == 0) {

@@ -23,6 +23,7 @@
 #include "menu/engine.h"
 #include "menu/pages.h"
 #include "pic.h"
+#include "platform/platform.h"
 #include "settings.h"
 #include "sound.h"
 #include "startup.h"
@@ -233,6 +234,133 @@ static void add_native_resolution(void)
     }
 }
 
+/* The port's settings, which ign_win.btz has no room for: the race
+ * writes that file at its own size. */
+#define PORT_SETTINGS "ign_port.cfg"
+
+static void port_settings_save(void)
+{
+    s32 renderer = settings_get(SET_RENDERER);
+
+    file_write(PORT_SETTINGS, &renderer, sizeof(renderer));
+}
+
+/* Moves an item's labels and values up by `dy`. */
+static void raise_item(struct menu_item *it, int dy)
+{
+    int v, n = 2 + 2 * (it->max - it->min + 1);
+
+    for (v = 0; v < n; v++) {
+        it->visuals[v].y = (s16)(it->visuals[v].y - dy);
+        it->visuals[v].text_y = (s16)(it->visuals[v].text_y - dy);
+    }
+}
+
+/* GFX OPTIONS gets a seventh item, RENDERER: HARDWARE draws the 2D on
+ * the GPU, SOFTWARE on the CPU as the original (the 3D is the GPU's
+ * either way). Its visuals are an ON / OFF item's of the page, a row
+ * lower; the page goes up most of a row so that 320 x 200 holds it. */
+static void add_renderer_option(void)
+{
+    enum { ROW = 19, RAISE = 15 };
+    static struct menu_item items[MENU_LANGUAGES][16];
+    static struct menu_visual visuals[MENU_LANGUAGES][6];
+    static const char *const text[6] = {
+        "RENDERER", "RENDERER", "HARDWARE", "HARDWARE", "SOFTWARE", "SOFTWARE"
+    };
+    static int done;
+    int lang, slot, k, v;
+
+    if (done) {
+        return;
+    }
+    done = 1;
+    for (lang = 0; lang < MENU_LANGUAGES; lang++) {
+        for (slot = 0; slot < MENU_PAGE_SLOTS; slot++) {
+            struct menu_page *p = g_menu_pages[lang][slot];
+            const struct menu_item *pair = NULL;
+            int has_resolution = 0, lowest = -1000;
+
+            if (p == NULL || p->items == items[lang] || p->count >= 16) {
+                continue;
+            }
+            for (k = 0; k < p->count; k++) {
+                const struct menu_item *it = &p->items[k];
+
+                has_resolution |= it->value == (s32 *)(g_settings + SET_RESOLUTION);
+                if (it->max == 1 && it->visuals != NULL && pair == NULL) {
+                    pair = it;
+                }
+                if (it->visuals != NULL && it->visuals[0].y > lowest) {
+                    lowest = it->visuals[0].y;
+                }
+            }
+            if (!has_resolution || pair == NULL) {
+                continue;
+            }
+            memcpy(visuals[lang], pair->visuals, sizeof(visuals[lang]));
+            for (v = 0; v < 6; v++) {
+                visuals[lang][v].text = text[v];
+                visuals[lang][v].y = (s16)(lowest + ROW);
+                visuals[lang][v].text_y = (s16)(lowest + ROW);
+            }
+            memcpy(items[lang], p->items, (size_t)p->count * sizeof(items[lang][0]));
+            items[lang][p->count] = *pair;
+            items[lang][p->count].value = (s32 *)(g_settings + SET_RENDERER);
+            items[lang][p->count].min = 0;
+            items[lang][p->count].max = 1;
+            items[lang][p->count].visuals = visuals[lang];
+            p->items = items[lang];
+            p->count++;
+            for (k = 0; k < p->count; k++) {
+                if (p->items[k].value != NULL && p->items[k].visuals != NULL) {
+                    raise_item(&p->items[k], RAISE);
+                }
+            }
+        }
+    }
+}
+
+/* The renderer from PORT_SETTINGS, or the resolution's default: the GPU
+ * for NATIVE, the CPU for the original's sizes. --software starts on the
+ * CPU whatever is saved. */
+static void port_settings_load(int resolution)
+{
+    s32 renderer = resolution == CANVAS_NATIVE ? 0 : 1;
+
+    if (file_exists(PORT_SETTINGS) == 1) {
+        file_read_at(PORT_SETTINGS, &renderer, sizeof(renderer), 0);
+    }
+    if (!canvas_hardware()) {
+        renderer = 1;
+    }
+    settings_set(SET_RENDERER, renderer == 1);
+    canvas_set_hardware(renderer != 1);
+}
+
+/* The window for the RESOLUTION option: the original's sizes get a
+ * window of that size (320 x 200 shown at 640 x 480); NATIVE gets back
+ * the size the window had before. */
+static void size_window(int resolution)
+{
+    static int saved_w, saved_h;
+    int w = 0, h = 0;
+
+    if (resolution == CANVAS_NATIVE) {
+        if (saved_w > 0) {
+            plat_window_size(saved_w, saved_h, &w, &h);
+            saved_w = saved_h = 0;
+        }
+        return;
+    }
+    plat_window_size(resolution == CANVAS_800X600 ? 800 : 640,
+                     resolution == CANVAS_800X600 ? 600 : 480, &w, &h);
+    if (saved_w == 0) {
+        saved_w = w;
+        saved_h = h;
+    }
+}
+
 /* The internal resolution the RESOLUTION option asks for, from the
  * settings file: the menu reads it before the settings are loaded. */
 static int menu_resolution(void)
@@ -255,14 +383,36 @@ void menu_present(void)
     const s32 *mode = g_menu_modes[g_menu_mode_index];
     s32 res = settings_get(SET_RESOLUTION);
 
+    static s32 last_renderer = -1;
+    static int last_hardware = -1;
+    s32 renderer;
+
     menu_sound_tick();
-    /* The RESOLUTION option takes effect as it changes. */
+    /* The RESOLUTION option takes effect as it changes, and sets the
+     * renderer to the resolution's default. */
     if (res >= CANVAS_320X200 && res <= CANVAS_NATIVE && res != last) {
+        /* --res fixes the resolution whatever the option says. */
         if (last != -1) {
             canvas_set_resolution(res);
+            settings_set(SET_RENDERER, canvas_resolution() != CANVAS_NATIVE);
         }
+        size_window(canvas_resolution());
         last = res;
     }
+    /* Alt+R switches the renderer too: the option follows it. */
+    if (last_hardware != -1 && canvas_hardware() != last_hardware) {
+        settings_set(SET_RENDERER, !canvas_hardware());
+        last_renderer = -1;
+    }
+    renderer = settings_get(SET_RENDERER);
+    if (renderer != last_renderer) {
+        canvas_set_hardware(renderer != 1);
+        if (last_renderer != -1) {
+            port_settings_save();
+        }
+        last_renderer = renderer;
+    }
+    last_hardware = canvas_hardware();
     video_blit(g_menu_screen, mode[0], 0, 0, mode[0], mode[1], 0, 0);
     video_flip();
 }
@@ -571,7 +721,9 @@ int menu_init(void)
     file_read_at("baltazar\\data\\menu.col", g_menu_palette, 0x300, 8);
     g_menu_screen = malloc(0xfb41);
     add_native_resolution();
+    add_renderer_option();
     canvas_set_resolution(menu_resolution());
+    port_settings_load(canvas_resolution());
     canvas_register(g_menu_screen, 320, 200);
     g_menu_camera = scene_create();
     s_mode_pending = 1;

@@ -26,7 +26,10 @@ enum {
     SET_SCREEN_SIZE = 0x103,
     SET_RESOLUTION = 0x10b,
     SET_KEYS = 0x17f,                   /* key bindings, one scan code each */
-    SET_LANGUAGE = 0x593
+    SET_LANGUAGE = 0x593,
+    /* The port's, past the file's 0x597 bytes, kept in PORT_SETTINGS:
+     * 0 the 2D on the GPU, 1 on the CPU. */
+    SET_RENDERER = 0x598
 };
 
 static inline s32 settings_get(int offset)

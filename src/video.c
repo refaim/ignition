@@ -155,7 +155,7 @@ int video_set_palette(const u8 *rgb)
 }
 
 /* Scheduled screenshots, taken in the order given. */
-enum { SHOTS = 32 };
+enum { SHOTS = 64 };
 static struct {
     u32 ms;
     char path[1024];

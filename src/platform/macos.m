@@ -242,6 +242,26 @@ static void handle_event(NSEvent *ev)
     [NSApp sendEvent:ev];
 }
 
+void plat_window_size(int width, int height, int *old_width, int *old_height)
+{
+    @autoreleasepool {
+        NSRect r;
+
+        *old_width = *old_height = 0;
+        if (s_window == nil) {
+            return;
+        }
+        r = [s_window contentRectForFrameRect:[s_window frame]];
+        *old_width = (int)r.size.width;
+        *old_height = (int)r.size.height;
+        if (([s_window styleMask] & NSWindowStyleMaskFullScreen) != 0) {
+            return;
+        }
+        [s_window setContentSize:NSMakeSize(width, height)];
+        [s_window center];
+    }
+}
+
 int plat_window_open(const char *title, int width, int height, int fullscreen)
 {
     @autoreleasepool {

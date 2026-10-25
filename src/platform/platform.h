@@ -24,6 +24,10 @@ u32 plat_time_ms(void);
  * an open one to the requested mode. `width` and `height` are the
  * windowed size in points. Returns 0 on failure. */
 int plat_window_open(const char *title, int width, int height, int fullscreen);
+/* Sizes the window's drawing area to width x height (points on macOS),
+ * unless it is full screen; and gives the size it had. A host without
+ * windows gives 0 x 0 and does nothing. */
+void plat_window_size(int width, int height, int *old_width, int *old_height);
 void plat_destroy_window(void);
 
 /* Drawable size in pixels (HiDPI aware). */

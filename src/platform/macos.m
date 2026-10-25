@@ -237,9 +237,14 @@ static void handle_event(NSEvent *ev)
     case NSEventTypeFlagsChanged: {
         NSEventModifierFlags f = [ev modifierFlags];
 
-        set_modifier(f, NSEventModifierFlagShift, DIK_LSHIFT);
-        set_modifier(f, NSEventModifierFlagControl, DIK_LCONTROL);
-        set_modifier(f, NSEventModifierFlagOption, DIK_LMENU);
+        /* Each side by its own bit (IOKit's NX_DEVICE*KEYMASK): the
+         * game binds Right Shift apart from Left Shift. */
+        set_modifier(f, 0x0002, DIK_LSHIFT);
+        set_modifier(f, 0x0004, DIK_RSHIFT);
+        set_modifier(f, 0x0001, DIK_LCONTROL);
+        set_modifier(f, 0x2000, DIK_RCONTROL);
+        set_modifier(f, 0x0020, DIK_LMENU);
+        set_modifier(f, 0x0040, DIK_RMENU);
         break;
     }
     default:

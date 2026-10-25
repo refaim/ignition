@@ -8,6 +8,7 @@ All notable changes to this project are documented in this file.
 - The Vita draws the race's 3D at 720 x 408 (75%), stretched to the screen, to hold 36 frames a second more often; the HUD and menus stay at full resolution.
 
 ### Fixed
+- On macOS, Right Shift (the boost), Right Control and Right Option are told apart from the left keys.
 - The championship's end shows the podium: the cup or statue, the league completed, the place and the score.
 - A view wider than 4:3 no longer shows black where the track was not gathered: the port gathers a wider disc of cells about the camera.
 

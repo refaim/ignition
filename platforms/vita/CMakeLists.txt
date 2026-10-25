@@ -38,7 +38,7 @@ set(SRC ${ROOT}/src)
 # Every engine file, the Vita host instead of the others, and the GXM
 # renderer instead of the OpenGL one.
 file(GLOB IGN_SOURCES CONFIGURE_DEPENDS ${SRC}/*.c ${SRC}/lisa/*.c ${SRC}/race/*.c ${SRC}/menu/*.c
-     ${SRC}/frontend/*.c)
+     ${SRC}/frontend/*.c ${SRC}/soft3d/*.c)
 list(FILTER IGN_SOURCES EXCLUDE REGEX "/rnd_gl\\.c$")
 list(APPEND IGN_SOURCES ${SRC}/platform/vita.c)
 

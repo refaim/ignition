@@ -421,6 +421,21 @@ struct scene_obj *scene_obj_pool(int *count)
     return s_objs;
 }
 
+/* The grid's cells (0x63b5ec), `*w` by `*h` of them. */
+struct scene_obj **scene_grid(int *w, int *h)
+{
+    *w = s_grid_w;
+    *h = (s_world_h + 0xff) / 256;
+    return s_grid;
+}
+
+/* The sine table (0x63b5f4): sin(i / 10 degrees) at [1800 + i], for
+ * i from -1800 to 6299; cos is 900 entries on (0x63b5f8). */
+const float *scene_sin_table(void)
+{
+    return s_sin;
+}
+
 struct scene_obj *scene_obj_at(int index)
 {
     return &s_objs[index];

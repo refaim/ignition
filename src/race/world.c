@@ -19,6 +19,7 @@
 #include "race/init.h"
 #include "structs/coll_obj.h"
 #include "scene.h"
+#include "soft3d/soft3d.h"
 #include "startup.h"
 #include "stubs.h"
 #include "video.h"
@@ -474,6 +475,10 @@ static int s_fill_count;
 
 void race_view_fill(double y0, double y1, int index)
 {
+    if (g_soft3d) {
+        soft3d_race_fill((int)y0, (int)y1, index);
+        return;
+    }
     if (s_fill_count < 4) {
         s_fills[s_fill_count].y0 = y0;
         s_fills[s_fill_count].y1 = y1;
@@ -491,6 +496,10 @@ void race_draw_view(const struct scene *sc, struct scene_obj *const *objs, int n
     int w, h;
     double vw, ox;
 
+    if (g_soft3d) {
+        soft3d_race_view(first);
+        return;
+    }
     if (first) {
         memset(g_back_buffer, 0, (size_t)g_screen_width * g_screen_height);
     }

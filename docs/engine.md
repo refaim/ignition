@@ -24,6 +24,7 @@ named `f<offset>` are not understood yet.
 | race | `src/race/` | loading a track, the race's step and its picture |
 | Lisa 2 | `src/lisa/` | the original's library: memory pools, files, fonts, sprites, textures, the 2D target |
 | 3D | `src/scene.c`, `src/gl3d.c`, `src/srf.c`, `src/anim_tex.c` | the scene, objects and grid; drawing meshes; the ground under a point |
+| software 3D | `src/soft3d/` | the original's pipeline and rasteriser, under `--soft3d` |
 | sound | `src/sound.c`, `src/audio.c`, `src/cd.c`, `src/cdimage.c` | sample banks and voices, the mixer, CD music from the disc image |
 | renderer | `src/canvas.c`, `src/gl3d.c`, `src/gfx.c`, `src/video.c`, `src/rnd_gl.c`, `src/rnd_gxm.c` | everything drawn on the GPU in colour indices |
 
@@ -520,7 +521,9 @@ plays the track the settings name; the race plays its track's own
 The original draws everything in software into 8 bit buffers: the 2D
 with sprites and colour tables, the 3D with its own rasteriser. The
 port keeps the 8 bit picture, its palette and the colour tables, and
-draws on the GPU. It does not port the rasteriser. Everything stays
+draws on the GPU. With `--soft3d` the 3D is drawn by the original's
+pipeline and rasteriser, ported in `src/soft3d/`
+([software3d.md](software3d.md)). Everything stays
 colour indices until the screen is shown through the palette.
 
 The layers, from the game down:

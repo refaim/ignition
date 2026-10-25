@@ -72,6 +72,17 @@ static struct sprite_tex s_sprites[MAX_SPRITES];
 static u32 s_clock;
 static unsigned s_upload;
 
+/* A page blended from in pieces (the race's results draw some twenty
+ * boxes a frame out of g_race_buffer): uploaded whole, with a copy of
+ * what was uploaded, and again only when a piece asked for differs.
+ * One upload where there was one a box, which cost the Vita 1 ms each. */
+static struct {
+    const u8 *src;
+    int pitch, h;
+    u8 *shadow;
+    unsigned tex;
+} s_page;
+
 int canvas_init(void)
 {
     s_ready = 1;
@@ -597,6 +608,9 @@ void canvas_forget(const u8 *pixels)
     if (!s_ready) {
         return;
     }
+    if (s_page.src == pixels) {
+        s_page.src = NULL;
+    }
     for (i = 0; i < MAX_SPRITES; i++) {
         if (s_sprites[i].pixels == pixels && s_sprites[i].tex != 0) {
             rnd_texture_free(s_sprites[i].tex);
@@ -727,6 +741,43 @@ int canvas_blend_rect(const u8 *src, int x0, int y0, int x1, int y1, u8 *dst, in
                                src_pitch);
 }
 
+/* The page texture with rows 0..y1 of `src`, up to date in x0..x1. */
+static unsigned page_piece(const u8 *src, int pitch, int x0, int y0, int x1, int y1)
+{
+    int y, stale = 0;
+
+    if (s_page.src != src || s_page.pitch != pitch || s_page.h < y1) {
+        /* Only rows the callers have asked for, which are the source's. */
+        int h = s_page.src == src && s_page.pitch == pitch && s_page.h > y1 ? s_page.h : y1;
+
+        free(s_page.shadow);
+        s_page.src = src;
+        s_page.pitch = pitch;
+        s_page.h = h;
+        s_page.shadow = malloc((size_t)pitch * s_page.h);
+        memcpy(s_page.shadow, src, (size_t)pitch * s_page.h);
+        stale = 1;
+    }
+    for (y = y0; y < y1 && !stale; y++) {
+        const u8 *a = src + (size_t)y * pitch + x0, *b = s_page.shadow + (size_t)y * pitch + x0;
+
+        if (memcmp(a, b, (size_t)(x1 - x0)) != 0) {
+            stale = 1;
+        }
+    }
+    if (stale) {
+        /* The rows asked for; others are checked when they are. */
+        memcpy(s_page.shadow + (size_t)y0 * pitch, src + (size_t)y0 * pitch,
+               (size_t)pitch * (y1 - y0));
+        if (s_page.tex == 0) {
+            s_page.tex = rnd_texture(RND_R8, pitch, s_page.h, s_page.shadow, pitch);
+        } else {
+            rnd_texture_set(s_page.tex, pitch, s_page.h, s_page.shadow, pitch);
+        }
+    }
+    return s_page.tex;
+}
+
 int canvas_blend_scaled(const u8 *src, int x0, int y0, int x1, int y1, u8 *dst, int dx, int dy,
                         int dw, int dh, const u8 *table, int src_pitch)
 {
@@ -746,10 +797,11 @@ int canvas_blend_scaled(const u8 *src, int x0, int y0, int x1, int y1, u8 *dst, 
         fprintf(stderr, "canvas: blend from a surface not supported\n");
         return 1;
     }
-    tex = upload_src(src + y0 * src_pitch + x0, w, h, src_pitch);
+    tex = page_piece(src, src_pitch, x0, y0, x1, y1);
     use_table(d, table, (float)dx, (float)dy, (float)(dx + dw), (float)(dy + dh));
     rnd_texture_unit(0, tex);
-    quad((float)dx, (float)dy, (float)(dx + dw), (float)(dy + dh), 0, 0, (float)w, (float)h);
+    quad((float)dx, (float)dy, (float)(dx + dw), (float)(dy + dh), (float)x0, (float)y0,
+         (float)x1, (float)y1);
     return 1;
 }
 

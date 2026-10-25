@@ -466,7 +466,9 @@ void race_view(double dt)
         race_iris((s32)r_552e48);
     }
     if (players_finished() && !(r_54f980 < 120.0) && r_563c60 == 0 && r_5532b0 == 0) {
+        prof_begin(PROF_RESULTS);
         race_results();
+        prof_end(PROF_RESULTS);
     }
     if (r_527f28 == 0 && (g_two_players == 0 || r_552f58 == 1)) {
         corners();

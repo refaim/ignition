@@ -66,13 +66,6 @@ static int is_out(const struct car *c)
     return c->f354 || c->f358 || c->f35c || c->f350;
 }
 
-/* 0x426b40: is_remote's cars follow the packets. Not ported yet. */
-static void race_contact_remote(int car, int code)
-{
-    (void)car; (void)code;
-    STUB(0x426b40, "race_contact_remote");
-}
-
 /* 0x427d70: the middle of the car's move, between its axles'. */
 void race_car_center(int i)
 {

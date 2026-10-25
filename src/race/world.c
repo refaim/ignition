@@ -12,6 +12,8 @@
 #include "platform/platform.h"
 #include "gl3d.h"
 #include "prof.h"
+#include "lisa/font.h"
+#include "lisa/gfx.h"
 #include "lisa/log.h"
 #include "lisa/mem.h"
 #include "race/race.h"
@@ -390,8 +392,23 @@ static void make_car_objects(void)
             exit(1);
         }
     }
-    /* The original also draws network players' names into the blank
-     * texture page here; there is no network play. */
+    /* A network game: every driver's name into the blank texture page,
+     * 24 pixels apart along its top rows, where the name meshes above
+     * take them from (0x41cc62). The page is uploaded when it is first
+     * drawn, after this. */
+    if (g_race_net.mode != 2) {
+        int font = g_fonts_menu[6];
+
+        set_target(g_race_tex[RACE_TEX_SLOTS - 1], 0x100, 0x100, 0x0a, 8);
+        g_gfx_color_table = g_identity_table;
+        g_fonts[font].align = FONT_ALIGN_CENTER;
+        for (i = 0; i < g_driver_count; i++) {
+            text_draw(g_drivers[i].name, font, 0x0c + 0x18 * i, 0);
+        }
+        g_gfx_color_table = g_level_pan;
+        g_fonts[font].align = FONT_ALIGN_LEFT;
+        set_target(g_back_buffer, g_screen_width, g_screen_width, g_screen_height, 8);
+    }
 }
 
 /* 0x41b470 */

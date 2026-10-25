@@ -52,6 +52,7 @@ _Static_assert(sizeof(struct race_msg) == 0x78, "race_msg");
 int race_message(const char *text, int a, int b, int view);
 
 void race_contact(int car);     /* 0x424570 */
+void race_contact_remote(int car, int event);  /* 0x426b40 */
 void race_squash(int car);      /* 0x4269a0 */
 void race_knockout(void);       /* 0x423620 */
 

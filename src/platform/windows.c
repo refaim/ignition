@@ -310,17 +310,29 @@ static u32 xinput_buttons(void)
             s_xinput_get_state = (xinput_get_state_fn)(void *)GetProcAddress(lib, "XInputGetState");
         }
     }
+    g_plat_sticks[0].present = g_plat_sticks[1].present = 0;
     if (s_xinput_get_state == NULL) {
         return 0;
     }
     for (i = 0; i < 4; i++) {
         XINPUT_STATE st;
         WORD w;
+        struct plat_stick *s;
 
         if (s_xinput_get_state(i, &st) != ERROR_SUCCESS) {
             continue;
         }
         w = st.Gamepad.wButtons;
+        s = !g_plat_sticks[0].present ? &g_plat_sticks[0]
+            : !g_plat_sticks[1].present ? &g_plat_sticks[1] : NULL;
+        if (s != NULL) {
+            /* XInput's y is up; the game's, down. */
+            s->present = 1;
+            s->x = st.Gamepad.sThumbLX * 100 / 32767;
+            s->y = -st.Gamepad.sThumbLY * 100 / 32767;
+            s->buttons[0] = (w & XINPUT_GAMEPAD_A) || st.Gamepad.bRightTrigger > 64;
+            s->buttons[1] = (w & XINPUT_GAMEPAD_B) || st.Gamepad.bLeftTrigger > 64;
+        }
         b |= (w & XINPUT_GAMEPAD_DPAD_LEFT) || st.Gamepad.sThumbLX < -16384 ? PAD_LEFT : 0;
         b |= (w & XINPUT_GAMEPAD_DPAD_RIGHT) || st.Gamepad.sThumbLX > 16384 ? PAD_RIGHT : 0;
         b |= (w & XINPUT_GAMEPAD_DPAD_UP) || st.Gamepad.sThumbLY > 16384 ? PAD_UP : 0;

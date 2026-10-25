@@ -160,11 +160,23 @@ static u32 gamepad_buttons(void)
         return 0;
     }
     n = emscripten_get_num_gamepads();
+    g_plat_sticks[0].present = g_plat_sticks[1].present = 0;
     for (i = 0; i < n; i++) {
         EmscriptenGamepadEvent g;
+        struct plat_stick *s;
 
         if (emscripten_get_gamepad_status(i, &g) != EMSCRIPTEN_RESULT_SUCCESS || !g.connected) {
             continue;
+        }
+        s = !g_plat_sticks[0].present ? &g_plat_sticks[0]
+            : !g_plat_sticks[1].present ? &g_plat_sticks[1] : NULL;
+        if (s != NULL && g.numAxes >= 2) {
+            /* The standard mapping: A is 0, B 1, the triggers 6 and 7. */
+            s->present = 1;
+            s->x = (int)(g.axis[0] * 100.0);
+            s->y = (int)(g.axis[1] * 100.0);
+            s->buttons[0] = (g.numButtons > 7 && g.analogButton[7] > 0.25) || g.digitalButton[0];
+            s->buttons[1] = (g.numButtons > 6 && g.analogButton[6] > 0.25) || g.digitalButton[1];
         }
         for (k = 0; k < g.numButtons && k < 17; k++) {
             if (g.digitalButton[k] || g.analogButton[k] > 0.5) {

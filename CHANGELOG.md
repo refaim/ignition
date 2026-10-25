@@ -4,6 +4,9 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### Added
+- The game's joystick controller: with JOYSTICK chosen for a player in the options, the left stick steers with analog control and the triggers (or A and B) accelerate and brake, on the Vita, Windows, Linux and the web.
+
 ## [0.2.0] - 2026-10-24
 
 The Vita becomes playable, championships play through, and NATIVE's

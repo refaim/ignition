@@ -32,6 +32,9 @@ _Static_assert(sizeof(struct joystick) == 0x44, "joystick record");
 
 extern struct joystick g_joysticks[2];
 
+int joystick_init(void);            /* 0x4596a0 */
+int joystick_read(void);            /* 0x459a20 */
+
 extern u8 g_key_down[256];      /* 0x50de60 */
 extern u8 g_key_trigger[256];   /* 0x50df68 */
 extern u8 g_key_pressed[256];   /* 0x50e068 */

@@ -37,15 +37,6 @@ void render_init_460b50(void);      /* 0x460b50 */
 void gfx_init_45d840(void);         /* 0x45d840 */
 void gfx_init_spans(void);          /* 0x45c9f0 */
 
-/* joystick and CD audio */
-int joystick_init(void);            /* 0x4596a0 */
-
-
-
-/* sound */
-
-int joystick_read(void);            /* 0x459a20 */
-
 /* front end pieces still to port */
 int menu_network_page(void);        /* 0x40af54, inside menu_page_handler_a */
 /* 3D, for the OpenGL renderer */

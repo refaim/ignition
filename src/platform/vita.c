@@ -288,6 +288,11 @@ static void poll_pad(void)
         return;
     }
     pad_keys(c.buttons, c.lx, c.ly, keys);
+    g_plat_sticks[0].present = 1;
+    g_plat_sticks[0].x = (c.lx - 128) * 100 / 127;
+    g_plat_sticks[0].y = (c.ly - 128) * 100 / 127;
+    g_plat_sticks[0].buttons[0] = (c.buttons & (SCE_CTRL_R1 | SCE_CTRL_RTRIGGER)) != 0;
+    g_plat_sticks[0].buttons[1] = (c.buttons & (SCE_CTRL_L1 | SCE_CTRL_LTRIGGER)) != 0;
     for (i = 1; i < 256; i++) {
         if (keys[i] != s_pad_keys[i]) {
             s_pad_keys[i] = keys[i];

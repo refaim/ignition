@@ -9,6 +9,7 @@
 #include "platform/platform.h"
 
 struct joystick g_joysticks[2];    /* 0x4ba9f0 */
+struct plat_stick g_plat_sticks[2];
 u8 g_key_down[256];         /* 0x50de60 */
 u8 g_key_trigger[256];      /* 0x50df68 */
 u8 g_key_pressed[256];      /* 0x50e068 */
@@ -134,4 +135,45 @@ void input_poll(void)
 int input_key_down(int key)
 {
     return g_key_down[key & 0xff];
+}
+
+static s16 axis(int v)
+{
+    return (s16)(v < -100 ? -100 : v > 100 ? 100 : v);
+}
+
+/* 0x4596a0: which joysticks there are. The original asks winmm for each
+ * one's ranges, to scale its axes to -100..100; the hosts give them
+ * scaled. */
+int joystick_init(void)
+{
+    int i;
+
+    for (i = 0; i < 2; i++) {
+        g_joysticks[i].present = g_plat_sticks[i].present;
+    }
+    return 1;
+}
+
+/* 0x459a20: each chosen joystick's axes, clamped to -100..100, and its
+ * first two buttons. The port also takes a pad plugged in after the
+ * start. */
+int joystick_read(void)
+{
+    int i;
+
+    for (i = 0; i < 2; i++) {
+        struct joystick *js = &g_joysticks[i];
+        const struct plat_stick *p = &g_plat_sticks[i];
+
+        js->present = p->present;
+        if (!js->present || !js->enabled) {
+            continue;
+        }
+        js->x = axis(p->x);
+        js->y = axis(p->y);
+        js->buttons[0] = (u8)(p->buttons[0] != 0);
+        js->buttons[1] = (u8)(p->buttons[1] != 0);
+    }
+    return 1;
 }

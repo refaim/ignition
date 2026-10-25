@@ -387,18 +387,52 @@ static u32 pad_read(struct pad *p)
     return b;
 }
 
+/* A pad as the game's joystick: its stick, and its accelerate and brake
+ * buttons (A or the right trigger, B or the left). */
+static void pad_stick(const struct pad *p, struct plat_stick *s)
+{
+    int i;
+
+    s->present = 1;
+    s->x = s->y = 0;
+    s->buttons[0] = s->buttons[1] = 0;
+    for (i = 0; i < AXES; i++) {
+        int v = p->axes[i];
+
+        switch (p->ax_code[i]) {
+        case ABS_X: s->x = v * 100 / 32767; break;
+        case ABS_Y: s->y = v * 100 / 32767; break;
+        case ABS_RZ: s->buttons[0] |= v - p->rest[i] > PUSH; break;
+        case ABS_Z: s->buttons[1] |= v - p->rest[i] > PUSH; break;
+        default: break;
+        }
+    }
+    for (i = 0; i < BUTTONS; i++) {
+        if (p->buttons[i] && (p->btn_code[i] == BTN_SOUTH || p->btn_code[i] == BTN_TR2)) {
+            s->buttons[0] = 1;
+        }
+        if (p->buttons[i] && (p->btn_code[i] == BTN_EAST || p->btn_code[i] == BTN_TL2)) {
+            s->buttons[1] = 1;
+        }
+    }
+}
+
 static void poll_pads(void)
 {
     u32 b = 0;
-    int i;
+    int i, n = 0;
 
     if (plat_time_ms() >= s_next_scan) {
         s_next_scan = plat_time_ms() + 1000;
         pad_scan();
     }
+    g_plat_sticks[0].present = g_plat_sticks[1].present = 0;
     for (i = 0; i < PADS; i++) {
         if (s_pads[i].fd > 0) {
             b |= pad_read(&s_pads[i]);
+            if (s_pads[i].fd > 0 && n < 2) {
+                pad_stick(&s_pads[i], &g_plat_sticks[n++]);
+            }
         }
     }
     plat_pad_update(b);

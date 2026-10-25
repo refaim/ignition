@@ -36,6 +36,19 @@ void plat_present(void);
  * key is down, the layout of IDirectInputDevice::GetDeviceState. */
 extern u8 g_plat_keys[256];
 
+/* The first two gamepads as analog sticks, for the game's joystick
+ * (input.c, joystick_read): the left stick's x and y from -100 (left,
+ * up) to 100, and the accelerate and brake buttons (the right and left
+ * triggers or A and B). A host with gamepads fills them as it reads its
+ * pads; on one without, present stays 0. */
+struct plat_stick {
+    int present;
+    int x, y;
+    int buttons[2];
+};
+
+extern struct plat_stick g_plat_sticks[2];
+
 /* Takes the oldest key event since the last call, as DirectInput's
  * buffered data gives it: scan code, and 1 for a press, 0 for a
  * release. Returns 0 when there is none. */

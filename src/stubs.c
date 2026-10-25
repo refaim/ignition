@@ -28,38 +28,6 @@ STUB_VOID(0x460b50, render_init_460b50)
 STUB_VOID(0x45d840, gfx_init_45d840)
 STUB_VOID(0x45c9f0, gfx_init_spans)
 
-int joystick_init(void)
-{
-    STUB(0x4596a0, "joystick_init");
-    return 1;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-int joystick_read(void)
-{
-    STUB(0x459a20, "joystick_read");
-    return 0;
-}
-
-
-
-
 int menu_network_page(void)
 {
     STUB(0x40af54, "menu_network_page");

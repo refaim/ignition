@@ -588,7 +588,9 @@ void race_ai(int i)
         }
 
         /* How hard the way there is: the surface, the bends, the hill. */
-        rough = (8.0 - g_surface_grip[(s8)cur->surface]) * 0.125;
+        /* Most .TRI surfaces are past the table's 30 (BRAZIL's are up
+         * to 247): the original reads the doubles about it, from -128. */
+        rough = (8.0 - g_surface_grip_ai[(s8)cur->surface + 128]) * 0.125;
         if (rough < 0.0) {
             rough = 0.0;
         }

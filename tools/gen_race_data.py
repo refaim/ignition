@@ -72,6 +72,10 @@ TABLES = [
     # difficulty; the computer's grip, eleven a difficulty, indexed
     # through g_car_499a90.
     ("g_surface_grip", 0x4972D0, "double", 30, True),
+    # The same table as the computer's driving reads it (0x413c2d), by
+    # the .TRI's surface as a signed byte, -128 to 127: the tracks hold
+    # surfaces past 29, which read the .data about the table.
+    ("g_surface_grip_ai", 0x496ED0, "double", 256, True),
     ("g_car_traction", 0x492358, "double", 12, True),
     ("g_grip_scale", 0x492A08, "double", 4, True),
     ("g_ai_grip", 0x499930, "double", 44, True),

@@ -35,6 +35,7 @@ extern const s32 g_track_cd[7];  /* 0x497eb8 */
 extern const s32 g_place_points[12];  /* 0x492a24 */
 extern const s32 g_cells_ahead[2592];  /* 0x49a058 */
 extern const double g_surface_grip[30];  /* 0x4972d0 */
+extern const double g_surface_grip_ai[256];  /* 0x496ed0 */
 extern const double g_car_traction[12];  /* 0x492358 */
 extern const double g_grip_scale[4];  /* 0x492a08 */
 extern const double g_ai_grip[44];  /* 0x499930 */

@@ -193,6 +193,14 @@ static int lights_on(void)
 static void draw_3d(int x0, int x1, int first)
 {
     prof_begin(PROF_GATHER);
+    {
+        /* The view takes the drawable's shape (race_draw_view): wider
+         * than 4:3, it sees past the original's cells at the sides. */
+        int w, h;
+
+        video_drawable_size(&w, &h);
+        scene_set_reach(h > 0 ? (double)w / h / (4.0 / 3.0) * (x1 - x0) / g_screen_width : 1.0);
+    }
     scene_gather_view();
     prof_end(PROF_GATHER);
     prof_begin(PROF_3D);

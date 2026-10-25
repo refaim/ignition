@@ -10,6 +10,10 @@
 #include "scene.h"
 
 struct scene *g_scene;                      /* 0x63c5f0 */
+/* The original keeps 1500 objects in view; the port's wider views take
+ * more cells, so the list has room for them. */
+enum { VISIBLE_ORIGINAL = 1500, VISIBLE_MAX = 6000 };
+
 struct scene_obj **g_scene_visible;         /* 0x63c5cc */
 u8 *g_scene_textures[SCENE_TEXTURES];       /* 0x63c5c8 */
 int g_scene_texture_pages[SCENE_TEXTURES];
@@ -45,7 +49,7 @@ struct scene *scene_create(void)
     struct scene *sc;
     int i;
 
-    g_scene_visible = calloc(1500, sizeof(*g_scene_visible));
+    g_scene_visible = calloc(VISIBLE_MAX, sizeof(*g_scene_visible));
     sc = calloc(1, sizeof(*sc));
     s_sin = calloc(8100, sizeof(*s_sin));
     g_scene = sc;
@@ -422,6 +426,52 @@ struct scene_obj *scene_obj_at(int index)
     return &s_objs[index];
 }
 
+static double s_reach = 1.0;
+
+void scene_set_reach(double reach)
+{
+    s_reach = reach > 1.0 ? reach : 1.0;
+}
+
+/* The port's: a round disc of cells about the original's, `s_reach`
+ * times as wide, for a view wider than the original's 4:3, which sees
+ * past the original's disc at the sides. */
+static int gather_wide(struct scene *sc, const s32 *ahead)
+{
+    int r = (int)ceil(10.0 * s_reach) + 1, cx = (int)sc->x / 256 + ahead[0];
+    int cz = (int)sc->z / 256 + ahead[1], rows = (s_world_h + 0xff) / 256, dz, dx, n = 0;
+
+    for (dz = -r; dz <= r; dz++) {
+        int half = (int)sqrt((double)(r * r - dz * dz)), z = cz + dz;
+
+        if (z < 0 || z >= rows) {
+            continue;
+        }
+        for (dx = -half; dx <= half; dx++) {
+            int x = cx + dx;
+            struct scene_obj *o;
+
+            if (x < 0 || x >= s_grid_w || s_grid == NULL) {
+                continue;
+            }
+            o = s_grid[z * s_grid_w + x];
+            if (o == NULL || o->self != o) {
+                continue;
+            }
+            for (; o != NULL; o = o->next) {
+                if (o->self != o || n >= VISIBLE_MAX) {
+                    continue;
+                }
+                if (g_scene_group != 0 && o->group != 0 && o->group != g_scene_group) {
+                    continue;
+                }
+                g_scene_visible[n++] = o;
+            }
+        }
+    }
+    return n;
+}
+
 /* 0x448c30
  * Gathers the objects of the cells in a disc ahead of the camera (where
  * by its pitch and yaw) into the visible list. With g_scene_group set
@@ -439,6 +489,12 @@ int scene_gather_view(void)
         sector = 0;
     }
     ahead = &g_cells_ahead[2 * sector];
+    if (s_reach > 1.0) {
+        n = gather_wide(sc, ahead);
+        sc->obj_count = n;
+        sc->obj_count_all = n;
+        return 0;
+    }
     cells = s_grid_w * ((s_world_h + 0xff) / 256);
     start = ((int)sc->z / 256 + ahead[1] + g_cells_disc[1]) * s_grid_w
             + (int)sc->x / 256 + ahead[0] + g_cells_disc[2];
@@ -456,7 +512,7 @@ int scene_gather_view(void)
                 continue;
             }
             for (; o != NULL; o = o->next) {
-                if (o->self != o || n >= 1500) {
+                if (o->self != o || n >= VISIBLE_ORIGINAL) {
                     continue;
                 }
                 if (g_scene_group != 0 && o->group != 0 && o->group != g_scene_group) {

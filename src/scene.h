@@ -94,6 +94,9 @@ void scene_look_at(struct scene *sc);
 int scene_gather(const struct scene *sc, int radius, struct scene_obj **out, int max);
 /* 0x448c30: the cells ahead of g_scene's camera into g_scene_visible. */
 int scene_gather_view(void);
+/* How much wider than the original's 4:3 the view is (1 or more): the
+ * port gathers a wider disc for it. */
+void scene_set_reach(double reach);
 extern s32 g_scene_group;                   /* 0x63c5d8, 0 all groups */
 int scene_obj_index(const struct scene_obj *o);
 struct scene_obj *scene_obj_at(int index);

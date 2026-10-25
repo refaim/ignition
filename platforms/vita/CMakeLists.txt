@@ -58,6 +58,7 @@ target_link_libraries(ignition
     SceSysmodule_stub
     SceNet_stub
     SceCtrl_stub
+    SceTouch_stub
     SceAudio_stub
     ScePower_stub
     SceAppMgr_stub

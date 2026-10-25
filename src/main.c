@@ -171,6 +171,16 @@ int main(int argc, char **argv)
             if (sscanf(argv[++i], "%u:%x:%u", &ms, &key, &hold) >= 2) {
                 plat_schedule_key(ms, (int)key, hold);
             }
+        } else if (strcmp(argv[i], "--tap") == 0 && i + 1 < argc) {
+            unsigned ms;
+            float fx, fy;
+
+            /* ms:x:y, x and y shares of the window. */
+            if (sscanf(argv[++i], "%u:%f:%f", &ms, &fx, &fy) == 3) {
+#ifndef __vita__
+                plat_schedule_tap(ms, fx, fy);
+#endif
+            }
         } else if (strcmp(argv[i], "--host") == 0) {
             net_set_option(1, NULL);
         } else if (strcmp(argv[i], "--connect") == 0 && i + 1 < argc) {

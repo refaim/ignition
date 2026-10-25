@@ -30,6 +30,7 @@
 #include <psp2/kernel/threadmgr.h>
 #include <psp2/net/net.h>
 #include <psp2/power.h>
+#include <psp2/touch.h>
 #include <psp2/sysmodule.h>
 
 #include <stdio.h>
@@ -40,6 +41,7 @@
 #include "app.h"
 #include "dik.h"
 #include "game.h"
+#include "menu/engine.h"
 #include "platform/platform.h"
 #include "race/init.h"
 #include "race/race.h"
@@ -199,7 +201,7 @@ void plat_schedule_key(u32 ms, int key, u32 hold)
 static void run_scheduled(void)
 {
     u32 now = plat_time_ms();
-    int i;
+    int i, n;
 
     for (i = 0; i < s_scheduled_count; i++) {
         if (s_scheduled[i].state == 0 && now >= s_scheduled[i].ms) {
@@ -210,6 +212,13 @@ static void run_scheduled(void)
             s_scheduled[i].state = 2;
         }
     }
+    /* Done presses go, so that taps can keep adding them. */
+    for (i = 0, n = 0; i < s_scheduled_count; i++) {
+        if (s_scheduled[i].state != 2) {
+            s_scheduled[n++] = s_scheduled[i];
+        }
+    }
+    s_scheduled_count = n;
 }
 
 /* ------------------------------------------------------------ buttons */
@@ -315,10 +324,64 @@ static void poll_pad(void)
     }
 }
 
+/* ------------------------------------------------------------ touch */
+
+/* A tap: a touch let go within TAP_MS, having moved less than TAP_MOVE
+ * (in the screen panel's units, 1920 x 1088). */
+enum { TAP_MS = 400, TAP_MOVE = 60 };
+
+static struct tap {
+    int down;
+    int x, y;
+    u32 since;
+} s_taps[1];
+
+/* Whether port `port` was tapped since the last call, and where. */
+static int tapped(int port, int *x, int *y)
+{
+    SceTouchData d;
+    struct tap *t = &s_taps[port];
+
+    memset(&d, 0, sizeof(d));
+    if (sceTouchPeek(port, &d, 1) < 0) {
+        return 0;
+    }
+    if (d.reportNum > 0) {
+        if (!t->down) {
+            t->down = 1;
+            t->x = d.report[0].x;
+            t->y = d.report[0].y;
+            t->since = plat_time_ms();
+        } else if (abs(d.report[0].x - t->x) > TAP_MOVE || abs(d.report[0].y - t->y) > TAP_MOVE) {
+            t->since = 0;           /* a drag, not a tap */
+        }
+        return 0;
+    }
+    if (!t->down) {
+        return 0;
+    }
+    t->down = 0;
+    *x = t->x;
+    *y = t->y;
+    return t->since != 0 && plat_time_ms() - t->since <= TAP_MS;
+}
+
+/* In the menus a tap on the screen picks an item, as menu_touch says,
+ * with the keys a player would press. */
+static void poll_touch(void)
+{
+    int x, y;
+
+    if (tapped(SCE_TOUCH_PORT_FRONT, &x, &y) && g_race_running != 1) {
+        menu_tap(x / 1920.0f, y / 1088.0f);
+    }
+}
+
 void plat_pump_events(void)
 {
     run_scheduled();
     poll_pad();
+    poll_touch();
 }
 
 /* ------------------------------------------------------------ audio */
@@ -416,6 +479,7 @@ void plat_request_quit(void)
 static int run(int (*frame)(void *), void *user)
 {
     sceCtrlSetSamplingModeExt(SCE_CTRL_MODE_ANALOG_WIDE);
+    sceTouchSetSamplingState(SCE_TOUCH_PORT_FRONT, SCE_TOUCH_SAMPLING_STATE_START);
     while (!s_quit) {
         g_app_active = 1;
         plat_pump_events();

@@ -19,6 +19,8 @@
 
 #include "app.h"
 #include "dik.h"
+#include "game.h"
+#include "menu/engine.h"
 #include "platform/platform.h"
 #include "platform/common.h"
 
@@ -247,6 +249,15 @@ static void handle_event(NSEvent *ev)
         set_modifier(f, 0x0040, DIK_RMENU);
         break;
     }
+    case NSEventTypeLeftMouseUp:
+        /* A click in the menus is a tap, as on the Vita's screen. */
+        if (g_race_running != 1 && [ev window] != nil) {
+            NSRect b = [s_view bounds];
+            NSPoint p = [s_view convertPoint:[ev locationInWindow] fromView:nil];
+
+            menu_tap((float)(p.x / b.size.width), (float)(1.0 - p.y / b.size.height));
+        }
+        break;
     default:
         break;
     }

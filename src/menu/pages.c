@@ -16,6 +16,7 @@
 
 #include "app.h"
 #include "canvas.h"
+#include "dik.h"
 #include "frontend/frontend.h"
 #include "frontend/state.h"
 #include "game.h"
@@ -1116,4 +1117,29 @@ int menu_page_handler_b(int key, int action)
         fe_4be5fc = 1;
     }
     return 0;
+}
+
+/* The language page's flags, as the page draws them: four in a row, the
+ * second language left out, each 0x3d x 0x35. A tap on one walks the
+ * choice to it with Left or Right, a tap on the chosen one is Return. */
+int menu_pages_touch(float lx, float ly, int *count)
+{
+    int slot, cur;
+    s32 lang;
+
+    *count = 0;
+    if (g_menu_view.page != page(PAGE_LANGUAGE)) {
+        return -1;
+    }
+    if (ly < 0x4a || ly >= 0x4a + 0x35 || lx < 0x1a) {
+        return 0;
+    }
+    slot = (int)(lx - 0x1a) / 69;
+    if (slot > 3 || lx - 0x1a - slot * 69 >= 0x3d) {
+        return 0;
+    }
+    lang = settings_get(SET_LANGUAGE);
+    cur = lang > 1 ? (int)lang - 1 : (int)lang;
+    *count = slot == cur ? 1 : abs(slot - cur);
+    return slot == cur ? DIK_RETURN : slot > cur ? DIK_RIGHT : DIK_LEFT;
 }

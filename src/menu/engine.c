@@ -10,6 +10,7 @@
  * menu_snapshot publishes.
  */
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -21,6 +22,10 @@
 #include "lisa/sprite.h"
 #include "menu/menu.h"
 #include "menu/engine.h"
+#include "menu/pages.h"
+#include "platform/platform.h"
+#include "video.h"
+#include "dik.h"
 #include "startup.h"
 #include "stubs.h"
 
@@ -785,4 +790,87 @@ int menu_draw_items(void)
         }
     }
     return 1;
+}
+
+/* The port's, for touch screens: what a tap at (fx, fy), a share of the
+ * drawable's width and height, asks of the current page. A row other
+ * than the selected one: `count` presses of Up or Down to reach it, as
+ * move_selection steps. The selected row: Return on its label, Right on
+ * its values. 0 when the tap is on no row. */
+int menu_touch(float fx, float fy, int *count)
+{
+    float mx, my, lx, ly;
+    int k, best = -1, best_d = 10, target, steps, sel;
+
+    *count = 0;
+    if (s_page == NULL || s_page->count <= 0) {
+        return 0;
+    }
+    canvas_extent(g_menu_screen, &mx, &my);
+    if (mx > 0 || my > 0) {
+        lx = fx * (320.0f + 2 * mx) - mx;
+        ly = fy * (200.0f + 2 * my) - my;
+    } else {
+        int w = 0, h = 0;
+        float cw;
+
+        video_drawable_size(&w, &h);
+        cw = w > 0 && h > 0 ? (h * 4.0f / 3.0f) / w : 1.0f;
+        lx = (fx - (1.0f - cw) / 2) / cw * g_menu.screen_w;
+        ly = fy * g_menu.screen_h;
+    }
+    k = menu_pages_touch(lx, ly, count);
+    if (k >= 0) {
+        return k;
+    }
+    for (k = 0; k < s_page->count; k++) {
+        const struct menu_item *it = &s_page->items[k];
+        int d;
+
+        if (it->kind == 0 || it->visuals == NULL) {
+            continue;
+        }
+        d = (int)ly - (screen_y(it->visuals[0].text_y) + 5);
+        d = d < 0 ? -d : d;
+        if (d < best_d) {
+            best_d = d;
+            best = k;
+        }
+    }
+    if (best < 0) {
+        return 0;
+    }
+    sel = s_page->selected;
+    if (best == sel) {
+        const struct menu_item *it = &s_page->items[best];
+
+        *count = 1;
+        if (it->value != NULL && it->max > it->min
+            && lx >= screen_x(it->visuals[2].x) - 4) {
+            return DIK_RIGHT;
+        }
+        return DIK_RETURN;
+    }
+    /* The presses move_selection would take, without wrapping. */
+    target = best;
+    for (steps = 0, k = sel; k != target && steps < s_page->count; ) {
+        k += target > sel ? 1 : -1;
+        if (s_page->items[k].kind != 0) {
+            steps++;
+        }
+    }
+    *count = steps;
+    return target > sel ? DIK_DOWN : DIK_UP;
+}
+
+void menu_tap(float fx, float fy)
+{
+    u32 at = plat_time_ms();
+    int count, key, i;
+
+    key = menu_touch(fx, fy, &count);
+    fprintf(stderr, "menu: tap at %.3f, %.3f: key %02x, %d times\n", fx, fy, key, count);
+    for (i = 0; key != 0 && i < count; i++) {
+        plat_schedule_key(at + (u32)i * 70, key, 50);
+    }
 }

@@ -46,6 +46,11 @@ extern struct menu_context g_menu;
 extern struct menu_snapshot g_menu_view;
 
 int menu_engine_init(void);
+/* The port's: the key, and how many presses of it, a tap at (fx, fy)
+ * (shares of the drawable) asks of the current page; 0 for none. */
+int menu_touch(float fx, float fy, int *count);
+/* And presses those keys: a tap on the Vita's screen, a click. */
+void menu_tap(float fx, float fy);
 int menu_engine_frame(void);
 int menu_engine_free(void);
 int menu_set_delay(s32 ms);

@@ -133,6 +133,7 @@ These options are for testing:
 | Option | Effect |
 |---|---|
 | `--press MS:KEY[:HOLD]` | Presses `KEY` (a DirectInput scan code in hex) at `MS` milliseconds, held for `HOLD` milliseconds (60 by default). |
+| `--tap MS:X:Y` | Taps the menu at `MS` milliseconds, at `X` and `Y`, shares of the window from 0 to 1. |
 | `--shot MS:FILE.tga` | Saves a screenshot at `MS` milliseconds. |
 | `--autopilot` | The computer drives the player's car. |
 | `--background` | Keeps running when the window is not in front. |

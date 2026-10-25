@@ -18,6 +18,9 @@ void plat_key_event(int dik, int down);
  * time comes. Hosts call it from plat_pump_events. */
 void plat_run_scheduled(void);
 
+/* A click at (fx, fy), shares of the window, at `ms`: --tap. */
+void plat_schedule_tap(u32 ms, float fx, float fy);
+
 /* Gamepad buttons, whatever the pad calls them: A is the bottom face
  * button (Cross), B the right (Circle), X the left (Square), Y the top
  * (Triangle). The left stick counts as the d-pad. */

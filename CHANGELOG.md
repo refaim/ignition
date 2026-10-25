@@ -6,6 +6,7 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 - The Vita draws the race's 3D at 720 x 408 (75%), stretched to the screen, to hold 36 frames a second more often; the HUD and menus stay at full resolution.
+- The Vita holds its frame rate in thick smoke and sparks: see-through faces stack at most six layers deep, where a pile of them took up to 96 GPU scenes a frame, and the 2D's textures upload only the rows that changed.
 
 ### Fixed
 - On macOS, Right Shift (the boost), Right Control and Right Option are told apart from the left keys.
@@ -13,6 +14,7 @@ All notable changes to this project are documented in this file.
 - A view wider than 4:3 no longer shows black where the track was not gathered: the port gathers a wider disc of cells about the camera.
 
 ### Added
+- Touch in the Vita's menus: a tap on the front screen selects an item, a tap on the selected item activates it (or steps its value), and a tap on a flag picks the language. On macOS a click does the same, and `--tap MS:X:Y` scripts one.
 - Network play: MULTI PLAYER, NETWORK GAME races up to six players over a local network, on UDP instead of the original's DirectPlay and IPX. `--host` and `--connect HOST` choose to host or join; see [docs/network.md](docs/network.md).
 - `--soft3d` draws the 3D on the CPU with the original's own pipeline and rasteriser, ported: the race and the front end's cars and background, in 8 bit colour at the original resolutions (320 x 200, 640 x 480, 800 x 600; NATIVE races at 800 x 600), with no GPU 3D. GFX OPTIONS' RENDERER item selects it as SOFT 3D. With it, MIP MAPPING draws the original's blurred and magnified texture levels.
 - `--fps` and Alt+F show the race's frame rate; a second Alt+F adds the original's other debug lines, which it never showed.

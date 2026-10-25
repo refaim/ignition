@@ -11,6 +11,7 @@
 #include <sys/stat.h>
 
 #include "cdimage.h"
+#include "menu/engine.h"
 #include "compat.h"
 #include "dik.h"
 #include "game.h"
@@ -70,11 +71,24 @@ void plat_schedule_key(u32 ms, int key, u32 hold)
     }
 }
 
+static struct { u32 ms; float fx, fy; } s_taps[64];
+static int s_tap_count;
+
+void plat_schedule_tap(u32 ms, float fx, float fy)
+{
+    if (s_tap_count < 64) {
+        s_taps[s_tap_count].ms = ms;
+        s_taps[s_tap_count].fx = fx;
+        s_taps[s_tap_count].fy = fy;
+        s_tap_count++;
+    }
+}
+
 /* A scheduled key goes down when its time comes and up `hold` ms later. */
 void plat_run_scheduled(void)
 {
     u32 now = plat_time_ms();
-    int i;
+    int i, n;
 
     for (i = 0; i < s_scheduled_count; i++) {
         if (s_scheduled[i].state == 0 && now >= s_scheduled[i].ms) {
@@ -85,6 +99,20 @@ void plat_run_scheduled(void)
             s_scheduled[i].state = 2;
         }
     }
+    for (i = 0, n = 0; i < s_scheduled_count; i++) {
+        if (s_scheduled[i].state != 2) {
+            s_scheduled[n++] = s_scheduled[i];
+        }
+    }
+    s_scheduled_count = n;
+    for (i = 0, n = 0; i < s_tap_count; i++) {
+        if (now >= s_taps[i].ms) {
+            menu_tap(s_taps[i].fx, s_taps[i].fy);
+        } else {
+            s_taps[n++] = s_taps[i];
+        }
+    }
+    s_tap_count = n;
 }
 
 /* ------------------------------------------------------------ gamepad */

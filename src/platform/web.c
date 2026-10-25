@@ -115,6 +115,13 @@ static EM_BOOL on_key(int type, const EmscriptenKeyboardEvent *e, void *user)
             }
             return EM_TRUE;
         }
+        /* Alt+F shows the race's debug lines. */
+        if (dik == DIK_F && e->altKey) {
+            if (!e->repeat) {
+                app_toggle_debug();
+            }
+            return EM_TRUE;
+        }
         if (!e->repeat && !g_plat_keys[dik]) {
             plat_key_event(dik, 1);
         }

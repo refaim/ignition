@@ -43,6 +43,7 @@
 #endif
 #include "startup.h"
 #include "vfs.h"
+#include "race/debug.h"
 #include "race/init.h"
 #include "version.h"
 #include "video.h"
@@ -145,6 +146,8 @@ int main(int argc, char **argv)
             }
         } else if (strcmp(argv[i], "--cue") == 0 && i + 1 < argc) {
             cd_set_image(argv[++i]);
+        } else if (strcmp(argv[i], "--fps") == 0) {
+            r_4949b4 = 1;
         } else if (strcmp(argv[i], "--software") == 0) {
             canvas_set_hardware(0);
         } else if (strcmp(argv[i], "--res") == 0 && i + 1 < argc) {

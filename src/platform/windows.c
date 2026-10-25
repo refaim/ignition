@@ -86,6 +86,11 @@ static void key_message(UINT msg, WPARAM wp, LPARAM lp)
             app_toggle_renderer();
             return;
         }
+        /* Alt+F shows the race's debug lines. */
+        if (alt && wp == 'F') {
+            app_toggle_debug();
+            return;
+        }
         if (!g_plat_keys[dik]) {
             plat_key_event(dik, 1);
         }

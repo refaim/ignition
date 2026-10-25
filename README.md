@@ -117,6 +117,7 @@ make vita-deploy   # copies it to a Vita
 | `--cue FILE` | Plays the CD music from the disc image `FILE`. |
 | `--res N` | Forces the resolution: `0` 320 x 200, `1` 640 x 480, `2` 800 x 600, `3` NATIVE. |
 | `--software` | Draws the 2D on the CPU. |
+| `--fps` | Shows the race's frame rate (Alt+F switches it, and a second Alt+F adds the original's other debug lines). |
 | `--view FILE.PIC` | Shows one of the game's pictures. |
 | `--text TEXT` | Shows `TEXT` in the game's menu font. |
 | `--version` | Prints this port's version. |

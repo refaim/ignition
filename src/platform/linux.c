@@ -240,6 +240,11 @@ static void handle_event(XEvent *ev)
             app_toggle_renderer();
             break;
         }
+        /* Alt+F shows the race's debug lines. */
+        if (dik == DIK_F && (ev->xkey.state & Mod1Mask)) {
+            app_toggle_debug();
+            break;
+        }
         if (dik != 0 && !g_plat_keys[dik]) {
             plat_key_event(dik, 1);
         }

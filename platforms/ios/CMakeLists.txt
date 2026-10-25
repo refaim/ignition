@@ -30,7 +30,7 @@ endif()
 
 set(ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../..)
 set(SRC ${ROOT}/src)
-file(GLOB IGN_SOURCES ${SRC}/*.c ${SRC}/lisa/*.c ${SRC}/race/*.c ${SRC}/menu/*.c
+file(GLOB IGN_SOURCES CONFIGURE_DEPENDS ${SRC}/*.c ${SRC}/lisa/*.c ${SRC}/race/*.c ${SRC}/menu/*.c
      ${SRC}/frontend/*.c)
 list(FILTER IGN_SOURCES EXCLUDE REGEX "/rnd_gxm\\.c$")
 list(APPEND IGN_SOURCES ${SRC}/platform/ios.m ${SRC}/platform/common.c ${SRC}/platform/touch.c)

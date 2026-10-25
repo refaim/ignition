@@ -4,6 +4,7 @@
 
 #include "app.h"
 #include "cd.h"
+#include "race/debug.h"
 #include "canvas.h"
 #include "game.h"
 #include "input.h"
@@ -122,6 +123,12 @@ void app_on_destroy(void)
     video_shutdown();
     input_shutdown();
     plat_request_quit();
+}
+
+/* Alt+F: the race's frame rate, then all its debug lines, then none. */
+void app_toggle_debug(void)
+{
+    r_4949b4 = (r_4949b4 + 1) % 3;
 }
 
 /* Alt+R: the 2D on the GPU or on the CPU. */

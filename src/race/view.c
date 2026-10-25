@@ -17,6 +17,7 @@
 #include "race/cars.h"
 #include "race/contact.h"
 #include "race/data.h"
+#include "race/debug.h"
 #include "race/frame.h"
 #include "race/hud.h"
 #include "race/init.h"
@@ -439,6 +440,9 @@ void race_view(double dt)
         prof_begin(PROF_HUD);
         race_hud(g_view_car, 0);
         prof_end(PROF_HUD);
+    }
+    if (r_4949b4) {
+        race_debug_lines();
     }
 
     if (split) {

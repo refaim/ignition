@@ -215,6 +215,12 @@ static void handle_event(NSEvent *ev)
             app_toggle_renderer();
             break;
         }
+        /* Alt+F shows the race's debug lines. */
+        if (dik == DIK_F && ([ev modifierFlags] & NSEventModifierFlagOption)
+            && ![ev isARepeat]) {
+            app_toggle_debug();
+            break;
+        }
         if (dik != 0 && ![ev isARepeat]) {
             plat_key_event(dik, 1);
         }

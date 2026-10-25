@@ -12,6 +12,7 @@ All notable changes to this project are documented in this file.
 - A view wider than 4:3 no longer shows black where the track was not gathered: the port gathers a wider disc of cells about the camera.
 
 ### Added
+- `--fps` and Alt+F show the race's frame rate; a second Alt+F adds the original's other debug lines, which it never showed.
 - SOUND OPTIONS has MUSIC VOL., 0 to 10, for the CD music apart from SFX VOLUME; it is kept in `ign_port.cfg`.
 - GFX OPTIONS has a RENDERER item: HARDWARE draws the 2D on the GPU, SOFTWARE on the CPU as the original. Choosing a resolution sets its default, HARDWARE for NATIVE and SOFTWARE for the original sizes; the choice is kept in `ign_port.cfg`.
 - Choosing one of the original resolutions sizes the window to it (320 x 200 shown at 640 x 480); NATIVE gives the window back its size.

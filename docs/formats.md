@@ -196,9 +196,19 @@ the layout by the resolution, the view's size and the split screen.
 The `SMALL.LFT` in the disc's root has 70 glyphs and is not read.
 
 `FONTS/IGNITION.FNT` (0x1518 bytes) is loaded by `load_fonts`
-[0x41ac40] into `g_race_fnt`, and nothing reads it after that. Its
-layout is unknown. It starts with the u16 values 0x38 and 0xa, then
-0xffff, then bytes that look like widths.
+[0x41ac40] into `g_race_fnt`. The original reads it only in its debug
+lines (`race_debug_lines` [0x43e9c0], text by `debug_text` [0x4133d0]),
+which it never shows; the port shows them with `--fps`.
+
+| Offset | Size | Field |
+|---|---|---|
+| 0x00 | u16 | unknown (0x38) |
+| 0x02 | s16 | height in rows (10) |
+| 0x04 | s16 | the gap after each glyph (-1) |
+| 0x06 | 192 x s8 | each glyph's width |
+| 0xc6 | 256 x s8 | each character's glyph |
+| 0x1c6 | 224 x u32 | each glyph's offset from 0x546 |
+| 0x546 | | the glyphs' pixels, a glyph's rows `width` apart; 0 is clear |
 
 ## Intro animations (.CDP)
 
@@ -798,7 +808,6 @@ for 0. `make extract` also writes each audio track to
 
 | File | What it is |
 |---|---|
-| `FONTS/IGNITION.FNT` | loaded, never used; layout unknown |
 | `LEVELS/<T>/<T>.TAB` | loaded, never used by the port |
 | `BALTAZAR/DATA/TEST2.PFM`, `DEFAULT2.PSQ` | a shorter menu film |
 | `BALTAZAR/DATA/CONSPR.PIC`, `DEMOCAR.PIC`, `DEMOTRK.PIC`, `MARK.PIC` | pictures |

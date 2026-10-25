@@ -25,8 +25,6 @@ STUB_VOID(0x4607c0, render_init_4607c0)
 STUB_VOID(0x45f640, render_init_45f640)
 STUB_VOID(0x45fa50, render_init_45fa50)
 STUB_VOID(0x460b50, render_init_460b50)
-STUB_VOID(0x45d840, gfx_init_45d840)
-STUB_VOID(0x45c9f0, gfx_init_spans)
 
 int menu_network_page(void)
 {

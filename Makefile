@@ -42,7 +42,7 @@ endif
 SOFT3D_SRC := $(wildcard $(SRCDIR)/soft3d/*.c)
 CORE_SRC := $(SRCDIR)/app.c $(SRCDIR)/game.c $(SRCDIR)/stubs.c $(SRCDIR)/net.c $(SRCDIR)/canvas.c $(SRCDIR)/scene.c $(SRCDIR)/gl3d.c $(SRCDIR)/menu/car.c $(SRCDIR)/menu/bg.c $(SRCDIR)/race/load.c $(SRCDIR)/race/track.c $(SRCDIR)/race/world.c $(SRCDIR)/race/cars.c $(SRCDIR)/phys.c $(SRCDIR)/race/phys.c $(SRCDIR)/anim_tex.c $(SRCDIR)/race/ai.c $(SRCDIR)/srf.c $(SRCDIR)/race/contact.c $(SRCDIR)/race/fx.c $(SRCDIR)/race/respawn.c $(SRCDIR)/race/camera.c $(SRCDIR)/race/view.c $(SRCDIR)/race/misc.c $(SRCDIR)/race/hud.c $(SRCDIR)/race/results.c $(SRCDIR)/race/sound.c $(SRCDIR)/race/control.c $(SRCDIR)/race/init.c $(SRCDIR)/race/race.c $(SRCDIR)/race/frame_stubs.c $(SRCDIR)/race/input.c $(SRCDIR)/race/data.c $(SRCDIR)/race/debug.c \
             $(SRCDIR)/lisa/lisa.c $(SRCDIR)/lisa/log.c $(SRCDIR)/lisa/mem.c $(SRCDIR)/lisa/file.c \
-            $(SRCDIR)/lisa/exit.c $(SRCDIR)/lisa/gfx.c $(SRCDIR)/lisa/texture.c $(SRCDIR)/lisa/sprite.c \
+            $(SRCDIR)/lisa/exit.c $(SRCDIR)/lisa/gfx.c $(SRCDIR)/lisa/texture.c $(SRCDIR)/lisa/sprite.c $(SRCDIR)/lisa/turned.c \
             $(SRCDIR)/lisa/font.c $(SRCDIR)/startup.c $(SRCDIR)/input.c \
             $(SRCDIR)/menu/engine.c $(SRCDIR)/menu/data.c $(SRCDIR)/settings.c $(SRCDIR)/frontend/frontend.c $(SRCDIR)/frontend/state.c \
             $(SRCDIR)/menu/panels.c $(SRCDIR)/menu/pages.c $(SRCDIR)/audio.c $(SRCDIR)/cd.c $(SRCDIR)/sound.c $(SRCDIR)/cdp.c \

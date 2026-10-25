@@ -34,8 +34,6 @@ void render_init_45fa50(void);      /* 0x45fa50 */
 void render_init_460b50(void);      /* 0x460b50 */
 
 /* Lisa rasteriser buffers, run by gfx_register_generic (0x456e60) */
-void gfx_init_45d840(void);         /* 0x45d840 */
-void gfx_init_spans(void);          /* 0x45c9f0 */
 
 /* front end pieces still to port */
 int menu_network_page(void);        /* 0x40af54, inside menu_page_handler_a */

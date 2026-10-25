@@ -4,10 +4,12 @@
 
 #include <math.h>
 #include <stddef.h>
+#include <string.h>
 
 #include "lisa/gfx.h"
 #include "canvas.h"
 #include "lisa/sprite.h"
+#include "lisa/turned.h"
 #include "stubs.h"
 
 enum { SPRITE_RECORDS = 2000 };
@@ -118,52 +120,33 @@ static void blit(const struct tex_desc *t, s32 x, s32 y)
     }
 }
 
-/* 0x468c70: a scaled or turned sprite. The original sends the sprite's
- * quad, its corners turned by m about the hot spot, as two textured
- * triangles to the rasteriser (0x45ca50); here each pixel of the quad's
- * box inside the clip is mapped back into the sprite, and those that
- * land in it become table[src << 8 | dst] as the unturned path's. x, y
- * are the top left in 8.8 before turning, hx, hy the hot spot. */
-static void blit_turned(const struct tex_desc *t, s32 x, s32 y, s32 hx, s32 hy, const s32 *m)
+/* A scaled or turned sprite, drawn by 0x468c70. The original keeps a
+ * sprite in a 256 x 256 page and gives the rasteriser its box there;
+ * the port keeps its pixels apart, so they are put at the corner of a
+ * page of their own. */
+static void blit_turned(const struct tex_desc *t, const struct sprite *sprite,
+                        const struct sprite_pos *pos, const s32 *m)
 {
-    const struct gfx_target *g = &g_gfx_target;
-    const u8 *table = g_gfx_color_table;
-    double a = m[0] / 65536.0, b = m[1] / 65536.0, c = m[2] / 65536.0, d = m[3] / 65536.0;
-    double cx = (x + hx) / 256.0, cy = (y + hy) / 256.0, hxf = hx / 256.0, hyf = hy / 256.0;
-    double det = a * d + b * c, lo_x = 1e9, lo_y = 1e9, hi_x = -1e9, hi_y = -1e9;
-    int k, px, py, x0, y0, x1, y1;
+    static u8 page[0x10000];
+    struct turned_src src;
+    int y;
 
-    if (t->pixels == NULL || det == 0.0) {
+    if (t->pixels == NULL || t->width <= 0 || t->height <= 0 || t->width > 256
+        || t->height > 256) {
         return;
     }
-    for (k = 0; k < 4; k++) {
-        double tx = (k & 1) * t->width - hxf, ty = (k >> 1) * t->height - hyf;
-        double qx = cx + a * tx - b * ty, qy = cy + c * tx + d * ty;
-
-        lo_x = qx < lo_x ? qx : lo_x;
-        hi_x = qx > hi_x ? qx : hi_x;
-        lo_y = qy < lo_y ? qy : lo_y;
-        hi_y = qy > hi_y ? qy : hi_y;
+    for (y = 0; y < t->height; y++) {
+        memcpy(page + y * 256, t->pixels + y * t->stride, (size_t)t->width);
     }
-    x0 = (int)floor(lo_x) < g->clip_x0 ? g->clip_x0 : (int)floor(lo_x);
-    y0 = (int)floor(lo_y) < g->clip_y0 ? g->clip_y0 : (int)floor(lo_y);
-    x1 = (int)ceil(hi_x) > g->clip_x1 ? g->clip_x1 : (int)ceil(hi_x);
-    y1 = (int)ceil(hi_y) > g->clip_y1 ? g->clip_y1 : (int)ceil(hi_y);
-    for (py = y0; py < y1; py++) {
-        u8 *dst = g->base + py * g->pitch;
-
-        for (px = x0; px < x1; px++) {
-            /* The pixel's middle, back through m: (dx, dy) = M (tx, ty)
-             * with M = [a -b; c d]. */
-            double dx = px + 0.5 - cx, dy = py + 0.5 - cy;
-            double tx = (d * dx + b * dy) / det + hxf, ty = (a * dy - c * dx) / det + hyf;
-            int u = (int)floor(tx), v = (int)floor(ty);
-
-            if (u >= 0 && v >= 0 && u < t->width && v < t->height) {
-                dst[px] = table[t->pixels[v * t->stride + u] << 8 | dst[px]];
-            }
-        }
-    }
+    src.hot_x = sprite->hot_x;
+    src.hot_y = sprite->hot_y;
+    src.u0 = 0;
+    src.v0 = 0;
+    src.u1 = t->width << 8;
+    src.v1 = t->height << 8;
+    src.page = page;
+    src.table = g_gfx_color_table;
+    turned_sprite(&src, m, pos->x, pos->y);
 }
 
 /* 0x457370 */
@@ -181,8 +164,7 @@ static void draw(const struct sprite *sprite, const struct sprite_pos *pos, cons
         return;
     }
     if (matrix != NULL) {
-        blit_turned(&t, pos->x - sprite->hot_x, pos->y - sprite->hot_y, sprite->hot_x,
-                    sprite->hot_y, matrix);
+        blit_turned(&t, sprite, pos, matrix);
         return;
     }
     /* sar: the shift of a negative position rounds down. */

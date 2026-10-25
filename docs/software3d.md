@@ -141,7 +141,14 @@ at 800 x 600.
 
 ## Not ported
 
-- The rotated sprite fillers of the 2D (0x45ca50, 0x45d170, 0x45d8a0,
-  0x45dfb0 and their code segment helpers 0x64ea80 to 0x64f4d0), which
-  `blit_turned` [0x468c70] uses. The port draws those sprites its own
-  way.
+- 0x457250 and 0x4572c0, a gfx slot that draws through 0x45d8a0 and
+  0x45dfb0: those two are ported (`src/lisa/turned.c`) but nothing calls
+  them yet.
+
+## The 2D's turned sprites
+
+The 2D's scaled and turned sprites (`blit_turned` [0x468c70],
+`src/lisa/sprite.c`) go through the same kind of triangle code on the
+CPU path: `turned_triangle` [0x45ca50] and `triangle_clipped_45d170`
+[0x45d170], with their spans and the code segment's helpers 0x64ea80 to
+0x64f4d0, in `src/lisa/turned.c`.

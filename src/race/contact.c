@@ -135,9 +135,9 @@ static void car_effect(int car, int type)
     g_effect.f18 = 80;
 }
 
-/* 0x4269a0
- * Flattens the car: its mesh copied to the car's own buffer, scaled 1.2
- * wide, 0.2 high and 1.6 long. */
+/* The flattened car: its mesh copied to the car's own buffer, scaled
+ * 1.2 wide, 0.2 high and 1.6 long (race_squash's, which the network's
+ * cars share with another sound). */
 static void squash_mesh(int car)
 {
     const s32 *src = g_car_meshes[g_drivers[car].car];
@@ -159,6 +159,7 @@ static void squash_mesh(int car)
     }
 }
 
+/* 0x4269a0: flattens the car, with its sound. */
 void race_squash(int car)
 {
     squash_mesh(car);

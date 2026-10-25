@@ -9,6 +9,7 @@ All notable changes to this project are documented in this file.
 - The Vita holds its frame rate in thick smoke and sparks: see-through faces stack at most six layers deep, where a pile of them took up to 96 GPU scenes a frame, and the 2D's textures upload only the rows that changed.
 
 ### Fixed
+- The game no longer crashes after a championship race on the Vita: the sound mixer could still be mixing the race's voices while the race freed them.
 - On the Vita, computer cars no longer stand at the start until bumped. Most tracks' racing lines give surfaces past the 30 in the grip table; the original reads the doubles around the table, and the port read past its own, which on the Vita held NaN and gave a throttle of 0.
 - On macOS, Right Shift (the boost), Right Control and Right Option are told apart from the left keys.
 - The championship's end shows the podium: the cup or statue, the league completed, the place and the score.

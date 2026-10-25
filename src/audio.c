@@ -36,9 +36,13 @@ static int s_open;
 
 enum { MAX_VOICES = 64 };
 
-static struct sound_voice *s_voices;
-static int s_voice_count;
-static int s_channels;
+/* The game's voices. The audio thread reads them only between raising
+ * and lowering s_mixing, from a pointer it loads once, so that the game
+ * can take them away: audio_voices_set waits out a mix in progress. */
+static _Atomic(struct sound_voice *) s_voices;
+static atomic_int s_voice_count;
+static atomic_int s_channels;
+static atomic_int s_mixing;
 static atomic_int s_active[MAX_VOICES];
 static atomic_int s_master = 0x10000;
 
@@ -95,31 +99,32 @@ static void skip(struct sound_voice *v, s32 frames)
 
 /* Adds the loudest voices into `out`, stepping each at its rate and
  * looping as many times as asked (0x467180). */
-static void mix_voices(float *out, s32 frames)
+static void mix_voices(float *out, s32 frames, struct sound_voice *voices)
 {
     int chosen[MAX_VOICES], n = 0, i, k;
+    int count = atomic_load(&s_voice_count), channels = atomic_load(&s_channels);
     float master = atomic_load(&s_master) * (1.0f / 65536.0f);
 
-    for (i = 0; i < s_voice_count; i++) {
-        const struct sound_voice *v = &s_voices[i];
+    for (i = 0; i < count; i++) {
+        const struct sound_voice *v = &voices[i];
 
         if (atomic_load(&s_active[i]) && v->rate > 0 && v->sample != NULL) {
             chosen[n++] = i;
         }
     }
-    while (n > s_channels) {
+    while (n > channels) {
         int quiet = 0;
 
         for (k = 1; k < n; k++) {
-            if (loudness(&s_voices[chosen[k]]) < loudness(&s_voices[chosen[quiet]])) {
+            if (loudness(&voices[chosen[k]]) < loudness(&voices[chosen[quiet]])) {
                 quiet = k;
             }
         }
-        skip(&s_voices[chosen[quiet]], frames);
+        skip(&voices[chosen[quiet]], frames);
         chosen[quiet] = chosen[--n];
     }
     for (k = 0; k < n; k++) {
-        struct sound_voice *v = &s_voices[chosen[k]];
+        struct sound_voice *v = &voices[chosen[k]];
         const struct sound_sample *s = v->sample;
         float gain = v->volume * (1.0f / 65536.0f) * master;
         float left = gain * (v->pan > 0 ? (128 - v->pan) / 128.0f : 1.0f);
@@ -183,26 +188,37 @@ static void mix(float *out, s32 frames, void *user)
             atomic_store(&s_cd_playing, 0);
         }
     }
-    if (s_voices != NULL) {
-        mix_voices(out, frames);
+    atomic_store(&s_mixing, 1);
+    {
+        struct sound_voice *voices = atomic_load(&s_voices);
+
+        if (voices != NULL) {
+            mix_voices(out, frames, voices);
+        }
     }
+    atomic_store(&s_mixing, 0);
 }
 
 void audio_voices_set(struct sound_voice *voices, int count, int channels)
 {
     int i;
 
+    /* Taken away first; then a mix that loaded the old ones ends before
+     * the game frees them. */
+    atomic_store(&s_voices, NULL);
+    while (atomic_load(&s_mixing)) {
+    }
     for (i = 0; i < MAX_VOICES; i++) {
         atomic_store(&s_active[i], 0);
     }
-    s_voice_count = count < MAX_VOICES ? count : MAX_VOICES;
-    s_channels = channels;
-    s_voices = voices;
+    atomic_store(&s_voice_count, count < MAX_VOICES ? count : MAX_VOICES);
+    atomic_store(&s_channels, channels);
+    atomic_store(&s_voices, voices);
 }
 
 void audio_voice_start(struct sound_voice *v)
 {
-    atomic_store(&s_active[v - s_voices], 1);
+    atomic_store(&s_active[v - atomic_load(&s_voices)], 1);
 }
 
 void audio_voices_volume(s32 volume)
@@ -214,8 +230,11 @@ void audio_voices_collect(struct sound_voice **free_list, int *free_count)
 {
     int i;
 
-    for (i = 0; i < s_voice_count; i++) {
-        struct sound_voice *v = &s_voices[i];
+    struct sound_voice *voices = atomic_load(&s_voices);
+    int count = atomic_load(&s_voice_count);
+
+    for (i = 0; voices != NULL && i < count; i++) {
+        struct sound_voice *v = &voices[i];
 
         if (atomic_load(&s_active[i]) && v->rate == 0 && v->keep != 1) {
             atomic_store(&s_active[i], 0);

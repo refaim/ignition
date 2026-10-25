@@ -32,6 +32,7 @@
 #include "race/hud.h"
 #include "race/init.h"
 #include "race/misc.h"
+#include "prof.h"
 #include "race/results.h"
 #include "startup.h"
 
@@ -560,16 +561,25 @@ static void store_records(void)
 static void podium(void)
 {
     char buf[256];
-    int l = lang(), d = g_mirror, k;
+    int l = lang(), d = g_mirror, k, scaled = race_box_scaled();
+    /* NATIVE draws it on the page as on a 320 x 200 screen, then the page
+     * onto the screen at the menus' size, as the results' rows. */
+    int sw = scaled ? 0x140 : g_screen_width, sh = scaled ? 200 : g_screen_height;
     const struct car *c = &g_cars[0];
-    s32 x = (g_screen_width / 2 - 0x6c) << 8, y = (s32)(g_screen_height * 102.4);
-    double h = g_screen_height;
+    s32 x = (sw / 2 - 0x6c) << 8, y = (s32)(sh * 102.4);
+    double h = sh;
     const struct sprite_xform *xf;
-    int tx = g_screen_width / 2 - 0x44;
+    int tx = sw / 2 - 0x44;
 
     /* The rows before leave the page as the target (draw_row), and the
      * podium's places are the screen's: the port draws it there. */
-    target_screen();
+    if (scaled) {
+        memset(g_race_buffer, 0, 0x140 * 200);
+        set_target(g_race_buffer, 0x140, 0x140, 200, 8);
+        g_gfx_color_table = g_identity_table;
+    } else {
+        target_screen();
+    }
     r_563d70.angle = 0;
     r_563d70.scale = (float)(c->f5d4 * 0.04);
     if (r_563ce0 == 0) {
@@ -605,18 +615,22 @@ static void podium(void)
     if (g_two_players == 0) {
         if (r_525e70[0] != 0) {
             snprintf(buf, sizeof(buf), "%s", g_res_must_achieve[l]);
-            text_centred(buf, F_HIGH, g_screen_width / 2, (s32)(h * 0.4 + 65.0));
+            text_centred(buf, F_HIGH, sw / 2, (s32)(h * 0.4 + 65.0));
             snprintf(buf, sizeof(buf), "%s", g_res_gold_statue[l]);
-            text_centred(buf, F_HIGH, g_screen_width / 2, (s32)(h * 0.4 + 80.0));
+            text_centred(buf, F_HIGH, sw / 2, (s32)(h * 0.4 + 80.0));
         } else if (d < 3) {
             snprintf(buf, sizeof(buf), g_res_now_try[l], g_res_leagues[4 * l + d + 1]);
-            text_centred(buf, F_HIGH, g_screen_width / 2, (s32)(h * 0.4 + 75.0));
+            text_centred(buf, F_HIGH, sw / 2, (s32)(h * 0.4 + 75.0));
         }
     }
     if (g_screen_size == 0) {
-        text_centred(g_res_press_return[l], F_LOW, g_screen_width / 2, g_screen_height - 10);
+        text_centred(g_res_press_return[l], F_LOW, sw / 2, sh - 10);
     } else {
-        text_centred(g_res_press_return[l], F_HIGH, g_screen_width / 2, g_screen_height - 20);
+        text_centred(g_res_press_return[l], F_HIGH, sw / 2, sh - 20);
+    }
+    if (scaled) {
+        target_screen();
+        put(0, 0, 0x140, 200, 0x140, g_screen_width / 2 - 0xa0, g_screen_height / 2 - down(100));
     }
     /* Confetti about the view's middle; the original works it out but
      * never draws it. */
@@ -654,6 +668,19 @@ static void retry_menu(void)
         s32 x = (g_screen_width / 2 - 0x4c) << 8;
         s32 y = (s32)((sin(r_552f68) * g_screen_height * 0.6 - 51.0) * 256.0);
 
+        if (race_box_scaled()) {
+            /* At the menus' size: drawn on the page below its 480 rows,
+             * then blended up, its top sliding as the original's. */
+            int top = (int)(sin(r_552f68) * g_screen_height * 0.6) - down(51);
+
+            memset(g_race_buffer + 0x200 * 0x140, 0, 0x40 * 0x140);
+            set_target(g_race_buffer, 0x140, 0x140, 0x240, 8);
+            g_gfx_color_table = g_identity_table;
+            draw_at(g_hud_places4[0], 0x74 << 8, 0x200 << 8, NULL);
+            target_screen();
+            put(0x74, 0x200, 0x74 + 0x99, 0x200 + 0x32, 0x140, g_screen_width / 2 - 0x4c, top);
+            return;
+        }
         target_screen();
         draw_at(g_hud_places4[0], x, y, NULL);
         return;
@@ -684,8 +711,7 @@ static void retry_menu(void)
     }
     g_gfx_color_table = g_level_pan;
     set_target(g_back_buffer, g_screen_width, g_screen_width, g_screen_height, 8);
-    blend_rect(g_race_buffer, 0, 0x1e, 0x13f, 0x8c, g_back_buffer, g_screen_width / 2 - 0xa0,
-               g_screen_height / 2 - 0x46, g_level_pan, 0x140, g_screen_width);
+    put(0, 0x1e, 0x13f, 0x8c, 0x140, g_screen_width / 2 - 0xa0, g_screen_height / 2 - down(0x46));
 }
 
 /* The index of car `car` in the total score order, or `keep`. */
@@ -952,7 +978,9 @@ int race_results(void)
             final_page();
         }
     }
+    prof_begin(PROF_ROWS);
     blend_rows(step, top);
+    prof_end(PROF_ROWS);
     if (g_race_net.mode != 2) {
         result_page_again();
     }

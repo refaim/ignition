@@ -14,7 +14,7 @@ set(IGN_VERSION "0.0.0" CACHE STRING "This port's version, e.g. 0.1.0")
 set(ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../..)
 set(SRC ${ROOT}/src)
 file(GLOB IGN_SOURCES CONFIGURE_DEPENDS ${SRC}/*.c ${SRC}/lisa/*.c ${SRC}/race/*.c ${SRC}/menu/*.c
-     ${SRC}/frontend/*.c)
+     ${SRC}/frontend/*.c ${SRC}/soft3d/*.c)
 list(FILTER IGN_SOURCES EXCLUDE REGEX "/rnd_gxm\\.c$")
 list(APPEND IGN_SOURCES ${SRC}/platform/android.c ${SRC}/platform/common.c ${SRC}/platform/udp.c
      ${SRC}/platform/touch.c)

@@ -20,6 +20,7 @@
 #include "gl3d.h"
 #include "prof.h"
 #include "rnd.h"
+#include "soft3d/soft3d.h"
 
 enum {
     MAX_MESHES = 1024,
@@ -1191,8 +1192,15 @@ static unsigned table_get(const u8 *table)
     return e->tex;
 }
 
+/* The pages, for --soft3d, which draws the commands itself. */
+static const u8 *s_raster_pixels;
+
 void gl3d_raster_pages(const u8 *pixels, int count)
 {
+    s_raster_pixels = pixels;
+    if (g_soft3d) {
+        return;
+    }
     if (s_raster_pages != 0) {
         rnd_texture_free(s_raster_pages);
     }
@@ -1269,8 +1277,14 @@ static void flat_fill(u8 *target, int w, int h, int pitch, const struct raster_c
 void gl3d_raster(u8 *target, int w, int h, int pitch, const struct raster_cmd *cmds, int count)
 {
     int i, k, run, pw, ph, copied = 0, batch = rnd_batch_copies();
-    int gpu = canvas_is_gpu(target);
+    int gpu;
     float size[2], off[2] = { 0, 0 };
+
+    if (g_soft3d) {
+        soft3d_raster(target, w, h, pitch, cmds, count, s_raster_pixels);
+        return;
+    }
+    gpu = canvas_is_gpu(target);
 
     /* Only flat triangles into memory (the race HUD's needle and bar):
      * filled here, as a trip through the GPU waits for it twice. */

@@ -23,6 +23,7 @@
 #include "race/race.h"
 #include "race/cars.h"
 #include "race/init.h"
+#include "soft3d/soft3d.h"
 #include "startup.h"
 #include "stubs.h"
 #include "video.h"
@@ -176,6 +177,13 @@ static void read_settings(void)
     track_names();
 
     g_driver_count = race_cfg(0x153);
+    /* --soft3d draws at the original's resolutions only: the front
+     * end's (--res's), and 800 x 600 for NATIVE. */
+    if (g_soft3d) {
+        s32 res = canvas_resolution() > 2 ? 2 : canvas_resolution();
+
+        memcpy(g_race_cfg + 0x10b, &res, sizeof(res));
+    }
     /* The port's NATIVE (3) takes the 800 x 600 layout. */
     g_screen_size = race_cfg(0x10b) > 2 ? 2 : race_cfg(0x10b);
     r_527f28 = r_563c6c = race_cfg(0x107);

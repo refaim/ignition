@@ -60,7 +60,9 @@ steps 36 times a second. The race effects (smoke, sparks, explosions,
 nitro and rain) are drawn at 40% of the original's size.
 
 `--software` (or Alt+R in the game) switches the 2D drawing back to the CPU,
-as the original does it. The 3D is always drawn on the GPU.
+as the original does it. `--soft3d` (or SOFT 3D for RENDERER in GFX OPTIONS)
+also draws the 3D on the CPU, with the original's own pipeline and
+rasteriser (`src/soft3d/`), at the original resolutions; [docs/software3d.md](docs/software3d.md) describes it.
 
 ## Game data
 
@@ -120,6 +122,7 @@ make vita-deploy   # copies it to a Vita
 | `--software` | Draws the 2D on the CPU. |
 | `--host` | NETWORK GAME hosts a game. |
 | `--connect HOST` | NETWORK GAME joins the game at `HOST` (a name or IP address, with `:PORT` or without). |
+| `--soft3d` | Draws the 2D and the 3D on the CPU, as the original does. |
 | `--fps` | Shows the race's frame rate (Alt+F switches it, and a second Alt+F adds the original's other debug lines). |
 | `--view FILE.PIC` | Shows one of the game's pictures. |
 | `--text TEXT` | Shows `TEXT` in the game's menu font. |

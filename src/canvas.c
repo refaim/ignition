@@ -18,6 +18,7 @@
 #include <string.h>
 
 #include "canvas.h"
+#include "soft3d/soft3d.h"
 #include "lisa/gfx.h"
 #include "rnd.h"
 #include "video.h"
@@ -233,7 +234,9 @@ void canvas_set_hardware(int on)
 {
     int i;
 
-    s_hardware = on != 0;
+    /* The software 3D draws into the buffers on the CPU, so the 2D stays
+     * there too. */
+    s_hardware = on != 0 && !g_soft3d;
     if (!s_ready) {
         return;
     }

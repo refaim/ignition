@@ -12,6 +12,7 @@
 #include "platform/platform.h"
 #include "video.h"
 #include "lisa/sprite.h"
+#include "lisa/turned.h"
 #include "stubs.h"
 
 struct video_mode g_video_mode;     /* 0x4ba6e0 */

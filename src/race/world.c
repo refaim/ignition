@@ -21,6 +21,7 @@
 #include "race/init.h"
 #include "structs/coll_obj.h"
 #include "scene.h"
+#include "soft3d/soft3d.h"
 #include "startup.h"
 #include "stubs.h"
 #include "video.h"
@@ -428,6 +429,9 @@ void race_make_world(void)
     }
     /* 0x447280 builds blurred levels of the track's texture when
      * r_527f78 is set; GL samples the pages as they are. */
+    if (g_soft3d) {
+        soft3d_race_textures();
+    }
     memcpy(r_563c80, sizes, sizeof(sizes));
     r_527f2c = g_screen_size != 0 ? 7 : 6;
     r_54f9d4 = r_563c80[g_two_players + 2 * (r_527f28 + 4 * g_screen_size)];
@@ -491,6 +495,10 @@ static int s_fill_count;
 
 void race_view_fill(double y0, double y1, int index)
 {
+    if (g_soft3d) {
+        soft3d_race_fill((int)y0, (int)y1, index);
+        return;
+    }
     if (s_fill_count < 4) {
         s_fills[s_fill_count].y0 = y0;
         s_fills[s_fill_count].y1 = y1;
@@ -508,6 +516,10 @@ void race_draw_view(const struct scene *sc, struct scene_obj *const *objs, int n
     int w, h;
     double vw, ox;
 
+    if (g_soft3d) {
+        soft3d_race_view(first);
+        return;
+    }
     if (first) {
         memset(g_back_buffer, 0, (size_t)g_screen_width * g_screen_height);
     }

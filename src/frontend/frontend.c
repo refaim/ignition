@@ -26,6 +26,7 @@
 #include "pic.h"
 #include "platform/platform.h"
 #include "settings.h"
+#include "soft3d/soft3d.h"
 #include "sound.h"
 #include "startup.h"
 #include "stubs.h"
@@ -327,20 +328,21 @@ static struct menu_page *page_with(int lang, int offset, int *index)
 
 /* The port's items:
  * - GFX OPTIONS gets RENDERER last: HARDWARE draws the 2D on the GPU,
- *   SOFTWARE on the CPU as the original (the 3D is the GPU's either
- *   way). The page goes up most of a row, so that 320 x 200 holds it.
+ *   SOFTWARE on the CPU as the original (the 3D on the GPU), SOFT 3D
+ *   the 3D on the CPU too, with the original's pipeline (src/soft3d/).
+ *   The page goes up most of a row, so that 320 x 200 holds it.
  * - SOUND OPTIONS gets MUSIC VOL. under CD MUSIC, 0 to 10, as SFX
  *   VOLUME, which the original has for the effects alone. */
 static void add_port_options(void)
 {
     enum { RAISE = 15, MAX_ITEMS = 16 };
-    static const char *const renderer[2] = { "HARDWARE", "SOFTWARE" };
+    static const char *const renderer[3] = { "HARDWARE", "SOFTWARE", "SOFT 3D" };
     static const char *const levels[11] = {
         "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"
     };
     static struct menu_item gfx_items[MENU_LANGUAGES][MAX_ITEMS];
     static struct menu_item sound_items[MENU_LANGUAGES][MAX_ITEMS];
-    static struct menu_visual gfx_visuals[MENU_LANGUAGES][6];
+    static struct menu_visual gfx_visuals[MENU_LANGUAGES][8];
     static struct menu_visual music_visuals[MENU_LANGUAGES][24];
     static int done;
     int lang, k;
@@ -370,7 +372,7 @@ static void add_port_options(void)
             if (pair != NULL) {
                 n.offset = SET_RENDERER;
                 n.min = 0;
-                n.max = 1;
+                n.max = 2;
                 n.label = "RENDERER";
                 n.names = renderer;
                 n.visuals = gfx_visuals[lang];
@@ -400,7 +402,8 @@ static void add_port_options(void)
 
 /* PORT_SETTINGS, or the defaults: the renderer the resolution's (the
  * GPU for NATIVE, the CPU for the original's sizes; --software starts
- * on the CPU whatever is saved), the music at 10. */
+ * on the CPU and --soft3d with the 3D on it too, whatever is saved),
+ * the music at 10. */
 static void port_settings_load(int resolution)
 {
     s32 v[2];
@@ -412,12 +415,17 @@ static void port_settings_load(int resolution)
 
         file_read_at(PORT_SETTINGS, v, size >= (long)sizeof(v) ? sizeof(v) : sizeof(v[0]), 0);
     }
-    if (!canvas_hardware()) {
+    if (!canvas_hardware() && v[0] == 0) {
         v[0] = 1;
     }
-    settings_set(SET_RENDERER, v[0] == 1);
+    if (g_soft3d) {
+        v[0] = 2;
+    }
+    v[0] = v[0] < 0 || v[0] > 2 ? 1 : v[0];
+    settings_set(SET_RENDERER, v[0]);
     settings_set(SET_MUSIC_VOLUME, v[1] < 0 ? 0 : v[1] > 10 ? 10 : v[1]);
-    canvas_set_hardware(v[0] != 1);
+    g_soft3d = v[0] == 2;
+    canvas_set_hardware(v[0] == 0);
     cd_set_music_volume(settings_get(SET_MUSIC_VOLUME));
 }
 
@@ -477,7 +485,10 @@ void menu_present(void)
         /* --res fixes the resolution whatever the option says. */
         if (last != -1) {
             canvas_set_resolution(res);
-            settings_set(SET_RENDERER, canvas_resolution() != CANVAS_NATIVE);
+            /* SOFT 3D stays: it races at the original's sizes. */
+            if (settings_get(SET_RENDERER) != 2) {
+                settings_set(SET_RENDERER, canvas_resolution() != CANVAS_NATIVE);
+            }
         }
         size_window(canvas_resolution());
         last = res;
@@ -489,7 +500,8 @@ void menu_present(void)
     }
     renderer = settings_get(SET_RENDERER);
     if (renderer != last_renderer) {
-        canvas_set_hardware(renderer != 1);
+        g_soft3d = renderer == 2;
+        canvas_set_hardware(renderer == 0);
         if (last_renderer != -1) {
             port_settings_save();
         }

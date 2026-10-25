@@ -17,6 +17,7 @@
 #include "menu/car.h"
 #include "menu/pages.h"
 #include "scene.h"
+#include "soft3d/soft3d.h"
 #include "stubs.h"
 
 enum { MENU_CARS = 11 };
@@ -135,7 +136,9 @@ int car3d_draw(s32 car, int spin, double scale, int x, int y)
     /* The original draws a view of the menu's size centred on (x, y),
      * into the menu screen. */
     scene_look_at(sc);
-    if (gl3d_surface_begin(g_menu_screen, mode[0], mode[1])) {
+    if (g_soft3d) {
+        soft3d_menu_car(x - mode[0] / 2, y - mode[1] / 2, mode[0], mode[1]);
+    } else if (gl3d_surface_begin(g_menu_screen, mode[0], mode[1])) {
         gl3d_draw(sc, g_scene_visible, sc->obj_count, x - mode[0] / 2, y - mode[1] / 2);
         gl3d_surface_end();
     } else {

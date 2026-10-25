@@ -21,6 +21,7 @@ Default.fil
 test_menu
 test_settings
 test_sound
+test_soft3d
 build-vita/
 build-linux/
 build-windows/

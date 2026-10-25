@@ -20,7 +20,7 @@ OUT = os.path.join(ROOT, "docs", "PROGRESS.md")
 
 def scan():
     ported, stubbed = {}, {}
-    above = re.compile(r"^/\*\s*(?:\w+\s+)?(0x4[0-9a-f]{5})\b")
+    above = re.compile(r"^/\*\s*(?:\w+\s+)?(0x(?:4|64)[0-9a-f]{4,5})\b")
     defn = re.compile(r"^(?:static\s+)?[A-Za-z_][\w\s\*]*?\b([A-Za-z_]\w*)\(")
     decl = re.compile(r"\b([A-Za-z_]\w*)\([^;]*\);\s*/\*\s*(0x4[0-9a-f]{5})")
     for path in glob.glob(os.path.join(SRC, "**", "*.[ch]"), recursive=True):

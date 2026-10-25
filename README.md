@@ -59,9 +59,9 @@ steps 36 times a second. The race effects (smoke, sparks, explosions,
 nitro and rain) are drawn at 40% of the original's size.
 
 `--software` (or Alt+R in the game) switches the 2D drawing back to the CPU,
-as the original does it. `--soft3d` also draws the 3D on the CPU, with the
-original's own pipeline and rasteriser (`src/soft3d/`), at the original
-resolutions; [docs/software3d.md](docs/software3d.md) describes it.
+as the original does it. `--soft3d` (or SOFT 3D for RENDERER in GFX OPTIONS)
+also draws the 3D on the CPU, with the original's own pipeline and
+rasteriser (`src/soft3d/`), at the original resolutions; [docs/software3d.md](docs/software3d.md) describes it.
 
 ## Game data
 

@@ -123,8 +123,8 @@ coordinates are 8.8 texels of a 256 x 256 page, `tex[v << 8 | u]`.
   front end's background, the HUD's needle and bars) and draws them
   with `sw_raster_draw`.
 
-`--soft3d` keeps the 2D on the CPU, since the 3D draws into the same
-buffers. A race runs at its resolution's original size; NATIVE races
+`--soft3d`, or SOFT 3D for RENDERER in GFX OPTIONS, keeps the 2D on
+the CPU, since the 3D draws into the same buffers. A race runs at its resolution's original size; NATIVE races
 at 800 x 600.
 
 ## Not ported

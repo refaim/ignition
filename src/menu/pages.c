@@ -18,6 +18,7 @@
 #include "canvas.h"
 #include "frontend/frontend.h"
 #include "frontend/state.h"
+#include "game.h"
 #include "input.h"
 #include "lisa/file.h"
 #include "lisa/font.h"
@@ -556,6 +557,127 @@ static void make_choice_sprites(void)
     }
 }
 
+/* The tracks' short names (0x47dfa8). */
+static const char *const s_track_short[8] = {
+    "MOOSEJAW F.", "GOLD RUSH", "SNAKE ISLAND", "LOST RUINS",
+    "YODEL PEAKS", "CAPE THOR", "TOKYO BULLET", "MOOSEJAW FALLS"
+};
+
+/* Where the players' badges go about (0xa0, 0x69), by how many players
+ * there are, 1 to 6 (built on the stack at 0x40b12a). */
+static const s8 s_badge_xy[6][6][2] = {
+    { { 0, 0 }, { -1, -1 }, { -1, -1 }, { -1, -1 }, { -1, -1 }, { -1, -1 } },
+    { { -30, 0 }, { 30, 0 }, { -1, -1 }, { -1, -1 }, { -1, -1 }, { -1, -1 } },
+    { { -60, 0 }, { 0, 0 }, { 60, 0 }, { -1, -1 }, { -1, -1 }, { -1, -1 } },
+    { { -30, -30 }, { 30, -30 }, { -30, 30 }, { 30, 30 }, { -1, -1 }, { -1, -1 } },
+    { { -60, -30 }, { 60, -30 }, { 0, 0 }, { -60, 30 }, { 60, 30 }, { -1, -1 } },
+    { { -60, -30 }, { 0, -30 }, { 60, -30 }, { -60, 30 }, { 0, 30 }, { 60, 30 } }
+};
+
+/* 0x40af54, in handler A: the network page. The track, a badge and the
+ * name of each human player, and what the session waits for; the
+ * messages go out (net_menu, then net_send_settings once joined), and
+ * the race starts when the host says so. */
+static void menu_network_page(void)
+{
+    const s32 *mode = g_menu_modes[g_menu_mode_index];
+    int w = mode[0];
+    int title_w, track_w, half, humans, k, i;
+    const char *track = s_track_short[(u32)settings_get(0x0f3) & 7];
+    const char *text = NULL;
+
+    fe_4be568++;
+    fe_net.mode = g_net_state;
+    if (fe_4be568 == 1) {
+        menu_apply_settings();
+    }
+    memset(g_menu_buffer2, 0, 64000);
+    set_target(g_menu_buffer2, mode[0], mode[0], mode[1], 8);
+    g_gfx_color_table = g_identity_table;
+    if (fe_net.mode != 2 && settings_get(0x008) == 2) {
+        settings_set(0x153, g_net_players + 1);
+    }
+    panels_clear();
+    title_w = text_width(mini_text(0x47e004), g_fonts_menu[1]);
+    track_w = text_width(mini_text(0x47e008), g_fonts_menu[1]);
+    half = title_w / 2;
+    panel_add(0x93 - half, 0, title_w, -2, 0);
+    panel_add(0x0b, 1, track_w, -2, 0);
+    panel_add(track_w + 0x26, 1, text_width(track, g_fonts_menu[1]), -2, 1);
+    panels_draw(g_menu_buffer2, w);
+    text_draw(mini_text(0x47e004), g_fonts_menu[1], 0xa0 - half, 0x0a);
+    text_draw(mini_text(0x47e008), g_fonts_menu[0], 0x18, 0x1d);
+    text_draw(track, g_fonts_menu[2], track_w + 0x33, 0x1d);
+
+    /* The badges: player-driven cars (control 0, or 2 over the network). */
+    panels_clear();
+    for (i = 0, humans = 0; i < settings_get(0x153); i++) {
+        s32 control = settings_get(0x15f + 4 * i);
+
+        if (control == 0 || control == 2) {
+            humans++;
+        }
+    }
+    g_fonts[g_fonts_menu[7]].align = FONT_ALIGN_CENTER;
+    for (i = 0, k = 0; i < settings_get(0x153); i++) {
+        s32 control = settings_get(0x15f + 4 * i);
+        char name[16];
+        int x, y;
+
+        if (control != 0 && control != 2) {
+            continue;
+        }
+        /* The original reads past its table with more than 6. */
+        if (humans > 6 || k >= 6) {
+            break;
+        }
+        x = s_badge_xy[humans - 1][k][0] + 0xa0;
+        y = s_badge_xy[humans - 1][k][1];
+        k++;
+        draw_sprite_at(g_sprite_badges[(u32)settings_get(0x01c + 4 * i) % 12], x, y + 0x69);
+        snprintf(name, sizeof(name), "%s", (const char *)g_settings + 0x06c + 15 * i);
+        text_draw(name, g_fonts_menu[7], x, y + 0x7f);
+    }
+    g_fonts[g_fonts_menu[7]].align = FONT_ALIGN_LEFT;
+    panels_draw(g_menu_buffer2, w);
+
+    if (fe_net.stage == 0) {
+        int text_w = title_w;
+
+        panels_clear();
+        if (fe_net.mode == 3) {
+            text = mini_text(g_net_players > 0 ? 0x47e010 : 0x47e018);
+        } else if (fe_net.mode == 4) {
+            text = mini_text(0x47e014);
+        }
+        if (text != NULL) {
+            text_w = text_width(text, g_fonts_menu[1]);
+            panel_add(0x93 - text_w / 2, 9, text_w, -9, 0);
+        }
+        panels_draw(g_menu_buffer2, w);
+        if (text != NULL) {
+            text_draw(text, g_fonts_menu[1], 0xa0 - text_w / 2, 0xae);
+        }
+        net_menu(&fe_net, g_settings);
+    }
+    if (fe_net.stage == 1) {
+        panels_clear();
+        if (fe_net.mode == 4) {
+            text = mini_text(0x47e018);
+            half = text_width(text, g_fonts_menu[1]);
+            panel_add(0x93 - half / 2, 9, half, -9, 0);
+            panels_draw(g_menu_buffer2, w);
+            text_draw(text, g_fonts_menu[1], 0xa0 - half / 2, 0xae);
+        }
+        net_send_settings(&fe_net, g_settings);
+    }
+    if (fe_net.stage == 2 && fe_4be8a0 == 0.0) {
+        menu_cb_4045e0(0, MENU_KEY_ACTIVATE);
+    }
+    g_gfx_color_table = g_menu_table;
+    set_target(g_menu_screen, mode[0], mode[0], mode[1], 8);
+}
+
 /* 0x409fb0 */
 int menu_page_handler_a(void)
 {
@@ -701,7 +823,7 @@ int menu_page_handler_a(void)
     if (cur == page(PAGE_NETWORK)) {
         menu_network_page();
     } else {
-        fe_4be710 = 2;
+        fe_net.mode = 2;
         fe_4be568 = 0;
     }
     if (intro_done) {
@@ -903,10 +1025,10 @@ int menu_page_handler_b(int key, int action)
         return MENU_KEY_TAKEN;
     }
     if (cur == page(PAGE_NETWORK)) {
-        if (action == MENU_KEY_BACK && (fe_4be710 == 4 || fe_4be710 == 3)) {
+        if (action == MENU_KEY_BACK && (fe_net.mode == 4 || fe_net.mode == 3)) {
             return MENU_KEY_TAKEN;
         }
-        if (!(action == MENU_KEY_ACTIVATE && fe_4be710 == 3 && g_net_players > 0)) {
+        if (!(action == MENU_KEY_ACTIVATE && fe_net.mode == 3 && g_net_players > 0)) {
             return MENU_KEY_TAKEN;
         }
     }

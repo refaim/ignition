@@ -30,7 +30,7 @@
 #include "startup.h"
 
 extern s32 r_563c80[0x18], r_54f9d4, r_527f2c, r_527f28;   /* race/world.c, race/load.c */
-extern s32 r_552f10, r_553068, r_527f24, r_563c38;
+extern s32 r_553068, r_527f24, r_563c38;
 extern s32 r_5531c0, r_5531c4;
 extern s32 r_6192a0[10], r_6192c8[10];
 extern s32 *r_552f24;
@@ -382,7 +382,7 @@ static void knockout_bar(int view)
     s32 h = g_screen_size == 0 ? 120 : 300;
     int i;
 
-    if (c->grid == r_527f24 && c->f528 == 0 && !(r_494990 && r_552f10 == 2)) {
+    if (c->grid == r_527f24 && c->f528 == 0 && !(r_494990 && g_race_net.mode == 2)) {
         char buf[0x64] = "";
 
         if (g_language >= 0 && g_language < 6) {
@@ -488,12 +488,12 @@ static void boost_lamp(struct car *c, s32 x1, s32 y1)
     if (c->f53c == 0 && c->f534 >= 20.0 && c->f534 < 100.0) {
         k = 1;
     } else if (c->f53c == 0 && c->f534 >= 100.0) {
-        if (!(r_494990 && r_552f10 == 2) && ++c->f540 > 14) {
+        if (!(r_494990 && g_race_net.mode == 2) && ++c->f540 > 14) {
             c->f540 = 0;
         }
         k = c->f540 < 7 ? 2 : 1;
     } else if (c->f53c > 0 || c->f534 < 20.0) {
-        if (!(r_494990 && r_552f10 == 2) && ++c->f540 > 1) {
+        if (!(r_494990 && g_race_net.mode == 2) && ++c->f540 > 1) {
             c->f540 = 0;
         }
         k = 1 + c->f540;

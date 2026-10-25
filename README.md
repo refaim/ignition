@@ -19,7 +19,8 @@ the HUD and the results.
 
 - About 70% of the game's code is ported. [docs/PROGRESS.md](docs/PROGRESS.md)
   lists every routine of `IGN_WIN.EXE` and its status.
-- Split-screen two-player races work. Network play is not ported.
+- Split-screen two-player races work, and network races over a local
+  network ([docs/network.md](docs/network.md)).
 - The original's joystick code is not ported. The keyboard works, and on
   every platform but macOS a gamepad presses the game's keys.
 
@@ -117,6 +118,8 @@ make vita-deploy   # copies it to a Vita
 | `--cue FILE` | Plays the CD music from the disc image `FILE`. |
 | `--res N` | Forces the resolution: `0` 320 x 200, `1` 640 x 480, `2` 800 x 600, `3` NATIVE. |
 | `--software` | Draws the 2D on the CPU. |
+| `--host` | NETWORK GAME hosts a game. |
+| `--connect HOST` | NETWORK GAME joins the game at `HOST` (a name or IP address, with `:PORT` or without). |
 | `--fps` | Shows the race's frame rate (Alt+F switches it, and a second Alt+F adds the original's other debug lines). |
 | `--view FILE.PIC` | Shows one of the game's pictures. |
 | `--text TEXT` | Shows `TEXT` in the game's menu font. |
@@ -179,6 +182,8 @@ function names its address in a comment, for example `/* 0x422680 */`.
 - `tools/progress.py` writes [docs/PROGRESS.md](docs/PROGRESS.md).
 - [docs/formats.md](docs/formats.md) describes the game's files, and
   [docs/engine.md](docs/engine.md) how the engine and its tracks work.
+- [docs/network.md](docs/network.md) describes network play and its
+  messages.
 
 The disassembly and the IDA database are not in this repository.
 

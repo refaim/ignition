@@ -56,6 +56,7 @@ target_link_libraries(ignition
     SceGxm_stub
     SceDisplay_stub
     SceSysmodule_stub
+    SceNet_stub
     SceCtrl_stub
     SceAudio_stub
     ScePower_stub

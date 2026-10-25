@@ -235,7 +235,7 @@ static void result_footer(void)
 {
     int l = lang();
 
-    if (r_552f10 == 4) {
+    if (g_race_net.mode == 4) {
         page_footer(g_res_waiting[l]);
     } else if (g_race_mode != 0) {
         page_footer(g_res_play_again[l]);
@@ -953,7 +953,7 @@ int race_results(void)
         }
     }
     blend_rows(step, top);
-    if (r_552f10 != 2) {
+    if (g_race_net.mode != 2) {
         result_page_again();
     }
     /* The original points the rasteriser's list (0x498730) back at the

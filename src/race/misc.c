@@ -417,7 +417,7 @@ static void race_save_settings(void)
 {
     int i;
 
-    if (g_race_mode != 0 && g_driver_count > 1 && r_552f10 == 2) {
+    if (g_race_mode != 0 && g_driver_count > 1 && g_race_net.mode == 2) {
         for (i = 0; i < g_driver_count; i++) {
             int a = (s32)(race_rand() * g_driver_count);
             int b = (s32)(race_rand() * g_driver_count);
@@ -493,7 +493,7 @@ void race_save_results(void)
  * of the results. */
 static int restart_allowed(void)
 {
-    return (r_552f10 == 2 || r_552f10 == 3) && r_563da0 != 1 && r_5daff0 != 1
+    return (g_race_net.mode == 2 || g_race_net.mode == 3) && r_563da0 != 1 && r_5daff0 != 1
         && g_race_tries > 0 && r_5530a8 <= 5;
 }
 
@@ -685,7 +685,7 @@ static void cd_next(void)
 static void toggle_pause(void)
 {
     r_494990 ^= 1;
-    if (r_494990 != 0 && r_5daff8 == 1 && r_552f10 == 2) {
+    if (r_494990 != 0 && r_5daff8 == 1 && g_race_net.mode == 2) {
         sound_stop_all();
     }
     race_frame_time();
@@ -787,7 +787,7 @@ static void menu_up(void)
     if (--r_563c04 < 0) {
         r_563c04 = 3;
     }
-    if (r_552f10 == 4) {
+    if (g_race_net.mode == 4) {
         if (r_563c04 == 1) {
             r_563c04 = 0;
         }
@@ -803,7 +803,7 @@ static void menu_down(void)
     if (++r_563c04 > 3) {
         r_563c04 = 0;
     }
-    if (r_552f10 == 4) {
+    if (g_race_net.mode == 4) {
         if (r_563c04 == 1) {
             r_563c04 = 2;
         }
@@ -827,12 +827,12 @@ static int yes_key(void)
 static void answer(int *any)
 {
     if (yes_key()) {
-        if (r_552f18 > 1 && r_552f18 < 4) {
+        if (g_race_net.stage > 1 && g_race_net.stage < 4) {
             r_563d88 = 1;
         }
         if (r_601674 == 0) {
             *any = 1;
-            if (r_552f10 != 3) {
+            if (g_race_net.mode != 3) {
                 g_race_again = 1;
                 r_563c60 = 1;
             } else {
@@ -841,20 +841,20 @@ static void answer(int *any)
             }
         } else if (r_601674 == 2) {
             g_race_again = 1;
-            if (r_552f10 == 3) {
+            if (g_race_net.mode == 3) {
                 r_54f97c = 0x65;
             }
             if (g_race_mode == 0) {
                 r_5daff0 = 1;
                 g_race_tries--;
-            } else if (r_552f10 != 3) {
+            } else if (g_race_net.mode != 3) {
                 r_563d88 = 1;
             }
         } else if (r_601674 == 1) {
             g_race_again = 0;
-            if (r_552f10 == 3) {
+            if (g_race_net.mode == 3) {
                 r_54f97c = 0x64;
-            } else if (r_552f10 == 4) {
+            } else if (g_race_net.mode == 4) {
                 r_54f97c = 0x66;
                 r_54f9a8 = 0;
             } else {
@@ -867,7 +867,7 @@ static void answer(int *any)
     if (input_key_down(0x31) == 1 && r_563c18 != 0x31) {
         if (r_601674 == 0) {
             *any = 1;
-            if (r_552f10 != 3) {
+            if (g_race_net.mode != 3) {
                 g_race_again = 2;
                 r_563c60 = 1;
             } else {
@@ -1186,14 +1186,14 @@ void race_joystick(void)
             if (--r_563c04 < 0) {
                 r_563c04 = 3;
             }
-            if (r_552f10 == 4 && r_563c04 == 1) {
+            if (g_race_net.mode == 4 && r_563c04 == 1) {
                 r_563c04 = 0;
             }
         } else if (r_4949d0 == -1 && r_4949d8 == 0) {
             if (++r_563c04 > 3) {
                 r_563c04 = 0;
             }
-            if (r_552f10 == 4 && r_563c04 == 1) {
+            if (g_race_net.mode == 4 && r_563c04 == 1) {
                 r_563c04 = 2;
             }
         } else if (r_4949cc == 1 && r_4949d4 == 0) {

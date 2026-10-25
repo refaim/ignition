@@ -5,6 +5,7 @@
 #ifndef IGN_RACE_INIT_H
 #define IGN_RACE_INIT_H
 
+#include "net.h"
 #include "structs/race_cam.h"
 #include "types.h"
 
@@ -47,7 +48,8 @@ extern s32 g_view_car;                  /* 0x4949a4 */
 extern s32 g_champ_points[11];          /* 0x563d00 */
 extern s32 r_494990;                    /* paused */
 extern s32 r_563d88;                    /* the race is over */
-extern s32 r_552f18;                    /* 4 racing; 2, 3 waiting for the network */
+extern struct net_game g_race_net;      /* 0x552f10 (race/load.c): 4 racing, 2 and 3
+                                           waiting for the network */
 extern s32 r_54f97c, r_5532c8, r_553070, r_553280, r_5530b8, r_563da0, r_5daff0;
 extern s32 r_5532b0, r_601674;
 extern s32 r_5530e0;                    /* steps since the start */

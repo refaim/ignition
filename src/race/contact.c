@@ -135,10 +135,10 @@ static void car_effect(int car, int type)
     g_effect.f18 = 80;
 }
 
-/* 0x4269a0
- * Flattens the car: its mesh copied to the car's own buffer, scaled 1.2
- * wide, 0.2 high and 1.6 long. */
-void race_squash(int car)
+/* The flattened car: its mesh copied to the car's own buffer, scaled
+ * 1.2 wide, 0.2 high and 1.6 long (race_squash's, which the network's
+ * cars share with another sound). */
+static void squash_mesh(int car)
 {
     const s32 *src = g_car_meshes[g_drivers[car].car];
     s32 *dst = g_squash_meshes[car];
@@ -157,6 +157,12 @@ void race_squash(int car)
     if (scene_obj_set_mesh(&g_car_objs[car], dst, 1, car + 100, 0, -1, 0) != 0) {
         log_printf("Error while changing car mesh\n");
     }
+}
+
+/* 0x4269a0: flattens the car, with its sound. */
+void race_squash(int car)
+{
+    squash_mesh(car);
     car_sound(&g_cars[car], 0, 2, 6);
 }
 
@@ -181,10 +187,10 @@ void race_knockout(void)
             out = i;
         }
     }
-    if (!(behind == 1 && r_552f10 != 4) && !(r_54f97c == 3 && r_552f10 == 4)) {
+    if (!(behind == 1 && g_race_net.mode != 4) && !(r_54f97c == 3 && g_race_net.mode == 4)) {
         return;
     }
-    if (r_54f97c == 3 && r_552f10 == 4) {
+    if (r_54f97c == 3 && g_race_net.mode == 4) {
         out = r_54f9a8;
     }
     c = &g_cars[out];
@@ -232,7 +238,7 @@ void race_knockout(void)
             }
         }
     }
-    if (r_552f10 == 3) {
+    if (g_race_net.mode == 3) {
         r_54f97c = 3;
         r_54f9a8 = out;
     }
@@ -839,11 +845,225 @@ void race_contact(int car)
         squash_smoke(c);
     }
 
-    if (r_552f10 != 2) {
+    if (g_race_net.mode != 2) {
         if (reset > 0) {
             c->net_event = -reset;
         } else if (event > 0) {
             c->net_event = event;
         }
+    }
+}
+
+/* The sound at a car for the network's cars, quieter (0x9000). */
+static void remote_sound(const struct car *c, int sample)
+{
+    float z = (float)(s32)c->z;
+    float x = (float)(s32)c->x;
+
+    race_sound_3d(0, 2, sample, 0, 0x9000, 0x55f0, 0, x, z);
+}
+
+/* 0x426b40
+ * race_contact for a car the network moves (another player's, or the
+ * host's computer cars on a client): its position, angles and lap times
+ * come in the packets, so only the corners' surfaces and the ground's
+ * height are probed here, the laps and quarters counted (without the
+ * record messages), the grip set, and `event`, what the car's own
+ * machine saw (net_event: -1 blown up, -2 in the water, -3 off the
+ * track, 1 a crash roll, 2 a bump, 3 squashed), played out. A crash
+ * zone under the car's middle makes a crash roll here too. The original
+ * also sums the corners' heights front, rear and by side, and compares
+ * each with the car's height, and uses none of it. */
+void race_contact_remote(int car, int event)
+{
+    struct car *c = &g_cars[car];
+    struct car_phys *p = &g_car_phys[car];
+    const struct race_driver *d = &g_drivers[car];
+    struct srf_hit rec[4];
+    const struct srf_hit *hit = NULL;
+    double px, pz, cs, sn, rx, rz, ground = 0;
+    int k, i, n, changed;
+
+    for (k = 0; k < 4; k++) {
+        c->last_surface[k] = c->surface[k];
+        c->surface[k] = -1;
+    }
+    for (k = 0; k < 4; k++) {
+        double tz, tx, s;
+
+        cs = cos(c->heading);
+        sn = sin(c->heading);
+        rx = c->corner_x[k] * cs - c->corner_z[k] * sn;
+        rz = c->corner_x[k] * sn + c->corner_z[k] * cs;
+        px = rx * c->probe_scale + c->x;
+        pz = rz * c->probe_scale + c->z;
+        hit = srf_lookup((s32)px, (s32)(c->y + 50.0), (s32)pz);
+        if (k == 0 && r_5285d0 == 1
+            && race_obj_query((s32)c->x, (s32)c->y, (s32)c->z, -1, 50)->type == 301) {
+            event = 1;
+        }
+        /* A lap, as lap_done counts it, without the records. */
+        if (c->f378 == 3 && hit->f20 == 0 && abs(c->f370) - g_track_link_count == -1
+            && c->f604 == 0) {
+            c->laps++;
+            c->f378 = 0;
+            if (c->laps >= 3 && g_race_mode != 3) {
+                c->f528 = 1;
+                c->f3a0 = c->grid;
+                r_553280++;
+                if (car == 0 || (car == 1 && g_two_players == 1)) {
+                    r_54f980 = 0;
+                    r_563d20 = 3;
+                    r_4949a8 = 100;
+                    r_527f40[car] = 0;
+                }
+            }
+            c->f3b4 = c->lap_time;
+            switch (c->laps) {
+            case 0:
+                c->f3b4 = c->lap_time;
+                break;
+            case 1:
+                c->f3bc = c->lap_time;
+                break;
+            case 2:
+                c->f3c4 = c->lap_time;
+                break;
+            case 3:
+                c->f3cc = c->lap_time;
+                break;
+            }
+            c->lap_start = r_553090;
+        }
+        if (hit->f20 != SEG_NONE) {
+            c->f370 = hit->f20;
+        }
+        /* The face's plane at the corner, as plane_height; the original
+         * divides by the normal's y unchecked. */
+        tz = (double)(hit->v[1][2] - hit->v[0][2]) - (pz - hit->v[0][2]);
+        tx = (double)(hit->v[1][0] - hit->v[0][0]) - (px - hit->v[0][0]);
+        s = tz * hit->normal[2] + tx * hit->normal[0]
+            + (double)(hit->v[1][1] - hit->v[0][1]) * hit->normal[1];
+        rec[k] = *hit;
+        c->surface[k] = rec[k].type;
+        c->wall_surface[k] = rec[k].type;
+        ground -= hit->v[0][1] + s / hit->normal[1];
+    }
+
+    /* The segment, as race_contact takes it; here it goes into the first
+     * record, which is kept in srf_cache below. `hit` is the last
+     * corner's. */
+    if (c->f270 == 1 || c->landing != 0 || hit->type == -1 || rec[0].f20 != rec[1].f20
+        || rec[0].type >= 100 || c->f350 == 1) {
+        rec[0].f20 = c->f364;
+        rec[0].klass = c->f36c;
+    }
+    changed = 0;
+    if (rec[0].f20 != SEG_NONE) {
+        if (rec[0].f20 != c->f364) {
+            changed = 1;
+            c->f368 = c->f364;
+        }
+        c->f364 = rec[0].f20;
+        c->f36c = rec[0].klass;
+    }
+    if (changed) {
+        c->seg_frames = 0;
+    } else if (c->seg_frames < 29) {
+        c->seg_frames++;
+    }
+    n = g_track_link_count / 4;
+    i = abs(c->f364);
+    if (c->f378 == 0) {
+        if (i >= n && 2 * n > i) {
+            c->f378 = 1;
+        }
+    } else if (c->f378 == 1) {
+        if (2 * n <= i && 3 * n > i) {
+            c->f378 = 2;
+        }
+    } else if (c->f378 == 2) {
+        if (3 * n <= i && 4 * n > i) {
+            c->f378 = 3;
+        }
+    }
+    c->narrow = 0;
+
+    if (c->surface[0] >= 0 && c->surface[0] < 30 && c->surface[1] >= 0 && c->surface[1] < 30
+        && c->surface[2] >= 0 && c->surface[2] < 30 && c->surface[3] >= 0 && c->surface[3] < 30) {
+        c->f148 = (g_surface_grip[c->surface[2]] + g_surface_grip[c->surface[3]]
+                   + g_surface_grip[c->surface[1]] + g_surface_grip[c->surface[0]]) * 0.25;
+        if (d->control != 1) {
+            p->traction = c->f148 * g_car_traction[d->car];
+            p->grip = g_car_traction[d->car] * c->f148 * g_grip_scale[g_mirror];
+        } else {
+            p->traction = c->f148 * g_car_traction[11];
+            p->grip = g_ai_grip[g_car_499a90[d->car] + g_mirror * 11] * c->f148
+                      * g_car_traction[11];
+        }
+    }
+    memcpy(c->srf_cache, rec, sizeof(rec));
+    c->f128 = c->f120;
+    c->f120 = ground * 0.25;
+
+    if (event == -1) {
+        c->f354 = 1;
+        car_effect(car, 3);
+        g_effect.f1c = 1;
+        race_effect(&g_effect);
+    } else if (event == -2) {
+        c->f358 = 1;
+        car_effect(car, 7);
+        race_effect(&g_effect);
+    } else if (event == -3) {
+        c->f35c = 1;
+        car_effect(car, 10);
+        race_effect(&g_effect);
+    }
+    if (event == 1 && c->f270 == 0 && c->f554 == 0) {
+        c->f554 = 1;
+        roll_debris(c);
+    }
+    if (event == 2 && c->f270 == 0 && c->y - c->f120 < 50.0 && r_619300 == 0) {
+        car_sound(c, 1, 0, 8);
+        r_619300 = 15;
+    }
+    if (r_619300 > 0) {
+        r_619300--;
+    }
+    if ((event == 3 && c->f558 == 0) || (c->f55c == 0 && c->f560 == 1)) {
+        c->f55c = 1;
+        if (!(d->control == 2 && car != 0)) {
+            c->f560 = 1;
+        }
+        c->f558 = 1;
+        squash_mesh(car);
+        remote_sound(c, 6);
+    }
+    if (c->f558 > 0) {
+        c->f558++;
+        if (c->f558 >= 200 || (c->f55c == 1 && c->f560 == 0)) {
+            int w, v;
+
+            /* Back to its mesh at once: unsquash without its checks. */
+            if (scene_obj_set_mesh(&g_car_objs[car], g_car_meshes[d->car], 1, car + 100, 0, -1, 0)
+                != 0) {
+                log_printf("Error while changing car mesh\n");
+            }
+            for (w = 0; w < 4; w++) {
+                int m = d->car * 4 + w;
+                const s32 *src = g_wheel_meshes[m];
+                s32 *dst = &g_driver_wheels[car][w][2];
+
+                for (v = 0; v < g_wheel_info[m].verts; v++) {
+                    dst[3 * v] = g_wheel_dx[m] + src[2 + 3 * v];
+                    dst[3 * v + 1] = src[3 + 3 * v];
+                    dst[3 * v + 2] = g_wheel_dz[m] + src[4 + 3 * v];
+                }
+            }
+            c->f558 = 0;
+            remote_sound(c, 7);
+        }
+        squash_smoke(c);
     }
 }

@@ -12,6 +12,7 @@
 #include <string.h>
 
 #include "app.h"
+#include "canvas.h"
 #include "cd.h"
 #include "game.h"
 #include "input.h"
@@ -58,7 +59,7 @@ double race_frame_time(void)
     r_494984 = (s32)(36.0 / dt);
     g_fps_sum += r_494984;
     g_fps_count++;
-    if (r_494990 == 1 && r_552f10 == 2) {
+    if (r_494990 == 1 && g_race_net.mode == 2) {
         r_525e48 = (s32)(r_525e48 + dt * 27.77777777777778);
     }
     r_553090 = (s32)(g_frame_time - r_525e48) * 0.001;
@@ -146,19 +147,20 @@ static void race_step(double dt)
             g_race_again = 1;
         }
     }
-    if (r_552f10 != 2) {
+    if (g_race_net.mode != 2) {
         if (r_54f97c) {
             race_net_messages();
         }
         g_cars[0].clock = g_race_clock;
-        if (r_552f10 == 3) {
+        if (g_race_net.mode == 3) {
             for (i = 0; i < g_driver_count; i++) {
                 if (g_drivers[i].control == 1) {
                     g_cars[i].clock = g_race_clock;
                 }
             }
         }
-        /* Network play: 0x40e0a0 and 0x40d7a0 exchange the cars. */
+        net_send_cars(&g_race_net, g_cars, g_car_phys);
+        net_receive_cars(&g_race_net, g_cars, g_car_phys, g_race_clock);
         if (r_54f97c) {
             race_net_messages();
         }
@@ -258,7 +260,7 @@ void race_frame(void)
     video_restore();
     dt = race_frame_time();
     input_poll();
-    if (!(r_494990 && r_552f10 == 2) && dt >= 1.0 && r_552f18 == 4) {
+    if (!(r_494990 && g_race_net.mode == 2) && dt >= 1.0 && g_race_net.stage == 4) {
         race_step(dt);
     } else if (!r_563da0 && !r_5daff0) {
         race_hot_keys();
@@ -273,9 +275,45 @@ void race_frame(void)
             cd_play_track(g_race_cd_track);
         }
     }
-    /* r_552f18 2 and 3 wait for network players; there are none. */
+    /* A network race waits for the other players (0x417a45): stage 2
+     * until all have loaded, then 3 until all are ready to go. */
+    if (g_race_net.stage == 2) {
+        static const char *const waiting[6] = {
+            "WAITING FOR OTHER PLAYERS", "WARTE AUF WEITERE SPIELER",
+            "IN ATTESA DI ALTRI GIOCATORI", "ESPERANDO A OTROS JUGADORES",
+            "VbNTAR Pa ANDRA SPELARE", "ATTENTE DES AUTRES JOUEURS"
+        };
+        s32 lang = race_cfg(0x593);
+        int font = g_fonts_menu[7];
+
+        canvas_clear(g_back_buffer, 0, (size_t)g_screen_width * g_screen_height);
+        g_fonts[font].align = FONT_ALIGN_CENTER;
+        /* The original leaves its buffer as it was for another language. */
+        text_draw(waiting[lang >= 0 && lang < 6 ? lang : 0], font, (int)(g_screen_width * 0.5),
+                  (int)(g_screen_height * 0.45));
+        g_fonts[font].align = FONT_ALIGN_LEFT;
+        if (!r_494990) {
+            present_back_buffer();
+        }
+        net_wait_ready(&g_race_net);
+        if (g_race_net.stage == 3) {
+            cd_read_status();
+            if (g_cd_present == 1) {
+                cd_read_tracks();
+                cd_play_track(g_race_cd_track);
+            }
+        }
+    }
+    if (g_race_net.stage == 3) {
+        net_wait_start(&g_race_net);
+        if (g_race_net.stage == 4) {
+            race_frame_time();
+            race_clear_laps();
+            r_552e48 = 0;
+        }
+    }
     if (r_494990 == 1) {
-        if (r_552f10 == 2) {
+        if (g_race_net.mode == 2) {
             /* Off the network the race stands still: the view, as it
              * is, under the menu. */
             race_view(0);

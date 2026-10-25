@@ -509,6 +509,9 @@ void race_draw_view(const struct scene *sc, struct scene_obj *const *objs, int n
 
         vw = g_screen_height * tall * w / h;
         canvas_internal_size(&w43, &ih);
+        /* A host may draw the 3D at less than its full height
+         * (g_view_scale); it is shown stretched to the drawable. */
+        ih = (int)(ih * g_view_scale + 0.5);
         w = (int)((double)ih * w / h + 0.5);
         h = ih;
     }

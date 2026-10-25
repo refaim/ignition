@@ -42,6 +42,7 @@
 #include "race/init.h"
 #include "race/race.h"
 #include "rnd.h"
+#include "video.h"
 
 /* newlib's heap: the game's pools and the decoded data. rnd_gxm.c
  * takes GPU memory from what is left. */
@@ -130,6 +131,9 @@ int plat_window_open(const char *title, int width, int height, int fullscreen)
     scePowerSetGpuClockFrequency(222);
     scePowerSetGpuXbarClockFrequency(166);
     s_display_ready = 1;
+    /* The 3D at 720 x 408: a scene's cost goes with its pixels, and the
+     * race holds its 36 frames a second more often. */
+    g_view_scale = 0.75f;
     return 1;
 }
 

@@ -26,6 +26,10 @@ extern struct video_mode g_video_mode;  /* 0x4ba6e0 */
 extern u8 *g_video_screen;
 extern u8 g_video_palette[768];
 
+/* The race's 3D view's resolution as a share of the drawable's: 1, or
+ * less where the GPU needs the room (the Vita's, at 0.75). */
+extern float g_view_scale;
+
 /* Fills the driver tables for `driver` 0, DirectDraw. Returns 1, or 2
  * for any other driver. */
 int video_select_driver(int driver);

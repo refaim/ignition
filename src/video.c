@@ -17,6 +17,7 @@
 struct video_mode g_video_mode;     /* 0x4ba6e0 */
 u8 *g_video_screen;
 u8 g_video_palette[768];
+float g_view_scale = 1.0f;
 
 static int s_gfx_ready;
 static const u8 *s_present;     /* a canvas surface to show, or NULL */

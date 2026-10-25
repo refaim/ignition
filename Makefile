@@ -130,8 +130,12 @@ test_settings: tests/test_settings.c $(TEST_OBJ)
 test_sound: tests/test_sound.c $(TEST_OBJ)
 	$(CC) $(CFLAGS) $^ $(LDFLAGS) -o $@
 
-test: test_lisa test_menu test_settings test_sound
+test_soft3d: tests/test_soft3d.c $(TEST_OBJ)
+	$(CC) $(CFLAGS) $^ $(LDFLAGS) -o $@
+
+test: test_lisa test_menu test_settings test_soft3d test_sound
 	./test_lisa $(BUILD)
+	./test_soft3d
 	./test_menu
 	./test_settings
 	./test_sound
@@ -255,4 +259,4 @@ vita-clean:
 	rm -rf $(VBUILD)
 
 clean:
-	rm -rf $(BUILD) $(TARGET) cd_extract test_lisa test_menu test_settings test_sound *.dSYM
+	rm -rf $(BUILD) $(TARGET) cd_extract test_lisa test_menu test_settings test_soft3d test_sound *.dSYM

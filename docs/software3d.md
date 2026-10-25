@@ -72,10 +72,22 @@ effects draw over the road they stand on.
 | 15 | 0x44b770 | `face_flat` | 15, a flat triangle |
 | 16 | 0x44b980 | `face_flat16` | 16, a shaded triangle |
 | 17 | 0x44c2e0 | `face_texture` | 17, an affine textured triangle |
+| 17, MIP MAPPING on | 0x44dc60, 0x44c610 | `face_texture_mip`, `face_texture_mip_b` | 22 from a magnified tile, or 17 from a blurred level |
 | 17, PERSP. POLY on | 0x44bb90 | `face_texture_persp` | 20 near the eye, else 17 |
 | 18, 19, 22, 23 | 0x44caa0, 0x44cac0, 0x44cae0, 0x44cb00, 0x44cb20 | `face_texture_18` and so on, `face_texture_table` | 18 through the colour key (18, 22) or the `.SHD` (19, 23); 21 near the eye with PERSP. POLY on |
 | 20 | 0x44cf00 | `face_flat_table` | 19, a flat triangle through the `.SHD` (shadows) |
 | 21 | 0x44d550 | `face_texture_21` | 20 near the eye with PERSP. POLY on, else 17 |
+| 17, 21 with both on | 0x44e1b0, 0x44e900 | `face_texture_persp_mip`, `face_texture_21_mip` | 20 or 17 from a level |
+
+## Mip levels
+
+With MIP MAPPING on, `sw_tex_make` [0x447280] (`src/soft3d/mip.c`)
+builds a texture slot's blurred levels when the race makes its world:
+`blur_box` [0x447fb0] and `blur_wide` [0x4481f0] filter in RGB and map
+back to the palette through `make_lookup`'s [0x448620] 64 x 64 x 64
+table, and `magnify` [0x4475c0] makes the 4 x 4 magnified tiles that
+command 22 draws near the eye. The face handlers pick a level from the
+face's area on the screen against its area in the texture.
 
 ## The rasteriser
 
@@ -129,10 +141,6 @@ at 800 x 600.
 
 ## Not ported
 
-- MIP MAPPING. The level builder (0x447280, 0x4475c0, 0x447fb0,
-  0x4481f0) and the face handlers that use the levels (0x44dc60,
-  0x44e1b0, 0x44e900, 0x44c610) are not ported. The pipeline draws
-  from the full texture whatever the option says.
 - The rotated sprite fillers of the 2D (0x45ca50, 0x45d170, 0x45d8a0,
   0x45dfb0 and their code segment helpers 0x64ea80 to 0x64f4d0), which
   `blit_turned` [0x468c70] uses. The port draws those sprites its own

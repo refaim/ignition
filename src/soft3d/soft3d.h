@@ -37,6 +37,11 @@ void *const *soft3d_scene_render(void);
 void soft3d_draw(u8 *target, int pitch, int height, int x0, int y0, int x1, int y1,
                  const u8 *table);
 
+/* MIP MAPPING (mip.c): the race's texture slots (0x41b470's calls of
+ * 0x447280), and what the scene frees (0x446c30). */
+void soft3d_race_textures(void);
+void soft3d_scene_freed(void);
+
 /* The port's glue (port.c). */
 struct raster_cmd;
 void soft3d_race_view(int first);

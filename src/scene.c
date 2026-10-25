@@ -8,6 +8,7 @@
 
 #include "race/data.h"
 #include "scene.h"
+#include "soft3d/soft3d.h"
 
 struct scene *g_scene;                      /* 0x63c5f0 */
 /* The original keeps 1500 objects in view; the port's wider views take
@@ -93,6 +94,7 @@ void scene_free(void)
     s_free_list = NULL;
     s_objs = NULL;
     s_obj_total = 0;
+    soft3d_scene_freed();
 }
 
 /* 0x446ca0: a world of w x h units in cells of 256, and room for

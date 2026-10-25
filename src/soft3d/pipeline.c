@@ -36,6 +36,7 @@ const u8 *g_sw_pan;                     /* 0x63c5f4 */
 s32 g_sw_mip;                           /* 0x49c9ac */
 s32 g_sw_mip_b;                         /* 0x49c9b4 */
 s32 r_49c9bc;                           /* counts frames when mip levels were made */
+const struct sw_tex_handle *g_sw_handle;    /* the slot behind 0x4cdc28 */
 
 /* Each visible object's mesh and its projected vertices (0x63c5fc). */
 static struct {
@@ -512,6 +513,7 @@ static void emit(void)
         }
         g_sw_obj = o;
         g_sw_tex = o->tex >= 0 && o->tex < SCENE_TEXTURES ? g_scene_textures[o->tex] : NULL;
+        g_sw_handle = g_sw_tex != NULL ? g_sw_tex_handles[o->tex] : NULL;
         g_sw_face = (const u8 *)(mesh + 2 + 3 * mesh[0]);
         g_sw_verts = s_xobj[i].verts;
         for (g_sw_faces_left = mesh[1]; g_sw_faces_left > 0; g_sw_faces_left--) {

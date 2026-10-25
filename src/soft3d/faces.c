@@ -86,11 +86,34 @@ static s32 facing(const struct sw_vert *a, const struct sw_vert *b, const struct
 }
 
 /* The texture of the current object at a mip level: -5 the texture
- * itself, -4 and -3 the blurred levels (none made: the texture). */
+ * itself, -4 to -1 its blurred levels (slot[level] in the original). */
 static const u8 *tex_level(s32 level)
 {
-    (void)level;
-    return g_sw_tex;
+    if (g_sw_handle == NULL || level < -5 || level > -1) {
+        return g_sw_tex;
+    }
+    return g_sw_handle->level[level + 5];
+}
+
+/* Whether the current object's texture has magnified tiles: its slot[0]
+ * is not the texture. */
+static int magnified(void)
+{
+    return g_sw_handle != NULL && g_sw_handle->slot[0] != g_sw_handle->level[0];
+}
+
+/* The magnified tile the face's first texel is in: tile column
+ * u0 >> 14's buffer, the face's page and tile row v0 >> 14 within it,
+ * 4 bytes for each of the texture's. The port keeps to the four
+ * columns. */
+static const u8 *magnified_tex(void)
+{
+    s32 col = FACE_WORD(4) >> 14, row = FACE_WORD(5) >> 14;
+
+    if (col < 0 || col > 3) {
+        col = col < 0 ? 0 : 3;
+    }
+    return g_sw_handle->slot[4 * col] + (size_t)(u32)(FACE_WORD(10) + (row << 14)) * 4;
 }
 
 /* 0x44b560: type 0 ends the mesh. */
@@ -352,14 +375,14 @@ static void face_texture(void)
 
 /* The mip level a face takes (0x44bb90's and 0x44d550's test): its
  * screen area against its texture's, with mip levels made. */
-static s32 mip_level(const struct sw_vert *a, const struct sw_vert *b, const struct sw_vert *v)
+/* Twice the face's screen area times 1.5 (s) and its texture area
+ * (t), for the mip tests. */
+static void mip_areas(const struct sw_vert *a, const struct sw_vert *b, const struct sw_vert *v,
+                      s32 *s_out, s32 *t_out)
 {
     s32 xa, ya, xb, yb, xc, yc, s, t;
     s32 u0, v0, u1, v1, u2, v2;
 
-    if (g_sw_mip != 1) {
-        return -5;
-    }
     xa = a->x >> 8, ya = a->y >> 8, xb = b->x >> 8, yb = b->y >> 8;
     xc = v->x >> 8, yc = v->y >> 8;
     s = sw_mul(yc + yb, xc - xb) + sw_mul(ya + yb, xb - xa) + sw_mul(ya + yc, xa - xc);
@@ -369,10 +392,38 @@ static s32 mip_level(const struct sw_vert *a, const struct sw_vert *b, const str
     v1 = FACE_WORD(7) >> 8, u2 = FACE_WORD(8) >> 8, v2 = FACE_WORD(9) >> 8;
     t = sw_mul(v2 + v0, u0 - u2) + sw_mul(v2 + v1, u2 - u1) + sw_mul(v1 + v0, u1 - u0);
     t = t < 0 ? -t : t;
+    *s_out = s;
+    *t_out = t;
+}
+
+static s32 mip_level(const struct sw_vert *a, const struct sw_vert *b, const struct sw_vert *v)
+{
+    s32 s, t;
+
+    if (g_sw_mip != 1) {
+        return -5;
+    }
+    mip_areas(a, b, v, &s, &t);
     if (s > t) {
         return -5;
     }
-    return (s * 4 <= t) - 4;
+    return (sw_mul(s, 4) <= t) - 4;
+}
+
+/* The mip handlers' test: one more level, -2, for a face whose texture
+ * is 16 times its screen area. */
+static s32 mip_level4(const struct sw_vert *a, const struct sw_vert *b, const struct sw_vert *v)
+{
+    s32 s, t;
+
+    mip_areas(a, b, v, &s, &t);
+    if (s > t) {
+        return -5;
+    }
+    if (sw_mul(s, 4) > t) {
+        return -4;
+    }
+    return (sw_mul(s, 16) <= t) - 3;
 }
 
 /* A perspective command (type 20, or 21 through `table`): near faces
@@ -413,6 +464,14 @@ static void put_persp(const struct sw_vert *a, const struct sw_vert *b, const st
     c->v[1].y = b->y;
     c->v[2].x = v->x;
     c->v[2].y = v->y;
+    if (type == SW_PERSP && level == -5 && magnified()) {
+        /* The mip handlers draw a near face from its magnified tile. */
+        for (k = 0; k < 6; k++) {
+            c->uv[k] = (s32)(((u32)FACE_WORD(4 + k) & 0x3fff) << 2);
+        }
+        c->tex = magnified_tex();
+        return;
+    }
     for (k = 0; k < 6; k++) {
         c->uv[k] = FACE_WORD(4 + k);
     }
@@ -592,6 +651,119 @@ static void face_flat_table(void)
     g_sw_face += 0x14;
 }
 
+/* An affine command for a mip handler: from the magnified tile
+ * (type 22) for a near face that has one, else type 17 at its level. */
+static void put_texture_mip(const struct sw_vert *a, const struct sw_vert *b,
+                            const struct sw_vert *v, s32 level, s32 d)
+{
+    struct sw_cmd_texture *c;
+
+    if (level != -5 || !magnified()) {
+        put_texture(a, b, v, level, d);
+        return;
+    }
+    c = sw_cmd_alloc(sizeof(*c));
+    if (c == NULL) {
+        return;
+    }
+    c->type = SW_TEXTURE_MIP;
+    c->v[0].x = a->x;
+    c->v[0].y = a->y;
+    c->v[1].x = b->x;
+    c->v[1].y = b->y;
+    c->v[2].x = v->x;
+    c->v[2].y = v->y;
+    c->uv = &FACE_WORD(4);
+    c->tex = magnified_tex();
+    sw_cmd_bucket(d);
+}
+
+/* 0x44dc60: a run of affine textured triangles (type 17) with mip
+ * levels. */
+static void face_texture_mip(void)
+{
+    do {
+        const struct sw_vert *a = vert(1), *b = vert(2), *v = vert(3);
+        s32 sum;
+
+        if (box_out(a, b, v) || g_sw_tex == NULL) {
+            continue;
+        }
+        sum = a->z + b->z + v->z;
+        if (sum > 600 && facing(a, b, v, 4) > 0) {
+            put_texture_mip(a, b, v, mip_level4(a, b, v), nearer_17(sum >> 4));
+        }
+    } while (next_of_run(17));
+    g_sw_faces_left++;
+}
+
+/* A face of the perspective mip handlers, `bias` buckets nearer: in
+ * perspective near the eye, from the magnified tile at level -5. Their
+ * level is -4 when no levels were made. */
+static void texture_persp_mip(s32 bias)
+{
+    const struct sw_vert *a = vert(1), *b = vert(2), *v = vert(3);
+    s32 sum, d, level;
+
+    if (box_out(a, b, v) || g_sw_tex == NULL) {
+        return;
+    }
+    sum = v->z + b->z + a->z;
+    if (sum <= 600 || facing(a, b, v, 4) <= 0) {
+        return;
+    }
+    d = sum >> 4;
+    level = g_sw_mip == 1 ? mip_level4(a, b, v) : -4;
+    if (persp_class(d, g_sw_obj->klass)) {
+        put_persp(a, b, v, sum, d, level, SW_PERSP, NULL);
+        sw_cmd_bucket(nearer_17(d - bias));
+    } else {
+        put_texture_mip(a, b, v, level, nearer_17(d - bias));
+    }
+}
+
+/* 0x44e1b0: a run of textured triangles (type 17) with the perspective
+ * switch on and mip levels. */
+static void face_texture_persp_mip(void)
+{
+    do {
+        texture_persp_mip(0);
+    } while (next_of_run(17));
+    g_sw_faces_left++;
+}
+
+/* 0x44e900: type 21 with mip levels: as 0x44e1b0, 0x50 nearer, in
+ * perspective whatever the switch says. The run goes on over the type
+ * 17 faces that follow, as the original's copy of 0x44e1b0 does. */
+static void face_texture_21_mip(void)
+{
+    do {
+        texture_persp_mip(0x50);
+    } while (next_of_run(17));
+    g_sw_faces_left++;
+}
+
+/* 0x44c610: a run of affine textured triangles (type 17) at their mip
+ * level, for the switch 0x49c9b4, which nothing sets. */
+static void face_texture_mip_b(void)
+{
+    do {
+        const struct sw_vert *a = vert(1), *b = vert(2), *v = vert(3);
+        s32 sum, s, t, level;
+
+        if (box_out(a, b, v) || g_sw_tex == NULL) {
+            continue;
+        }
+        sum = b->z + v->z + a->z;
+        if (sum > 600 && facing(a, b, v, 4) > 0) {
+            mip_areas(a, b, v, &s, &t);
+            level = s > t ? -5 : (sw_mul(s, 4) <= t) - 4;
+            put_texture(a, b, v, level, nearer_17(sum >> 4));
+        }
+    } while (next_of_run(17));
+    g_sw_faces_left++;
+}
+
 /* The handlers by type; 0x44b560 in the slots of types that end the
  * mesh. */
 sw_face_fn g_sw_face_fns[24] = {        /* 0x49c8e0 */
@@ -608,13 +780,17 @@ void sw_faces_select(void)
 
     if (g_sw_mip_b == 0) {
         if (sc->perspective == 0) {
-            g_sw_face_fns[17] = face_texture;   /* 0x44dc60 with mip levels */
+            g_sw_face_fns[17] = g_sw_mip ? face_texture_mip : face_texture;
         } else {
-            g_sw_face_fns[17] = face_texture_persp;   /* 0x44e1b0 with mip levels */
+            g_sw_face_fns[17] = g_sw_mip ? face_texture_persp_mip : face_texture_persp;
         }
-        g_sw_face_fns[21] = face_texture_21;    /* 0x44e900 with mip levels */
+        g_sw_face_fns[21] = g_sw_mip ? face_texture_21_mip : face_texture_21;
     } else {
-        g_sw_face_fns[17] = sc->perspective ? face_texture_persp : face_texture;
+        if (sc->perspective == 0) {
+            g_sw_face_fns[17] = g_sw_mip ? face_texture_mip_b : face_texture;
+        } else {
+            g_sw_face_fns[17] = face_texture_persp;
+        }
         g_sw_face_fns[21] = face_texture_21;
     }
     sc->poly_count = 0;

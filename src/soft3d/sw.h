@@ -45,7 +45,7 @@ enum {
     SW_FLAT_TABLE = 19,         /* 0x454604, 0x24 */
     SW_PERSP = 20,              /* 0x4516f0, 0x44 */
     SW_PERSP_TABLE = 21,        /* 0x4516f0, 0x48 */
-    SW_TEXTURE_MIP = 22         /* 0x452050 */
+    SW_TEXTURE_MIP = 22         /* 0x452050, 0x24: 17 from a magnified tile */
 };
 
 /* 1: a point of one colour (0x44b5e0). */
@@ -177,7 +177,27 @@ extern const u8 *g_sw_shd;      /* 0x63b5f0, the level's .SHD */
 extern const u8 *g_sw_key;      /* 0x63c5b4, the colour key */
 extern const u8 *g_sw_pan;      /* 0x63c5f4, the level's .PAN */
 extern s32 g_sw_mip;            /* 0x49c9ac: mip levels were made */
-extern s32 g_sw_mip_b;          /* 0x49c9b4 */
+extern s32 g_sw_mip_b;          /* 0x49c9b4, never set */
+extern s32 r_49c9bc;            /* mip levels were made: 0x4466d0 mixes rand() for 100 frames */
+
+/* What 0x447280 makes of a texture slot (a calloc of 0x15 dwords, the
+ * slot pointing 5 in): level[0] the texture (slot[-5]), level[1..4] its
+ * blurred levels (slot[-4..-1]); slot[0] the texture, or with the
+ * magnified tiles 0x4475c0 makes, slot[4 k] tile column k's. */
+struct sw_tex_handle {
+    const u8 *level[5];
+    const u8 *slot[16];
+};
+
+/* Each scene texture slot's handle (0x63c5c8), NULL where 0x447280 was
+ * not run; and the current object's (with g_sw_tex). */
+extern const struct sw_tex_handle *g_sw_tex_handles[SCENE_TEXTURES];
+extern const struct sw_tex_handle *g_sw_handle;
+
+/* 0x447280: a slot's handle, its `levels` - 1 blurred levels of w x h
+ * tiles over `rows` rows of 256, and its magnified tiles; `pal` the
+ * level's palette, 3 bytes a colour. */
+void sw_tex_make(int slot, s32 count, s32 a8, s32 levels, s32 w, s32 h, s32 rows, const u8 *pal);
 
 /* The polygon store (0x63b600): a node names a command and the next in
  * its depth bucket. */

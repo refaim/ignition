@@ -458,6 +458,8 @@ static struct {
 } s_grave[FRAMES];
 
 static int s_slot;              /* this frame's of FRAMES */
+static unsigned s_frame_no;     /* frames presented */
+static SceUInt64 s_end_us;      /* time in sceGxmEndScene, for the log */
 
 static void gpu_free(void *p)
 {
@@ -487,6 +489,12 @@ struct texture {
     int drawn;                  /* the GPU draws into it */
     unsigned copy_target;       /* a target to copy into it */
     unsigned alias;             /* read as this texture instead (rnd_copy) */
+    /* A texture filled once a frame keeps a buffer for each frame in
+     * flight and a cached copy of each, and gets only its changed rows
+     * (rnd_texture_set). */
+    u8 *ring[FRAMES], *shadow[FRAMES];
+    int ring_w, ring_h, in_ring;
+    unsigned set_frame;
 };
 
 struct target {
@@ -676,7 +684,10 @@ static void depth_init(SceGxmDepthStencilSurface *ds, void *data, int aw, int ke
 static void end_scene(void)
 {
     if (s_in_scene) {
+        SceUInt64 t0 = sceKernelGetProcessTimeWide();
+
         sceGxmEndScene(s_ctx, NULL, NULL);
+        s_end_us += sceKernelGetProcessTimeWide() - t0;
         s_in_scene = 0;
     }
 }
@@ -686,7 +697,7 @@ static void end_scene(void)
 static struct {
     int frames, scenes, finishes, uploads, reads, copies, draws;
     SceUInt64 since, begin_us, wait_us, queue_us, draw_us, fill_us, mesh_us, stream_us;
-    u32 mesh_bytes, stream_bytes;
+    u32 mesh_bytes, stream_bytes, fill_bytes;
 } s_stats;
 
 /* Microseconds spent in a call that may block on the GPU. */
@@ -713,14 +724,17 @@ static void stats_frame(void)
         printf("gxm: %.1f fps; a frame: %.0f draws, %.1f scenes, %.1f copies, %.1f waits, %.1f uploads, "
                "%.1f reads; %.1f ms: %.1f the game, %.1f starting scenes, %.1f waiting for "
                "the GPU, %.1f queueing the display, %.1f in draws, %.1f filling textures, "
-               "%.1f copying %.0f KB of meshes, %.1f copying %.0f KB of vertices\n",
+               "%.1f copying %.0f KB of meshes, %.1f copying %.0f KB of vertices, "
+               "%.0f KB of texture rows, %.1f ending scenes\n",
                n / secs, s_stats.draws / n, s_stats.scenes / n, s_stats.copies / n,
                s_stats.finishes / n, s_stats.uploads / n, s_stats.reads / n, ms,
                ms - begin - wait - s_stats.queue_us / 1000.0 / n - s_stats.draw_us / 1000.0 / n,
                begin, wait, s_stats.queue_us / 1000.0 / n, s_stats.draw_us / 1000.0 / n,
                s_stats.fill_us / 1000.0 / n, s_stats.mesh_us / 1000.0 / n,
                s_stats.mesh_bytes / 1024.0 / n, s_stats.stream_us / 1000.0 / n,
-               s_stats.stream_bytes / 1024.0 / n);
+               s_stats.stream_bytes / 1024.0 / n, s_stats.fill_bytes / 1024.0 / n,
+               s_end_us / 1000.0 / n);
+        s_end_us = 0;
         memset(&s_stats, 0, sizeof(s_stats));
         s_stats.since = now;
     }
@@ -910,6 +924,7 @@ void rnd_present(void)
     s_front = s_back;
     s_back = (s_back + 1) % DISPLAY_BUFFERS;
     s_slot = (s_slot + 1) % FRAMES;
+    s_frame_no++;
     slot_begin(s_slot);
     stats_frame();
 }
@@ -1410,6 +1425,76 @@ static unsigned tex_new(void)
     return i;
 }
 
+static u32 stride_of(int format, int w);
+
+static void ring_free(struct texture *r)
+{
+    int k;
+
+    for (k = 0; k < FRAMES; k++) {
+        gpu_free(r->ring[k]);
+        free(r->shadow[k]);
+        r->ring[k] = NULL;
+        r->shadow[k] = NULL;
+    }
+    r->ring_w = r->ring_h = 0;
+    if (r->in_ring) {
+        r->data = NULL;
+        r->in_ring = 0;
+    }
+}
+
+/* Fills this frame's buffer of the ring with the rows of `pixels` that
+ * differ from what it holds. The buffer was last read by the frame
+ * FRAMES ago, which slot_begin waited for. 0 when the ring cannot be
+ * had. */
+static int ring_fill(struct texture *r, int w, int h, const u8 *pixels, int pitch)
+{
+    u32 stride = stride_of(r->format, w);
+    int bpp = r->format == RND_RG8 ? 2 : 1, k, y;
+    u8 *mem, *shadow;
+
+    if (r->ring_w != w || r->ring_h != h) {
+        ring_free(r);
+        for (k = 0; k < FRAMES; k++) {
+            r->ring[k] = gpu_alloc(stride * (u32)h, 256, 0);
+            r->shadow[k] = malloc((size_t)w * bpp * h);
+            if (r->ring[k] == NULL || r->shadow[k] == NULL) {
+                ring_free(r);
+                return 0;
+            }
+            /* A copy that no frame matches, so that all rows go. */
+            memset(r->shadow[k], 0xa5, (size_t)w * bpp * h);
+        }
+        r->ring_w = w;
+        r->ring_h = h;
+    }
+    if (pitch == 0) {
+        pitch = w;
+    }
+    mem = r->ring[s_slot];
+    shadow = r->shadow[s_slot];
+    for (y = 0; y < h; y++) {
+        const u8 *src = pixels + (size_t)y * pitch * bpp;
+        u8 *was = shadow + (size_t)y * w * bpp;
+
+        if (memcmp(was, src, (size_t)w * bpp) != 0) {
+            memcpy(was, src, (size_t)w * bpp);
+            s_stats.fill_bytes += (u32)(w * bpp);
+            TIMED(fill_us, memcpy(mem + (size_t)y * stride, src, (size_t)w * bpp));
+        }
+    }
+    if (!r->in_ring) {
+        gpu_free(r->data);
+    }
+    r->data = mem;
+    r->in_ring = 1;
+    r->w = w;
+    r->h = h;
+    r->stride = stride;
+    return 1;
+}
+
 static void tex_init(struct texture *r)
 {
     sceGxmTextureInitLinear(&r->t, r->data, gxm_format(r->format), (u32)r->w, (u32)r->h, 0);
@@ -1461,12 +1546,25 @@ void rnd_texture_set(unsigned tex, int w, int h, const void *pixels, int pitch)
         TIMED(fill_us, fill(r->data, r->stride, r->format, w, h, pixels, pitch));
         return;
     }
+    /* Once a frame and big: the ring. */
+    if (!r->drawn && pixels != NULL && r->format != RND_RGB8 && w * h >= 0x10000
+        && r->set_frame != s_frame_no + 1) {
+        r->set_frame = s_frame_no + 1;
+        if (ring_fill(r, w, h, pixels, pitch)) {
+            tex_init(r);
+            return;
+        }
+    }
+    r->set_frame = s_frame_no + 1;
     /* New memory, as draws still to run may read the old. */
     data = gpu_alloc(stride_of(r->format, w) * (u32)h, 256, r->drawn);
     if (data == NULL) {
         return;
     }
-    gpu_free(r->data);
+    if (!r->in_ring) {
+        gpu_free(r->data);
+    }
+    r->in_ring = 0;
     r->data = data;
     r->w = w;
     r->h = h;
@@ -1485,7 +1583,10 @@ void rnd_texture_free(unsigned tex)
     if (r->copy_target != 0) {
         rnd_target_free(r->copy_target);
     }
-    gpu_free(r->data);
+    if (!r->in_ring) {
+        gpu_free(r->data);
+    }
+    ring_free(r);
     memset(r, 0, sizeof(*r));
 }
 

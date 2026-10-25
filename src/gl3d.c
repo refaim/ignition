@@ -165,8 +165,13 @@ static int cells_touch(const int r[4], int mark)
  *
  * Faces overlap when their triangles share area: those that only meet
  * at an edge, as a mesh's neighbours do, do not (the GPU gives an edge's
- * pixels to one of them). A grid of cells finds the faces to test. */
-enum { LCELL = 32 };
+ * pixels to one of them). A grid of cells finds the faces to test.
+ *
+ * Each layer costs GXM a scene, and a scene's end costs about 0.25 ms:
+ * a pile of smoke or sparks made 90 of them a frame. Faces go no higher
+ * than MAX_LAYER; one through a table there reads the frame from before
+ * that layer, missing the faces drawn under it in the same layer. */
+enum { LCELL = 32, MAX_LAYER = 5 };
 
 struct geo {
     float x[6], y[6];           /* one or two triangles */
@@ -309,7 +314,7 @@ static int layer_of(int i, int through_table)
             }
         }
     }
-    s_layers[i] = through_table ? best + 1 : best;
+    s_layers[i] = through_table && best < MAX_LAYER ? best + 1 : best;
     for (y = cy0; y <= cy1; y++) {
         for (x = cx0; x <= cx1; x++) {
             if (s_nodes_n == s_nodes_cap) {

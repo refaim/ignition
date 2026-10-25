@@ -270,8 +270,11 @@ static void zone_record(struct srf_hit *h, const struct scene_obj *o,
  * addresses; the race passes -1, and the port does not keep them. */
 struct srf_hit *race_obj_query(s32 x, s32 y, s32 z, s32 slot, s32 y_ofs)
 {
-    const struct car *car = &g_cars[r_5285c0];
-    s32 range = car->deck != 0 ? 900 : 600;
+    /* Called after the cars' loop, r_5285c0 is one past the last car;
+     * the original reads that car's deck flag from past the array. The
+     * port takes it as no deck. */
+    int deck = r_5285c0 >= 0 && r_5285c0 < g_driver_count && g_cars[r_5285c0].deck != 0;
+    s32 range = deck ? 900 : 600;
     int i, ncand = 0, trigger = 0;
 
     if (slot > 0) {

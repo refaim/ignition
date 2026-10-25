@@ -26,7 +26,7 @@
 
 extern double r_54f948, r_54f980;
 extern s32 *g_ghost_buffer;
-extern s32 r_5531b8, r_563d44, r_552f54, r_563c60, r_5530e0, r_552f10, r_553068;
+extern s32 r_5531b8, r_563d44, r_552f54, r_563c60, r_5530e0, r_553068;
 
 s32 r_6035e0;                   /* 1 the ghost leads, 2 the player */
 
@@ -58,7 +58,7 @@ static int is_remote(int i)
 {
     s32 control = g_drivers[i].control;
 
-    return (control == 2 && i != 0) || (control == 1 && r_552f10 == 4);
+    return (control == 2 && i != 0) || (control == 1 && g_race_net.mode == 4);
 }
 
 static int is_out(const struct car *c)
@@ -444,7 +444,7 @@ static void step_car(int i)
     } else {
         phys_step(p, c->f270, c->f148 > 0.4 ? 1.0 : 4.0);
         race_car_fall(i);
-        if (r_552f10 != 2) {
+        if (g_race_net.mode != 2) {
             race_car_sway(i);
         }
     }
@@ -550,7 +550,7 @@ static void update_motion(int i)
     struct car *c = &g_cars[i];
     const struct car_phys *p = &g_car_phys[i];
     double front, cs, sn;
-    int slips = r_552f10 == 2 || (r_552f10 == 3 && g_drivers[i].control == 1) || i == 0;
+    int slips = g_race_net.mode == 2 || (g_race_net.mode == 3 && g_drivers[i].control == 1) || i == 0;
 
     c->heading = angle_wrap(p->heading);
     c->prev_dx = c->dx;
@@ -595,7 +595,7 @@ static void drive(int i)
         return;
     }
     r_5285c0 = i;
-    if (r_552f10 != 2 && r_552f10 != 3) {
+    if (g_race_net.mode != 2 && g_race_net.mode != 3) {
         return;
     }
     if ((g_drivers[i].f0c == 1 && c->gear != 0) || c->f604 == 1) {

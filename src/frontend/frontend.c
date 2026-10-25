@@ -1023,14 +1023,14 @@ static void step_timers(void)
     if (fe_4be8a0 != 0.0) {
         fe_4be8a0 += s_step_part;
         if (fe_4be8a0 >= 28.8) {
-            if (fe_4be710 == 2) {
+            if (fe_net.mode == 2) {
                 menu_apply_settings();
             }
-            if (fe_4be710 != 2 && fe_4be718 < 1) {
-                fe_4be718 = 1;
+            if (fe_net.mode != 2 && fe_net.stage < 1) {
+                fe_net.stage = 1;
             }
-            if (fe_4be718 == 1) {
-                net_send_settings(&fe_4be710, g_settings);
+            if (fe_net.stage == 1) {
+                net_send_settings(&fe_net, g_settings);
             }
             file_write(SETTINGS_FILE, g_settings, SETTINGS_SIZE);
             s_load_language = 0;
@@ -1342,16 +1342,16 @@ int menu_cb_404610(int arg0, int action)
     }
     net_connect();
     if (g_net_state == 3 || g_net_state == 4) {
-        net_start();
+        net_poll_players();
         fe_4be634 = g_net_state == 3 ? 1 : 2;
-        fe_4be718 = 0;
+        fe_net.stage = 0;
     } else {
         g_menu.key_pressed[0x01] = 1;
     }
     s_mode_pending = 1;
     menu_set_mode();
     video_set_palette(g_menu_palette);
-    net_reset(&fe_4be710);
+    net_reset(&fe_net);
     return 0;
 }
 
@@ -1444,7 +1444,7 @@ void menu_apply_settings(void)
         settings_set(0x050 + 4 * i, 1);
     }
 
-    settings_set(0x15f, fe_4be710 != 2 ? 2 : 0);
+    settings_set(0x15f, fe_net.mode != 2 ? 2 : 0);
     settings_set(0x163, settings_get(0x004) != 1 ? 1 : 0);
     for (i = 0; i < 6; i++) {
         settings_set(0x167 + 4 * i, 1);
@@ -1459,6 +1459,6 @@ void menu_apply_settings(void)
     for (i = 0; i < 8; i++) {
         settings_set(0x133 + 4 * i, i);
     }
-    settings_set(0x197, fe_4be710);
+    settings_set(0x197, fe_net.mode);
     settings_set(0x58f, 0);
 }

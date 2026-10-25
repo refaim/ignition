@@ -110,7 +110,7 @@ extern char g_ghost_name[16];           /* 0x5532a0, "MOOSEJAW" */
 
 /* From the settings (0x419260), named by address until their use is
  * known. */
-extern s32 r_527f28, r_563c6c, r_552f10, r_553068, r_527f78, r_525e68;
+extern s32 r_527f28, r_563c6c, r_553068, r_527f78, r_525e68;
 extern s32 r_552e58, r_563be0, r_553084, r_54f958, r_527f20, r_5daff8;
 extern s32 g_race_sfx_volume;           /* 0x601668 */
 extern s32 g_race_cd_volume;            /* 0x527f30 */

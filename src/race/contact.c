@@ -181,10 +181,10 @@ void race_knockout(void)
             out = i;
         }
     }
-    if (!(behind == 1 && r_552f10 != 4) && !(r_54f97c == 3 && r_552f10 == 4)) {
+    if (!(behind == 1 && g_race_net.mode != 4) && !(r_54f97c == 3 && g_race_net.mode == 4)) {
         return;
     }
-    if (r_54f97c == 3 && r_552f10 == 4) {
+    if (r_54f97c == 3 && g_race_net.mode == 4) {
         out = r_54f9a8;
     }
     c = &g_cars[out];
@@ -232,7 +232,7 @@ void race_knockout(void)
             }
         }
     }
-    if (r_552f10 == 3) {
+    if (g_race_net.mode == 3) {
         r_54f97c = 3;
         r_54f9a8 = out;
     }
@@ -839,7 +839,7 @@ void race_contact(int car)
         squash_smoke(c);
     }
 
-    if (r_552f10 != 2) {
+    if (g_race_net.mode != 2) {
         if (reset > 0) {
             c->net_event = -reset;
         } else if (event > 0) {

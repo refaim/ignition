@@ -64,7 +64,7 @@ u8 *g_race_pics[8];
 /* What the settings give the rest of the race; named by address until
  * their use is known. */
 s32 r_527f28, r_563c6c;                 /* 3 - screen size */
-s32 r_552f10;                           /* the network mode */
+struct net_game g_race_net;             /* 0x552f10, the network game */
 s32 r_553068, r_527f78, r_525e68, r_552e58, r_563be0, r_553084;
 s32 r_54f958, r_527f20, r_5daff8;
 s32 g_race_sfx_volume;                  /* 0x601668, 0..100 */
@@ -180,7 +180,7 @@ static void read_settings(void)
     g_screen_size = race_cfg(0x10b) > 2 ? 2 : race_cfg(0x10b);
     r_527f28 = r_563c6c = race_cfg(0x107);
     g_two_players = race_cfg(0x004);
-    r_552f10 = race_cfg(0x197);
+    g_race_net.mode = race_cfg(0x197);
     r_553068 = race_cfg(0x010);
     r_527f78 = race_cfg(0x15b);
     r_525e68 = race_cfg(0x10f);

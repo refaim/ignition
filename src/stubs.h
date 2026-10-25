@@ -37,13 +37,6 @@ void render_init_460b50(void);      /* 0x460b50 */
 void gfx_init_45d840(void);         /* 0x45d840 */
 void gfx_init_spans(void);          /* 0x45c9f0 */
 
-/* front end pieces still to port */
-int menu_network_page(void);        /* 0x40af54, inside menu_page_handler_a */
-/* 3D, for the OpenGL renderer */
-int net_send_settings(void *state, void *settings);    /* 0x40d200 */
-int net_connect(void);              /* 0x459d40, the DirectPlay dialogs */
-int net_start(void);                /* 0x459e80 */
-extern s32 g_net_players;           /* 0x50f7a8 */
 
 /* 3D scene; the renderer's buffers are replaced by OpenGL */
 

@@ -231,6 +231,7 @@ static void game_exit(void)
     int i;
 
     cd_stop_play();
+    net_shutdown();
     cd_close();
     free(g_menu_background);
     for (i = 0; i < 4; i++) {

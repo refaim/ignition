@@ -367,7 +367,7 @@ void race_reset_state(void)
 
 s32 *r_552f24;                              /* 0x552f24, 0x258 bytes */
 s32 r_498478, r_49847c;
-s32 r_563c18, r_563d88, r_552f18, r_54f9a8, r_5532ac, r_563ce4;
+s32 r_563c18, r_563d88, r_54f9a8, r_5532ac, r_563ce4;
 double r_552e48;
 s32 r_5531d0[0x2c];                         /* 0x5531d0..0x553280 */
 
@@ -397,18 +397,18 @@ void race_load_world(void)
     r_552f24 = pool_calloc(0x258);
     r_563c18 = 0;
     r_563d88 = 0;
-    if (r_552f10 != 2) {
-        r_552f18 = 2;
-        net_reset(NULL);
+    if (g_race_net.mode != 2) {
+        g_race_net.stage = 2;
+        net_clear_answers();
     } else {
-        r_552f18 = 4;
+        g_race_net.stage = 4;
         r_552e48 = 0;
     }
     r_54f97c = 0;
     r_54f9a8 = 0;
     r_5532ac = 0;
     r_563ce4 = 0;
-    if (r_552f18 == 4) {
+    if (g_race_net.stage == 4) {
         cd_read_status();
         if (g_cd_present == 1) {
             cd_read_tracks();

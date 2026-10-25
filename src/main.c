@@ -3,7 +3,7 @@
  *
  *   ignition [--data DIR] [--view FILE.PIC] [--text TEXT] [--press MS:KEY]...
  *            [--background] [--shot MS:FILE.TGA] [--cue IMAGE.CUE] [--res N]
- *            [--software]
+ *            [--software] [--host] [--connect HOST[:PORT]]
  *
  * --data is the folder with the game files, the disc root as extracted
  * by `make extract`. --view shows one picture through the renderer, with
@@ -18,6 +18,7 @@
  * internal resolution: 0 320 x 200, 1 640 x 480, 2 800 x 600, 3 the
  * window's. --software starts with the 2D drawn on the CPU, as the
  * original did (Alt+R switches). --version prints this port's version.
+ * --host and --connect choose what NETWORK GAME does (net_set_option).
  *
  * Without --data the host looks for the game (plat_find_data in
  * platform/common.h).
@@ -28,6 +29,7 @@
 #include <string.h>
 
 #include "app.h"
+#include "net.h"
 #include "canvas.h"
 #include "cd.h"
 #include "dik.h"
@@ -163,6 +165,10 @@ int main(int argc, char **argv)
             if (sscanf(argv[++i], "%u:%x:%u", &ms, &key, &hold) >= 2) {
                 plat_schedule_key(ms, (int)key, hold);
             }
+        } else if (strcmp(argv[i], "--host") == 0) {
+            net_set_option(1, NULL);
+        } else if (strcmp(argv[i], "--connect") == 0 && i + 1 < argc) {
+            net_set_option(0, argv[++i]);
         } else if (strcmp(argv[i], "--text") == 0 && i + 1 < argc) {
             text_arg = argv[++i];
         } else if (strcmp(argv[i], "--version") == 0) {

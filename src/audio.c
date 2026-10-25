@@ -31,6 +31,7 @@ static _Atomic(struct cd_stream *) s_cd_done;  /* audio to game, to free */
 static struct cd_stream *s_cd;                 /* audio thread only */
 static atomic_int s_cd_playing;
 static atomic_int s_cd_mute;
+static _Atomic float s_cd_gain = 1.0f;
 static int s_open;
 
 enum { MAX_VOICES = 64 };
@@ -167,13 +168,14 @@ static void mix(float *out, s32 frames, void *user)
     if (s_cd != NULL) {
         u32 rd = atomic_load(&s_cd->r), avail = atomic_load(&s_cd->w) - rd;
         int mute = atomic_load(&s_cd_mute);
+        float gain = atomic_load(&s_cd_gain) * (1.0f / 32768.0f);
 
         for (i = 0; i < frames && avail > 0; i++, rd++, avail--) {
             const s16 *p = s_cd->pcm + 2 * (rd % RING_FRAMES);
 
             if (!mute) {
-                out[2 * i] = p[0] * (1.0f / 32768.0f);
-                out[2 * i + 1] = p[1] * (1.0f / 32768.0f);
+                out[2 * i] = p[0] * gain;
+                out[2 * i + 1] = p[1] * gain;
             }
         }
         atomic_store(&s_cd->r, rd);
@@ -299,4 +301,9 @@ int audio_cd_playing(void)
 void audio_cd_mute(int mute)
 {
     atomic_store(&s_cd_mute, mute);
+}
+
+void audio_cd_gain(float gain)
+{
+    atomic_store(&s_cd_gain, gain);
 }

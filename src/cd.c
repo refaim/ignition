@@ -256,3 +256,11 @@ int cd_stop_play(void)
     s_playing_track = 0;
     return 1;
 }
+
+void cd_set_music_volume(int level)
+{
+    float v = (level < 0 ? 0 : level > 10 ? 10 : level) / 10.0f;
+
+    /* Squared, so that the steps sound even. */
+    audio_cd_gain(v * v);
+}

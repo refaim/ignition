@@ -29,7 +29,10 @@ enum {
     SET_LANGUAGE = 0x593,
     /* The port's, past the file's 0x597 bytes, kept in PORT_SETTINGS:
      * 0 the 2D on the GPU, 1 on the CPU. */
-    SET_RENDERER = 0x598
+    SET_RENDERER = 0x598,
+    /* The music's volume, 0 to 10 (the CD's in the original is on or
+     * off). */
+    SET_MUSIC_VOLUME = 0x59c
 };
 
 static inline s32 settings_get(int offset)

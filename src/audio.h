@@ -26,6 +26,8 @@ void audio_cd_end(struct cd_stream *s);
 void audio_cd_stop(void);
 int audio_cd_playing(void);
 void audio_cd_mute(int mute);
+/* The music's gain, 0 to 1. */
+void audio_cd_gain(float gain);
 
 struct sound_voice;
 

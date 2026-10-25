@@ -9,6 +9,7 @@
 
 #include "app.h"
 #include "canvas.h"
+#include "cd.h"
 #include "game.h"
 #include "cdp.h"
 #include "frontend/frontend.h"
@@ -234,60 +235,131 @@ static void add_native_resolution(void)
     }
 }
 
-/* The port's settings, which ign_win.btz has no room for: the race
- * writes that file at its own size. */
+/* The port's settings, which ign_win.btz has no room for (the race
+ * writes that file at its own size): the renderer, then the music's
+ * volume. */
 #define PORT_SETTINGS "ign_port.cfg"
 
 static void port_settings_save(void)
 {
-    s32 renderer = settings_get(SET_RENDERER);
+    s32 v[2];
 
-    file_write(PORT_SETTINGS, &renderer, sizeof(renderer));
+    v[0] = settings_get(SET_RENDERER);
+    v[1] = settings_get(SET_MUSIC_VOLUME);
+    file_write(PORT_SETTINGS, v, sizeof(v));
 }
 
-/* Moves an item's labels and values up by `dy`. */
-static void raise_item(struct menu_item *it, int dy)
+/* Moves an item's labels and values down by `dy`. */
+static void move_item(struct menu_item *it, int dy)
 {
     int v, n = 2 + 2 * (it->max - it->min + 1);
 
     for (v = 0; v < n; v++) {
-        it->visuals[v].y = (s16)(it->visuals[v].y - dy);
-        it->visuals[v].text_y = (s16)(it->visuals[v].text_y - dy);
+        it->visuals[v].y = (s16)(it->visuals[v].y + dy);
+        it->visuals[v].text_y = (s16)(it->visuals[v].text_y + dy);
     }
 }
 
-/* GFX OPTIONS gets a seventh item, RENDERER: HARDWARE draws the 2D on
- * the GPU, SOFTWARE on the CPU as the original (the 3D is the GPU's
- * either way). Its visuals are an ON / OFF item's of the page, a row
- * lower; the page goes up most of a row so that 320 x 200 holds it. */
-static void add_renderer_option(void)
+/* A port's item for a page: its value, the values' names, and where its
+ * visuals come from (`like`, an item of the page with values, whose
+ * label and first value's places it takes, at row y). */
+struct new_item {
+    int offset, min, max;
+    const char *label;
+    const char *const *names;
+    struct menu_visual *visuals;    /* 2 + 2 * (max - min + 1) */
+};
+
+/* Puts `n` into page p at index `at`, rows from there on one lower. */
+static void insert_item(struct menu_page *p, struct menu_item *items, int at,
+                        const struct menu_item *like, const struct new_item *n, int y)
 {
-    enum { ROW = 19, RAISE = 15 };
-    static struct menu_item items[MENU_LANGUAGES][16];
-    static struct menu_visual visuals[MENU_LANGUAGES][6];
-    static const char *const text[6] = {
-        "RENDERER", "RENDERER", "HARDWARE", "HARDWARE", "SOFTWARE", "SOFTWARE"
+    enum { ROW = 19 };
+    int k, v, values = n->max - n->min + 1;
+    struct menu_item it = *like;
+
+    for (k = 0; k < 2; k++) {
+        n->visuals[k] = like->visuals[k];
+        n->visuals[k].text = n->label;
+    }
+    for (v = 0; v < values; v++) {
+        for (k = 0; k < 2; k++) {
+            n->visuals[2 + 2 * v + k] = like->visuals[2 + k];
+            n->visuals[2 + 2 * v + k].text = n->names[v];
+        }
+    }
+    for (k = 0; k < 2 + 2 * values; k++) {
+        n->visuals[k].y = n->visuals[k].text_y = (s16)y;
+    }
+    it.value = (s32 *)(g_settings + n->offset);
+    it.min = n->min;
+    it.max = n->max;
+    it.visuals = n->visuals;
+    memcpy(items, p->items, (size_t)at * sizeof(*items));
+    items[at] = it;
+    memcpy(items + at + 1, p->items + at, (size_t)(p->count - at) * sizeof(*items));
+    for (k = at + 1; k <= p->count; k++) {
+        if (items[k].value != NULL && items[k].visuals != NULL) {
+            move_item(&items[k], ROW);
+        }
+    }
+    p->items = items;
+    p->count++;
+}
+
+/* The page with an item of g_settings + offset, in a language. */
+static struct menu_page *page_with(int lang, int offset, int *index)
+{
+    int slot, k;
+
+    for (slot = 0; slot < MENU_PAGE_SLOTS; slot++) {
+        struct menu_page *p = g_menu_pages[lang][slot];
+
+        for (k = 0; p != NULL && k < p->count; k++) {
+            if (p->items[k].value == (s32 *)(g_settings + offset)) {
+                *index = k;
+                return p;
+            }
+        }
+    }
+    return NULL;
+}
+
+/* The port's items:
+ * - GFX OPTIONS gets RENDERER last: HARDWARE draws the 2D on the GPU,
+ *   SOFTWARE on the CPU as the original (the 3D is the GPU's either
+ *   way). The page goes up most of a row, so that 320 x 200 holds it.
+ * - SOUND OPTIONS gets MUSIC VOL. under CD MUSIC, 0 to 10, as SFX
+ *   VOLUME, which the original has for the effects alone. */
+static void add_port_options(void)
+{
+    enum { RAISE = 15, MAX_ITEMS = 16 };
+    static const char *const renderer[2] = { "HARDWARE", "SOFTWARE" };
+    static const char *const levels[11] = {
+        "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"
     };
+    static struct menu_item gfx_items[MENU_LANGUAGES][MAX_ITEMS];
+    static struct menu_item sound_items[MENU_LANGUAGES][MAX_ITEMS];
+    static struct menu_visual gfx_visuals[MENU_LANGUAGES][6];
+    static struct menu_visual music_visuals[MENU_LANGUAGES][24];
     static int done;
-    int lang, slot, k, v;
+    int lang, k;
 
     if (done) {
         return;
     }
     done = 1;
     for (lang = 0; lang < MENU_LANGUAGES; lang++) {
-        for (slot = 0; slot < MENU_PAGE_SLOTS; slot++) {
-            struct menu_page *p = g_menu_pages[lang][slot];
-            const struct menu_item *pair = NULL;
-            int has_resolution = 0, lowest = -1000;
+        struct new_item n;
+        struct menu_page *p;
+        int at, lowest = -1000;
+        const struct menu_item *pair = NULL;
 
-            if (p == NULL || p->items == items[lang] || p->count >= 16) {
-                continue;
-            }
+        p = page_with(lang, SET_RESOLUTION, &at);
+        if (p != NULL && p->count < MAX_ITEMS) {
             for (k = 0; k < p->count; k++) {
                 const struct menu_item *it = &p->items[k];
 
-                has_resolution |= it->value == (s32 *)(g_settings + SET_RESOLUTION);
                 if (it->max == 1 && it->visuals != NULL && pair == NULL) {
                     pair = it;
                 }
@@ -295,47 +367,58 @@ static void add_renderer_option(void)
                     lowest = it->visuals[0].y;
                 }
             }
-            if (!has_resolution || pair == NULL) {
-                continue;
-            }
-            memcpy(visuals[lang], pair->visuals, sizeof(visuals[lang]));
-            for (v = 0; v < 6; v++) {
-                visuals[lang][v].text = text[v];
-                visuals[lang][v].y = (s16)(lowest + ROW);
-                visuals[lang][v].text_y = (s16)(lowest + ROW);
-            }
-            memcpy(items[lang], p->items, (size_t)p->count * sizeof(items[lang][0]));
-            items[lang][p->count] = *pair;
-            items[lang][p->count].value = (s32 *)(g_settings + SET_RENDERER);
-            items[lang][p->count].min = 0;
-            items[lang][p->count].max = 1;
-            items[lang][p->count].visuals = visuals[lang];
-            p->items = items[lang];
-            p->count++;
-            for (k = 0; k < p->count; k++) {
-                if (p->items[k].value != NULL && p->items[k].visuals != NULL) {
-                    raise_item(&p->items[k], RAISE);
+            if (pair != NULL) {
+                n.offset = SET_RENDERER;
+                n.min = 0;
+                n.max = 1;
+                n.label = "RENDERER";
+                n.names = renderer;
+                n.visuals = gfx_visuals[lang];
+                insert_item(p, gfx_items[lang], p->count, pair, &n, lowest + 19);
+                for (k = 0; k < p->count; k++) {
+                    if (p->items[k].value != NULL && p->items[k].visuals != NULL) {
+                        move_item(&p->items[k], -RAISE);
+                    }
                 }
             }
+        }
+        p = page_with(lang, SET_SFX_VOLUME, &at);
+        if (p != NULL && p->count < MAX_ITEMS) {
+            const struct menu_item *sfx = &p->items[at];
+            int y = sfx->visuals[0].y;
+
+            n.offset = SET_MUSIC_VOLUME;
+            n.min = 0;
+            n.max = 10;
+            n.label = "MUSIC VOL.";
+            n.names = levels;
+            n.visuals = music_visuals[lang];
+            insert_item(p, sound_items[lang], at, sfx, &n, y);
         }
     }
 }
 
-/* The renderer from PORT_SETTINGS, or the resolution's default: the GPU
- * for NATIVE, the CPU for the original's sizes. --software starts on the
- * CPU whatever is saved. */
+/* PORT_SETTINGS, or the defaults: the renderer the resolution's (the
+ * GPU for NATIVE, the CPU for the original's sizes; --software starts
+ * on the CPU whatever is saved), the music at 10. */
 static void port_settings_load(int resolution)
 {
-    s32 renderer = resolution == CANVAS_NATIVE ? 0 : 1;
+    s32 v[2];
 
+    v[0] = resolution == CANVAS_NATIVE ? 0 : 1;
+    v[1] = 10;
     if (file_exists(PORT_SETTINGS) == 1) {
-        file_read_at(PORT_SETTINGS, &renderer, sizeof(renderer), 0);
+        long size = file_size(PORT_SETTINGS);
+
+        file_read_at(PORT_SETTINGS, v, size >= (long)sizeof(v) ? sizeof(v) : sizeof(v[0]), 0);
     }
     if (!canvas_hardware()) {
-        renderer = 1;
+        v[0] = 1;
     }
-    settings_set(SET_RENDERER, renderer == 1);
-    canvas_set_hardware(renderer != 1);
+    settings_set(SET_RENDERER, v[0] == 1);
+    settings_set(SET_MUSIC_VOLUME, v[1] < 0 ? 0 : v[1] > 10 ? 10 : v[1]);
+    canvas_set_hardware(v[0] != 1);
+    cd_set_music_volume(settings_get(SET_MUSIC_VOLUME));
 }
 
 /* The window for the RESOLUTION option: the original's sizes get a
@@ -383,7 +466,7 @@ void menu_present(void)
     const s32 *mode = g_menu_modes[g_menu_mode_index];
     s32 res = settings_get(SET_RESOLUTION);
 
-    static s32 last_renderer = -1;
+    static s32 last_renderer = -1, last_music = -1;
     static int last_hardware = -1;
     s32 renderer;
 
@@ -411,6 +494,13 @@ void menu_present(void)
             port_settings_save();
         }
         last_renderer = renderer;
+    }
+    if (settings_get(SET_MUSIC_VOLUME) != last_music) {
+        cd_set_music_volume(settings_get(SET_MUSIC_VOLUME));
+        if (last_music != -1) {
+            port_settings_save();
+        }
+        last_music = settings_get(SET_MUSIC_VOLUME);
     }
     last_hardware = canvas_hardware();
     video_blit(g_menu_screen, mode[0], 0, 0, mode[0], mode[1], 0, 0);
@@ -721,7 +811,7 @@ int menu_init(void)
     file_read_at("baltazar\\data\\menu.col", g_menu_palette, 0x300, 8);
     g_menu_screen = malloc(0xfb41);
     add_native_resolution();
-    add_renderer_option();
+    add_port_options();
     canvas_set_resolution(menu_resolution());
     port_settings_load(canvas_resolution());
     canvas_register(g_menu_screen, 320, 200);

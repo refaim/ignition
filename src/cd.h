@@ -26,5 +26,7 @@ int cd_play_track(int track);
 int cd_stop_play(void);
 /* Keeps the playing track streaming; called each pass of the main loop. */
 void cd_pump(void);
+/* The port's: the music's volume, 0 (silent) to 10 (full). */
+void cd_set_music_volume(int level);
 
 #endif /* IGN_CD_H */

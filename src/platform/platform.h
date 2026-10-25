@@ -88,4 +88,33 @@ int plat_run_with(int (*frame)(void *user), void *user);
 
 void plat_request_quit(void);
 
+/* Network play: one UDP socket over IPv4, for dplay.c, the stand-in for
+ * the DirectPlay the original raced over. platform/udp.c has it on BSD
+ * sockets and Winsock, platform/vita.c on sceNet; the web's host has no
+ * UDP, and plat_net_open fails there. Addresses and ports are in host
+ * byte order. */
+struct plat_net_addr {
+    u32 ip;
+    u16 port;
+};
+
+#define PLAT_NET_ANY 0                  /* plat_net_open: any free port */
+#define PLAT_NET_BROADCAST 0xffffffffu  /* 255.255.255.255 */
+#define PLAT_NET_LOOPBACK 0x7f000001u   /* 127.0.0.1 */
+
+/* Opens the socket, bound to `port` on every interface, not blocking,
+ * with broadcasts allowed. A socket already open is closed first.
+ * Returns 0 when the host has no network or the port is taken. */
+int plat_net_open(u16 port);
+void plat_net_close(void);
+/* Sends one datagram. Returns 0 on failure. */
+int plat_net_send(const struct plat_net_addr *to, const void *buf, int size);
+/* Takes one waiting datagram: its size (cut to `size`), 0 when none is
+ * waiting, -1 on an error. */
+int plat_net_recv(struct plat_net_addr *from, void *buf, int size);
+/* Waits up to `ms` milliseconds for a datagram to arrive. */
+void plat_net_wait(u32 ms);
+/* Looks up a host name or dotted address. Returns 0 when unknown. */
+int plat_net_resolve(const char *name, u32 *ip);
+
 #endif /* IGN_PLATFORM_H */

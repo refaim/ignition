@@ -6,7 +6,7 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 - The Vita draws the race's 3D at 720 x 408 (75%), stretched to the screen, to hold 36 frames a second more often; the HUD and menus stay at full resolution.
-- The Vita holds its frame rate in thick smoke and sparks: see-through faces stack at most six layers deep, where a pile of them took up to 96 GPU scenes a frame, and the 2D's textures upload only the rows that changed. The race results upload their page once a frame instead of once a box, which took them from 10 to about 30 frames a second.
+- The Vita holds its frame rate in thick smoke and sparks: see-through faces stack at most six layers deep, where a pile of them took up to 96 GPU scenes a frame, and the 2D's textures upload only the rows that changed. The race results upload their page once a frame instead of once a box, where they ran at 10 frames a second.
 
 ### Fixed
 - In NATIVE, the championship's podium, the retry offer and GAME OVER are drawn at the menus' size, as the results are, instead of at the screen's own pixels.

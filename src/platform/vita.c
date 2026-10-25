@@ -28,7 +28,9 @@
 #include <psp2/io/stat.h>
 #include <psp2/kernel/processmgr.h>
 #include <psp2/kernel/threadmgr.h>
+#include <psp2/net/net.h>
 #include <psp2/power.h>
+#include <psp2/sysmodule.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -440,4 +442,126 @@ int plat_run(void)
 int plat_run_with(int (*frame)(void *user), void *user)
 {
     return run(frame, user);
+}
+
+/* ------------------------------------------------------------ network */
+
+/* UDP for network play on sceNet, the Vita's BSD-like sockets. The
+ * net module and its memory are set up the first time. */
+static int s_net_sock = -1;
+
+static int net_init(void)
+{
+    static int s_state;                 /* 0 not tried, 1 up, -1 failed */
+    static u8 s_net_memory[256 * 1024];
+    SceNetInitParam param;
+
+    if (s_state != 0) {
+        return s_state > 0;
+    }
+    s_state = -1;
+    if (sceSysmoduleLoadModule(SCE_SYSMODULE_NET) < 0) {
+        return 0;
+    }
+    param.memory = s_net_memory;
+    param.size = sizeof(s_net_memory);
+    param.flags = 0;
+    sceNetInit(&param);                 /* fails harmlessly when already up */
+    s_state = 1;
+    return 1;
+}
+
+static void to_sockaddr(const struct plat_net_addr *a, SceNetSockaddrIn *sa)
+{
+    memset(sa, 0, sizeof(*sa));
+    sa->sin_len = sizeof(*sa);
+    sa->sin_family = SCE_NET_AF_INET;
+    sa->sin_addr.s_addr = sceNetHtonl(a->ip);
+    sa->sin_port = sceNetHtons(a->port);
+}
+
+int plat_net_open(u16 port)
+{
+    struct plat_net_addr any = { 0, 0 };
+    SceNetSockaddrIn sa;
+    int on = 1;
+
+    plat_net_close();
+    if (!net_init()) {
+        return 0;
+    }
+    s_net_sock = sceNetSocket("ignition", SCE_NET_AF_INET, SCE_NET_SOCK_DGRAM, SCE_NET_IPPROTO_UDP);
+    if (s_net_sock < 0) {
+        s_net_sock = -1;
+        return 0;
+    }
+    sceNetSetsockopt(s_net_sock, SCE_NET_SOL_SOCKET, SCE_NET_SO_BROADCAST, &on, sizeof(on));
+    sceNetSetsockopt(s_net_sock, SCE_NET_SOL_SOCKET, SCE_NET_SO_NBIO, &on, sizeof(on));
+    any.port = port;
+    to_sockaddr(&any, &sa);
+    if (sceNetBind(s_net_sock, (const SceNetSockaddr *)&sa, sizeof(sa)) < 0) {
+        plat_net_close();
+        return 0;
+    }
+    return 1;
+}
+
+void plat_net_close(void)
+{
+    if (s_net_sock >= 0) {
+        sceNetSocketClose(s_net_sock);
+        s_net_sock = -1;
+    }
+}
+
+int plat_net_send(const struct plat_net_addr *to, const void *buf, int size)
+{
+    SceNetSockaddrIn sa;
+
+    if (s_net_sock < 0) {
+        return 0;
+    }
+    to_sockaddr(to, &sa);
+    return sceNetSendto(s_net_sock, buf, (unsigned)size, 0, (const SceNetSockaddr *)&sa,
+                        sizeof(sa)) == size;
+}
+
+int plat_net_recv(struct plat_net_addr *from, void *buf, int size)
+{
+    SceNetSockaddrIn sa;
+    unsigned int len = sizeof(sa);
+    int n;
+
+    if (s_net_sock < 0) {
+        return -1;
+    }
+    n = sceNetRecvfrom(s_net_sock, buf, (unsigned)size, 0, (SceNetSockaddr *)&sa, &len);
+    if (n < 0) {
+        return n == (int)SCE_NET_ERROR_EAGAIN ? 0 : -1;
+    }
+    from->ip = sceNetNtohl(sa.sin_addr.s_addr);
+    from->port = sceNetNtohs(sa.sin_port);
+    return n;
+}
+
+/* No select here: the socket does not block, and a short sleep does. */
+void plat_net_wait(u32 ms)
+{
+    sceKernelDelayThread(ms * 1000);
+}
+
+/* Dotted addresses only; the Vita's resolver is not set up. */
+int plat_net_resolve(const char *name, u32 *ip)
+{
+    unsigned int addr;
+
+    if (strcmp(name, "localhost") == 0) {
+        *ip = PLAT_NET_LOOPBACK;
+        return 1;
+    }
+    if (sceNetInetPton(SCE_NET_AF_INET, name, &addr) <= 0) {
+        return 0;
+    }
+    *ip = sceNetNtohl(addr);
+    return 1;
 }

@@ -409,3 +409,44 @@ const char *plat_host_pref_dir(void)
 {
     return "/ignition";
 }
+
+/* ------------------------------------------------------------ network */
+
+/* A browser has no UDP: network play is not available on the web. */
+int plat_net_open(u16 port)
+{
+    (void)port;
+    return 0;
+}
+
+void plat_net_close(void)
+{
+}
+
+int plat_net_send(const struct plat_net_addr *to, const void *buf, int size)
+{
+    (void)to;
+    (void)buf;
+    (void)size;
+    return 0;
+}
+
+int plat_net_recv(struct plat_net_addr *from, void *buf, int size)
+{
+    (void)from;
+    (void)buf;
+    (void)size;
+    return -1;
+}
+
+void plat_net_wait(u32 ms)
+{
+    (void)ms;
+}
+
+int plat_net_resolve(const char *name, u32 *ip)
+{
+    (void)name;
+    (void)ip;
+    return 0;
+}

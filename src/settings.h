@@ -32,7 +32,13 @@ enum {
     SET_RENDERER = 0x598,
     /* The music's volume, 0 to 10 (the CD's in the original is on or
      * off). */
-    SET_MUSIC_VOLUME = 0x59c
+    SET_MUSIC_VOLUME = 0x59c,
+    SET_EFFECT_SIZE = 0x5a0
+};
+
+enum {
+    EFFECT_SIZE_SMALL = 0,
+    EFFECT_SIZE_ORIGINAL = 1
 };
 
 static inline s32 settings_get(int offset)

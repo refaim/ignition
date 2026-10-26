@@ -133,12 +133,35 @@ test_sound: tests/test_sound.c $(TEST_OBJ)
 test_soft3d: tests/test_soft3d.c $(TEST_OBJ)
 	$(CC) $(CFLAGS) $^ $(LDFLAGS) -o $@
 
-test: test_lisa test_menu test_settings test_soft3d test_sound
+# Focused effects fixtures include the production unit under test; section
+# collection keeps their external substitutes limited to exercised boundaries.
+TEST_SECTION_CFLAGS := -ffunction-sections -fdata-sections
+TEST_SECTION_LDFLAGS := -Wl,--gc-sections
+ifeq ($(HOST),macos)
+TEST_SECTION_LDFLAGS := -Wl,-dead_strip
+endif
+
+ifeq ($(HOST),windows)
+# MinGW's unwind and shared switch tables retain unused engine sections.
+# These flags apply only to the two headless host-test fixtures.
+TEST_SECTION_CFLAGS += -fno-asynchronous-unwind-tables -fno-unwind-tables -fno-jump-tables
+endif
+
+test_effect_size: tests/test_effect_size.c $(SRCDIR)/race/fx.c $(SRCDIR)/settings.h
+	$(CC) $(CFLAGS) $(TEST_SECTION_CFLAGS) $< $(TEST_SECTION_LDFLAGS) -lm -o $@
+
+test_effect_options: tests/test_effect_options.c $(SRCDIR)/menu/engine.c $(SRCDIR)/menu/data.c $(SRCDIR)/frontend/frontend.c $(SRCDIR)/settings.h
+	$(CC) $(CFLAGS) $(TEST_SECTION_CFLAGS) tests/test_effect_options.c $(SRCDIR)/menu/engine.c $(SRCDIR)/menu/data.c $(TEST_SECTION_LDFLAGS) -lm -o $@
+
+test: test_lisa test_menu test_settings test_soft3d test_sound test_effect_size test_effect_options
 	./test_lisa $(BUILD)
 	./test_soft3d
 	./test_menu
 	./test_settings
 	./test_sound
+	./test_effect_size
+	./test_effect_options
+	./test_effect_options --guards
 
 # Extracts each disc image in data/ into data/<image name>/disc/.
 extract: cd_extract
@@ -259,4 +282,4 @@ vita-clean:
 	rm -rf $(VBUILD)
 
 clean:
-	rm -rf $(BUILD) $(TARGET) cd_extract test_lisa test_menu test_settings test_soft3d test_sound *.dSYM
+	rm -rf $(BUILD) $(TARGET) cd_extract test_lisa test_menu test_settings test_soft3d test_sound test_effect_size test_effect_options *.dSYM

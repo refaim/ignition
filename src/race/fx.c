@@ -28,6 +28,7 @@
 #include "srf.h"
 #include "structs/coll_obj.h"
 #include "scene.h"
+#include "settings.h"
 #include "../sound.h"
 #include "stubs.h"
 #include "video.h"
@@ -118,19 +119,20 @@ static void sprite_mesh(s32 *m, s32 vx, s32 vy, s32 vz)
     memset(m + 6, 0, 8 * sizeof(s32));
 }
 
-/* The effects' scale from 320 x 200, x and y (0x552d80, 0x552f5c),
- * times FX_SIZE / 10: the port draws the effects smaller than the
- * original, which on the Vita also means fewer of them overlapping. */
+/* ORIGINAL keeps the raw screen factors, including their low digits.
+ * SMALL retains the port's integer operation order and 40% size. */
 enum { FX_SIZE = 4 };
 
 static s32 fx_scale_x(void)
 {
-    return r_552d80 / 10 * FX_SIZE;
+    return settings_get(SET_EFFECT_SIZE) == EFFECT_SIZE_ORIGINAL
+               ? r_552d80 : r_552d80 / 10 * FX_SIZE;
 }
 
 static s32 fx_scale_y(void)
 {
-    return r_552f5c / 10 * FX_SIZE;
+    return settings_get(SET_EFFECT_SIZE) == EFFECT_SIZE_ORIGINAL
+               ? r_552f5c : r_552f5c / 10 * FX_SIZE;
 }
 
 /* The sprite's frame and size: frame f28 / 1024 of the table, the size

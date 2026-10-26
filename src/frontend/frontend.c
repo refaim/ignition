@@ -238,15 +238,16 @@ static void add_native_resolution(void)
 
 /* The port's settings, which ign_win.btz has no room for (the race
  * writes that file at its own size): the renderer, then the music's
- * volume. */
+ * volume, then the effect size. */
 #define PORT_SETTINGS "ign_port.cfg"
 
 static void port_settings_save(void)
 {
-    s32 v[2];
+    s32 v[3];
 
     v[0] = settings_get(SET_RENDERER);
     v[1] = settings_get(SET_MUSIC_VOLUME);
+    v[2] = settings_get(SET_EFFECT_SIZE);
     file_write(PORT_SETTINGS, v, sizeof(v));
 }
 
@@ -296,9 +297,9 @@ static void insert_item(struct menu_page *p, struct menu_item *items, int at,
     it.min = n->min;
     it.max = n->max;
     it.visuals = n->visuals;
-    memcpy(items, p->items, (size_t)at * sizeof(*items));
+    memmove(items, p->items, (size_t)at * sizeof(*items));
     items[at] = it;
-    memcpy(items + at + 1, p->items + at, (size_t)(p->count - at) * sizeof(*items));
+    memmove(items + at + 1, p->items + at, (size_t)(p->count - at) * sizeof(*items));
     for (k = at + 1; k <= p->count; k++) {
         if (items[k].value != NULL && items[k].visuals != NULL) {
             move_item(&items[k], ROW);
@@ -327,22 +328,24 @@ static struct menu_page *page_with(int lang, int offset, int *index)
 }
 
 /* The port's items:
- * - GFX OPTIONS gets RENDERER last: HARDWARE draws the 2D on the GPU,
+ * - GFX OPTIONS gets RENDERER and EFFECT SIZE: HARDWARE draws the 2D on the GPU,
  *   SOFTWARE on the CPU as the original (the 3D on the GPU), SOFT 3D
  *   the 3D on the CPU too, with the original's pipeline (src/soft3d/).
- *   The page goes up most of a row, so that 320 x 200 holds it.
+ *   The page goes up to fit both new rows at 320 x 200.
  * - SOUND OPTIONS gets MUSIC VOL. under CD MUSIC, 0 to 10, as SFX
  *   VOLUME, which the original has for the effects alone. */
 static void add_port_options(void)
 {
-    enum { RAISE = 15, MAX_ITEMS = 16 };
+    enum { RAISE = 34, MAX_ITEMS = 16 };
     static const char *const renderer[3] = { "HARDWARE", "SOFTWARE", "SOFT 3D" };
+    static const char *const effect_size[2] = { "SMALL", "ORIGINAL" };
     static const char *const levels[11] = {
         "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"
     };
     static struct menu_item gfx_items[MENU_LANGUAGES][MAX_ITEMS];
     static struct menu_item sound_items[MENU_LANGUAGES][MAX_ITEMS];
     static struct menu_visual gfx_visuals[MENU_LANGUAGES][8];
+    static struct menu_visual effect_visuals[MENU_LANGUAGES][6];
     static struct menu_visual music_visuals[MENU_LANGUAGES][24];
     static int done;
     int lang, k;
@@ -358,7 +361,7 @@ static void add_port_options(void)
         const struct menu_item *pair = NULL;
 
         p = page_with(lang, SET_RESOLUTION, &at);
-        if (p != NULL && p->count < MAX_ITEMS) {
+        if (p != NULL && p->count < MAX_ITEMS - 1) {
             for (k = 0; k < p->count; k++) {
                 const struct menu_item *it = &p->items[k];
 
@@ -377,6 +380,12 @@ static void add_port_options(void)
                 n.names = renderer;
                 n.visuals = gfx_visuals[lang];
                 insert_item(p, gfx_items[lang], p->count, pair, &n, lowest + 19);
+                n.offset = SET_EFFECT_SIZE;
+                n.max = 1;
+                n.label = "EFFECT SIZE";
+                n.names = effect_size;
+                n.visuals = effect_visuals[lang];
+                insert_item(p, gfx_items[lang], p->count, pair, &n, lowest + 38);
                 for (k = 0; k < p->count; k++) {
                     if (p->items[k].value != NULL && p->items[k].visuals != NULL) {
                         move_item(&p->items[k], -RAISE);
@@ -403,17 +412,27 @@ static void add_port_options(void)
 /* PORT_SETTINGS, or the defaults: the renderer the resolution's (the
  * GPU for NATIVE, the CPU for the original's sizes; --software starts
  * on the CPU and --soft3d with the 3D on it too, whatever is saved),
- * the music at 10. */
+ * the music at 10 and effects SMALL. Complete legacy words are retained;
+ * a short or failed read never applies part of a word. */
 static void port_settings_load(int resolution)
 {
-    s32 v[2];
+    s32 v[3];
 
     v[0] = resolution == CANVAS_NATIVE ? 0 : 1;
     v[1] = 10;
+    v[2] = EFFECT_SIZE_SMALL;
     if (file_exists(PORT_SETTINGS) == 1) {
         long size = file_size(PORT_SETTINGS);
 
-        file_read_at(PORT_SETTINGS, v, size >= (long)sizeof(v) ? sizeof(v) : sizeof(v[0]), 0);
+        int k;
+
+        for (k = 0; k < 3 && size >= (long)((k + 1) * sizeof(v[0])); k++) {
+            s32 word;
+
+            if (file_read_at(PORT_SETTINGS, &word, sizeof(word), (s32)(k * sizeof(word))) == 1) {
+                v[k] = word;
+            }
+        }
     }
     if (!canvas_hardware() && v[0] == 0) {
         v[0] = 1;
@@ -424,6 +443,7 @@ static void port_settings_load(int resolution)
     v[0] = v[0] < 0 || v[0] > 2 ? 1 : v[0];
     settings_set(SET_RENDERER, v[0]);
     settings_set(SET_MUSIC_VOLUME, v[1] < 0 ? 0 : v[1] > 10 ? 10 : v[1]);
+    settings_set(SET_EFFECT_SIZE, v[2] == EFFECT_SIZE_ORIGINAL ? EFFECT_SIZE_ORIGINAL : EFFECT_SIZE_SMALL);
     g_soft3d = v[0] == 2;
     canvas_set_hardware(v[0] == 0);
     cd_set_music_volume(settings_get(SET_MUSIC_VOLUME));
@@ -474,7 +494,7 @@ void menu_present(void)
     const s32 *mode = g_menu_modes[g_menu_mode_index];
     s32 res = settings_get(SET_RESOLUTION);
 
-    static s32 last_renderer = -1, last_music = -1;
+    static s32 last_renderer = -1, last_music = -1, last_effect_size = -1;
     static int last_hardware = -1;
     s32 renderer;
 
@@ -513,6 +533,12 @@ void menu_present(void)
             port_settings_save();
         }
         last_music = settings_get(SET_MUSIC_VOLUME);
+    }
+    if (settings_get(SET_EFFECT_SIZE) != last_effect_size) {
+        if (last_effect_size != -1) {
+            port_settings_save();
+        }
+        last_effect_size = settings_get(SET_EFFECT_SIZE);
     }
     last_hardware = canvas_hardware();
     video_blit(g_menu_screen, mode[0], 0, 0, mode[0], mode[1], 0, 0);

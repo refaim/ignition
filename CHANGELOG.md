@@ -4,6 +4,9 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### Added
+- GFX OPTIONS' EFFECT SIZE selects SMALL (the existing 40% scale) or ORIGINAL for race effect sprites, halos and snow; the choice is saved in `ign_port.cfg`, with SMALL as the default.
+
 ## [0.3.0] - 2026-10-25
 
 Network play, a software 3D renderer for the original resolutions,

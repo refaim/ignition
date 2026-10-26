@@ -124,6 +124,8 @@ void glGenRenderbuffers(GLsizei n, GLuint *renderbuffers);
 void glGenTextures(GLsizei n, GLuint *textures);
 void glGenVertexArrays(GLsizei n, GLuint *arrays);
 void glGetIntegerv(GLenum pname, GLint *data);
+void glInvalidateFramebuffer(GLenum target, GLsizei num_attachments,
+                             const GLenum *attachments);
 void glGetProgramiv(GLuint program, GLenum pname, GLint *params);
 void glGetShaderInfoLog(GLuint shader, GLsizei buf_size, GLsizei *length, GLchar *info_log);
 void glGetShaderiv(GLuint shader, GLenum pname, GLint *params);

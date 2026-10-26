@@ -513,7 +513,7 @@ void race_view_fill(double y0, double y1, int index)
 void race_draw_view(const struct scene *sc, struct scene_obj *const *objs, int n, int x0, int x1,
                     int first)
 {
-    int w, h;
+    int w, h, final;
     double vw, ox;
 
     if (g_soft3d) {
@@ -562,8 +562,12 @@ void race_draw_view(const struct scene *sc, struct scene_obj *const *objs, int n
     }
     gl3d_draw(sc, objs, n, ox, 0);
     gl3d_view_columns(0, 0);
+    /* The frame's last view: one view, or the second half of split
+     * screen (race/view.c draws the first half with first=1, then the
+     * second with first=0). Only then is the view's depth spent. */
+    final = !(g_two_players == 1 && r_552f58 == 0) || !first;
     prof_begin(PROF_VIEW_END);
-    gl3d_view_end();
+    gl3d_view_end(final);
     prof_end(PROF_VIEW_END);
     video_set_layer(gl3d_view_texture(), s_clear);
 }

@@ -86,6 +86,12 @@ unsigned rnd_pages(const u8 *pixels, int count);
  * `depth`. Freeing it leaves the texture. */
 unsigned rnd_target(unsigned color, int depth);
 void rnd_target_free(unsigned target);
+#if defined(IGN_GLES)
+/* Drops the depth attachment of `target`, which must be the bound
+ * target and have one; its colour attachment stays. GLES 3.0's
+ * glInvalidateFramebuffer. */
+void rnd_discard_depth(unsigned target);
+#endif
 /* Draws into `target` from now on, the viewport all of it. */
 void rnd_bind(unsigned target);
 /* Draws into the screen, `w` x `h` pixels. */

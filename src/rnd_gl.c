@@ -851,6 +851,19 @@ void rnd_target_free(unsigned target)
     }
 }
 
+#if defined(IGN_GLES)
+void rnd_discard_depth(unsigned target)
+{
+    static const GLenum attachment = GL_DEPTH_ATTACHMENT;
+    GLuint f = target;
+
+    if (f == 0 || f != s_bound) {
+        return;
+    }
+    glInvalidateFramebuffer(GL_FRAMEBUFFER, 1, &attachment);
+}
+#endif
+
 void rnd_bind(unsigned target)
 {
     struct tex *c = tex_rec(fb_rec(target)->color);

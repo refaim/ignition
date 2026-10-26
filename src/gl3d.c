@@ -623,9 +623,21 @@ void gl3d_view_columns(double x0, double x1)
     rnd_scissor(1, c0, 0, c1 > c0 ? c1 - c0 : 0, s_h);
 }
 
-/* The next draw binds its own target. */
-void gl3d_view_end(void)
+/* The next draw binds its own target. On a final view the depth is no
+ * longer needed this frame; the view's target is still bound, so discard
+ * its depth attachment now, before the 2D drawing binds away. The colour
+ * attachment stays for the present. */
+void gl3d_view_end(int final)
 {
+#if IGN_GL3D_DISCARD_DEPTH
+    struct target *t = &s_targets[1];
+
+    if (final && t->target != 0) {
+        rnd_discard_depth(t->target);
+    }
+#else
+    (void)final;
+#endif
 }
 
 unsigned gl3d_view_texture(void)

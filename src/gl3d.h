@@ -13,6 +13,16 @@
 #include "scene.h"
 #include "types.h"
 
+/* The final 3D view's depth buffer is discarded before the view's
+ * framebuffer is unbound, on the Android GLES build with the experiment
+ * enabled. Every other build keeps the depth until the next clear. */
+#if defined(IGN_GLES) && defined(__ANDROID__) && defined(IGN_GLES_DISCARD_DEPTH) && \
+    IGN_GLES_DISCARD_DEPTH == 1
+#define IGN_GL3D_DISCARD_DEPTH 1
+#else
+#define IGN_GL3D_DISCARD_DEPTH 0
+#endif
+
 /* Starts a frame of w x h pixels, empty. */
 void gl3d_begin(int w, int h);
 /* Draws objects as seen from `sc`, the original's view window placed
@@ -32,7 +42,10 @@ void gl3d_view_fill(double y0, double y1, int index);
 void gl3d_mesh_changed(const s32 *mesh);
 void gl3d_view_resume(void);
 void gl3d_view_columns(double x0, double x1);
-void gl3d_view_end(void);
+/* Ends the view's draws. `final` is the frame's last view: a single
+ * view, or the second half of split screen. A final view's depth is
+ * spent (experiment builds) and its colour stays for the present. */
+void gl3d_view_end(int final);
 /* The view's colour indices: a texture (rnd.h), R, row 0 at the top. */
 unsigned gl3d_view_texture(void);
 /* Draws into a canvas surface of logical size lw x lh, over what it

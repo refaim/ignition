@@ -19,6 +19,9 @@
 #endif
 
 enum { MAX_SHADERS = 64, MAX_PROGRAMS = 64, SOURCE_CAP = 16384 };
+enum { MAX_GL_EVENTS = 256 };
+/* rnd_gl's DYN program stride, and room for its largest pass upload. */
+enum { DYN_FLOATS = 9, SHADOW_CAP = 1024 * 1024 };
 
 struct shader_rec {
     int used;
@@ -45,6 +48,37 @@ static int s_extension_queries;
 static const char *const *s_extensions;
 static int s_extension_count;
 static int s_failures;
+
+enum { EV_DATA, EV_SUB, EV_DRAW };
+
+struct gl_event {
+    int kind;
+    GLuint buffer;
+    GLsizeiptr size;
+    GLintptr offset;
+    int is_null;
+    int first;
+    const void *data;
+    int missing;
+    unsigned long long checksum;
+    int payload_ok;
+};
+
+static struct gl_event s_events[MAX_GL_EVENTS];
+static int s_event_count;
+static GLuint s_array_buffer;
+static GLuint s_next_buffer;
+
+/* What the fake GL actually holds in the array buffer: an orphan clears
+ * it, a sub writes its bytes. Draws compare a run's slice with the bytes
+ * the sub supplied, so a right-sized upload of NULL or wrong data fails. */
+static unsigned char s_shadow[SHADOW_CAP];
+static size_t s_shadow_len;
+static GLuint s_shadow_buffer;
+static int s_corrupt_sub, s_drop_sub;
+/* Exactly what the test handed the production pass API for the last call. */
+static const float *s_expected;
+static int s_expected_verts;
 
 #define CHECK(cond) \
     do { \
@@ -87,6 +121,79 @@ static void fake_reset(void)
     s_extension_queries = 0;
     s_extensions = NULL;
     s_extension_count = 0;
+    s_event_count = 0;
+    s_array_buffer = 0;
+    s_next_buffer = 200;
+    s_shadow_len = 0;
+    s_shadow_buffer = 0;
+    s_corrupt_sub = 0;
+    s_drop_sub = 0;
+    s_expected = NULL;
+    s_expected_verts = 0;
+}
+
+static unsigned long long payload_sum(const void *p, size_t n)
+{
+    const unsigned char *b = p;
+    unsigned long long h = 1469598103934665603ULL;
+    size_t i;
+
+    for (i = 0; i < n; i++) {
+        h ^= b[i];
+        h *= 1099511628211ULL;
+    }
+    return h;
+}
+
+static void shadow_orphan(GLsizeiptr size)
+{
+    size_t n = size > 0 ? (size_t)size : 0;
+
+    if (n > SHADOW_CAP) {
+        n = SHADOW_CAP;
+    }
+    memset(s_shadow, 0xCD, n);
+    s_shadow_len = 0;
+    s_shadow_buffer = s_array_buffer;
+}
+
+/* The most recent sub for the buffer the draw reads. */
+static const struct gl_event *last_sub(GLuint buffer)
+{
+    int i;
+
+    for (i = s_event_count - 1; i >= 0; i--) {
+        if (s_events[i].kind == EV_SUB && s_events[i].buffer == buffer) {
+            return &s_events[i];
+        }
+    }
+    return NULL;
+}
+
+/* Exact bytes the production pass supplied for [first, first + count). */
+static int draw_payload_ok(GLint first, GLsizei count)
+{
+    const struct gl_event *sub = last_sub(s_array_buffer);
+    size_t start, bytes;
+
+    if (sub == NULL || sub->is_null || sub->missing || sub->data == NULL) {
+        return 0;
+    }
+    if (s_expected == NULL || first < 0 || count < 0 ||
+        first + count > s_expected_verts) {
+        return 0;
+    }
+    start = (size_t)first * DYN_FLOATS * sizeof(float);
+    bytes = (size_t)count * DYN_FLOATS * sizeof(float);
+    if ((size_t)sub->offset + start + bytes > (size_t)sub->size) {
+        return 0;
+    }
+    if ((size_t)sub->offset + start + bytes > s_shadow_len ||
+        s_shadow_buffer != sub->buffer) {
+        return 0;
+    }
+    return memcmp(s_shadow + (size_t)sub->offset + start,
+                  (const unsigned char *)s_expected + start, bytes) == 0;
 }
 
 static int source_count(const char *needle)
@@ -317,7 +424,7 @@ void glGenBuffers(GLsizei n, GLuint *buffers)
     GLsizei i;
 
     for (i = 0; i < n; i++) {
-        buffers[i] = 200u + (GLuint)i;
+        buffers[i] = s_next_buffer++;
     }
 }
 
@@ -346,11 +453,61 @@ VOID3(glTexParameteri, GLenum, GLenum, GLint)
 
 void glBindAttribLocation(GLuint program, GLuint index, const GLchar *name)
 { (void)program; (void)index; (void)name; }
-void glBindBuffer(GLenum target, GLuint buffer) { (void)target; (void)buffer; }
+void glBindBuffer(GLenum target, GLuint buffer)
+{
+    if (target == GL_ARRAY_BUFFER) {
+        s_array_buffer = buffer;
+    }
+}
 void glBufferData(GLenum target, GLsizeiptr size, const void *data, GLenum usage)
-{ (void)target; (void)size; (void)data; (void)usage; }
+{
+    (void)usage;
+    if (s_event_count < MAX_GL_EVENTS) {
+        struct gl_event *e = &s_events[s_event_count++];
+
+        e->kind = EV_DATA;
+        e->buffer = s_array_buffer;
+        e->size = size;
+        e->is_null = data == NULL;
+    }
+    if (target == GL_ARRAY_BUFFER) {
+        shadow_orphan(size);
+    }
+}
 void glBufferSubData(GLenum target, GLintptr offset, GLsizeiptr size, const void *data)
-{ (void)target; (void)offset; (void)size; (void)data; }
+{
+    (void)target;
+    if (s_event_count < MAX_GL_EVENTS) {
+        struct gl_event *e = &s_events[s_event_count++];
+
+        e->kind = EV_SUB;
+        e->buffer = s_array_buffer;
+        e->offset = offset;
+        e->size = size;
+        e->is_null = data == NULL;
+        e->data = data;
+        e->missing = data == NULL || s_drop_sub;
+        e->checksum = data != NULL && size > 0
+                          ? payload_sum(data, (size_t)size)
+                          : 0;
+    }
+    if (target == GL_ARRAY_BUFFER && data != NULL && !s_drop_sub) {
+        if ((size_t)offset + (size_t)size > SHADOW_CAP) {
+            if (s_event_count > 0) {
+                s_events[s_event_count - 1].missing = 1;
+            }
+            return;
+        }
+        memcpy(s_shadow + (size_t)offset, data, (size_t)size);
+        if (s_corrupt_sub) {
+            s_shadow[offset] ^= 0xFF;
+        }
+        if ((size_t)offset + (size_t)size > s_shadow_len) {
+            s_shadow_len = (size_t)offset + (size_t)size;
+        }
+        s_shadow_buffer = s_array_buffer;
+    }
+}
 void glClearColor(GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha)
 { (void)red; (void)green; (void)blue; (void)alpha; }
 void glCopyTexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffset,
@@ -365,7 +522,17 @@ void glBlitFramebuffer(GLint a, GLint b, GLint c, GLint d, GLint e, GLint f,
                        GLint g, GLint h, GLbitfield mask, GLenum filter)
 { (void)a; (void)b; (void)c; (void)d; (void)e; (void)f; (void)g; (void)h; (void)mask; (void)filter; }
 void glDrawArrays(GLenum mode, GLint first, GLsizei count)
-{ (void)mode; (void)first; (void)count; }
+{
+    (void)mode;
+    if (s_event_count < MAX_GL_EVENTS) {
+        struct gl_event *e = &s_events[s_event_count++];
+
+        e->kind = EV_DRAW;
+        e->first = first;
+        e->size = count;
+        e->payload_ok = draw_payload_ok(first, count);
+    }
+}
 void glCullFace(GLenum mode) { (void)mode; }
 void glFrontFace(GLenum mode) { (void)mode; }
 void glFramebufferRenderbuffer(GLenum target, GLenum attachment,
@@ -492,6 +659,161 @@ static void run_init_case(const char *label, const char *const *extensions, int 
     }
 }
 
+static void pass_upload(const float *verts, int count)
+{
+    s_expected = verts;
+    s_expected_verts = count;
+    rnd_stream_pass(verts, count);
+}
+
+/* rnd_stream_pass against the real rnd_gl.c: one orphan plus one upload
+ * for a pass, offsets drawn from it, and capacity grown then retained. */
+static void test_stream_pass(void)
+{
+    enum { STRIDE = 9, MAX_VERTS = 4096 * 6 };
+    static float verts[MAX_VERTS * STRIDE];
+    static const char *const exact[] = {
+        "GL_EXT_shader_framebuffer_fetch", "GL_OES_standard_derivatives"
+    };
+    int started = s_failures;
+    int base;
+    GLuint vbo = 0;
+    int i;
+
+    fake_reset();
+    extensions_set(exact, 2);
+    CHECK(rnd_init() != 0);
+    rnd_use(RND_DYN);
+    for (i = 0; i < MAX_VERTS * STRIDE; i++) {
+        verts[i] = (float)(i % 7);
+    }
+    base = s_event_count;
+
+    /* Initial DYN capacity is 6 vertices (6 * 9 * 4 = 216 bytes). */
+    pass_upload(verts, 3);
+    CHECK(s_event_count == base + 2);
+    CHECK(s_events[base].kind == EV_DATA);
+    CHECK(s_events[base].is_null == 1);
+    CHECK(s_events[base].size == 216);
+    CHECK(s_events[base + 1].kind == EV_SUB);
+    CHECK(s_events[base + 1].offset == 0);
+    CHECK(s_events[base + 1].size == 3 * STRIDE * (int)sizeof(float));
+    CHECK(s_events[base].buffer == s_events[base + 1].buffer);
+    CHECK(s_events[base + 1].is_null == 0);
+    CHECK(s_events[base + 1].missing == 0);
+    CHECK(s_events[base + 1].checksum ==
+          payload_sum(verts, 3 * STRIDE * sizeof(float)));
+    vbo = s_events[base].buffer;
+    CHECK(vbo != 0);
+    rnd_draw(RND_TRIANGLES, 0, 3);
+    CHECK(s_events[base + 2].kind == EV_DRAW);
+    CHECK(s_events[base + 2].first == 0);
+    CHECK(s_events[base + 2].size == 3);
+    CHECK(s_events[base + 2].payload_ok == 1);
+
+    /* Growth: 30 vertices need 1080 bytes; one data + one sub. */
+    base = s_event_count;
+    pass_upload(verts, 30);
+    CHECK(s_event_count == base + 2);
+    CHECK(s_events[base].kind == EV_DATA);
+    CHECK(s_events[base].is_null == 1);
+    CHECK(s_events[base].size == 30 * STRIDE * (int)sizeof(float));
+    CHECK(s_events[base].buffer == vbo);
+    CHECK(s_events[base + 1].kind == EV_SUB);
+    CHECK(s_events[base + 1].offset == 0);
+    CHECK(s_events[base + 1].size == 30 * STRIDE * (int)sizeof(float));
+    CHECK(s_events[base + 1].checksum ==
+          payload_sum(verts, 30 * STRIDE * sizeof(float)));
+    rnd_draw(RND_TRIANGLES, 0, 15);
+    rnd_draw(RND_TRIANGLES, 15, 15);
+    CHECK(s_events[base + 2].first == 0);
+    CHECK(s_events[base + 3].first == 15);
+    CHECK(s_events[base + 3].size == 15);
+    CHECK(s_events[base + 2].payload_ok == 1);
+    CHECK(s_events[base + 3].payload_ok == 1);
+
+    /* Reuse: same capacity is orphaned again, no growth. */
+    base = s_event_count;
+    pass_upload(verts, 30);
+    CHECK(s_event_count == base + 2);
+    CHECK(s_events[base].size == 30 * STRIDE * (int)sizeof(float));
+    CHECK(s_events[base].buffer == vbo);
+    CHECK(s_events[base + 1].size == 30 * STRIDE * (int)sizeof(float));
+    CHECK(s_events[base + 1].checksum ==
+          payload_sum(verts, 30 * STRIDE * sizeof(float)));
+
+    /* A smaller pass keeps the capacity. */
+    base = s_event_count;
+    pass_upload(verts, 3);
+    CHECK(s_event_count == base + 2);
+    CHECK(s_events[base].size == 30 * STRIDE * (int)sizeof(float));
+    CHECK(s_events[base + 1].size == 3 * STRIDE * (int)sizeof(float));
+    CHECK(s_events[base + 1].checksum ==
+          payload_sum(verts, 3 * STRIDE * sizeof(float)));
+
+    /* The maximum pass: 4096 six-vertex faces, 884736 bytes. */
+    base = s_event_count;
+    pass_upload(verts, MAX_VERTS);
+    CHECK(s_event_count == base + 2);
+    CHECK(s_events[base].size == MAX_VERTS * STRIDE * (int)sizeof(float));
+    CHECK(s_events[base].size == 884736);
+    CHECK(s_events[base].buffer == vbo);
+    CHECK(s_events[base + 1].size == 884736);
+    rnd_draw(RND_TRIANGLES, 6, 9);
+    CHECK(s_events[base + 2].first == 6);
+    CHECK(s_events[base + 2].size == 9);
+    CHECK(s_events[base + 2].payload_ok == 1);
+
+    /* After the maximum the retained capacity still bounds the pass. */
+    base = s_event_count;
+    pass_upload(verts, 3);
+    CHECK(s_event_count == base + 2);
+    CHECK(s_events[base].size == 884736);
+    CHECK(s_events[base + 1].size == 3 * STRIDE * (int)sizeof(float));
+
+    /* The oracle rejects a corrupted recorded payload, and a dropped one,
+     * as a plain mismatch rather than an environment failure. */
+    base = s_event_count;
+    s_corrupt_sub = 1;
+    pass_upload(verts, 3);
+    s_corrupt_sub = 0;
+    CHECK(s_event_count == base + 2);
+    CHECK(s_events[base + 1].kind == EV_SUB);
+    CHECK(s_events[base + 1].missing == 0);
+    CHECK(s_events[base + 1].size == 3 * STRIDE * (int)sizeof(float));
+    rnd_draw(RND_TRIANGLES, 0, 3);
+    CHECK(s_events[base + 2].kind == EV_DRAW);
+    CHECK(s_events[base + 2].payload_ok == 0);
+    CHECK(draw_payload_ok(0, 3) == 0);
+
+    base = s_event_count;
+    s_drop_sub = 1;
+    pass_upload(verts, 3);
+    s_drop_sub = 0;
+    CHECK(s_event_count == base + 2);
+    CHECK(s_events[base + 1].kind == EV_SUB);
+    /* The production call supplied real bytes; only the recorder lost them. */
+    CHECK(s_events[base + 1].is_null == 0);
+    CHECK(s_events[base + 1].missing == 1);
+    CHECK(s_events[base + 1].size == 3 * STRIDE * (int)sizeof(float));
+    rnd_draw(RND_TRIANGLES, 0, 3);
+    CHECK(s_events[base + 2].kind == EV_DRAW);
+    CHECK(s_events[base + 2].payload_ok == 0);
+    CHECK(draw_payload_ok(0, 3) == 0);
+
+    /* A clean upload after the probes is accepted again. */
+    base = s_event_count;
+    pass_upload(verts, 3);
+    rnd_draw(RND_TRIANGLES, 0, 3);
+    CHECK(s_events[base + 1].missing == 0);
+    CHECK(s_events[base + 2].payload_ok == 1);
+
+    rnd_shutdown();
+    if (s_failures == started) {
+        puts("stream pass orphan/upload/reuse  ok");
+    }
+}
+
 int main(void)
 {
     static const char *const exact[] = {
@@ -524,6 +846,7 @@ int main(void)
 #else
     run_init_case("coherent, default build off", exact, 2, 0, 0, 0, 0, 0, 1, 0);
 #endif
+    test_stream_pass();
 
     if (s_failures != 0) {
         fprintf(stderr, "test_rnd_dyn_fetch: %d failures\n", s_failures);

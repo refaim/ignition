@@ -117,6 +117,10 @@ void rnd_uniform(int id, const float *v);
 void rnd_texture_unit(int unit, unsigned tex);
 /* Vertices for the program in use, which rnd_draw draws from. */
 void rnd_stream(const float *verts, int count);
+/* One whole pass's vertices: orphan the program's stream buffer, keeping
+ * its capacity, and upload them once. Runs draw with rnd_draw(first,count).
+ * Only the opt-in GLES DYN arena path calls this. */
+void rnd_stream_pass(const float *verts, int count);
 void rnd_draw(int prim, int first, int count);
 
 /* MESH's vertex store: room for `count` vertices (emptied), and

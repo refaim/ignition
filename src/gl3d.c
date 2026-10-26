@@ -22,6 +22,13 @@
 #include "rnd.h"
 #include "soft3d/soft3d.h"
 
+#if defined(IGN_GLES) && defined(__ANDROID__) && defined(IGN_GLES_DYN_ARENA) && \
+    IGN_GLES_DYN_ARENA == 1
+#define IGN_DYN_ARENA 1
+#else
+#define IGN_DYN_ARENA 0
+#endif
+
 enum {
     MAX_MESHES = 1024,
     MAX_TEXTURES = 64,
@@ -991,6 +998,80 @@ static void draw_batch(const struct dyn *first, int n)
     rnd_draw(RND_TRIANGLES, 0, n);
 }
 
+#if IGN_DYN_ARENA
+/* A run's place in the pass's one vertex block. */
+struct dyn_run {
+    const struct dyn *first;
+    int at;
+    int count;
+};
+
+static struct dyn_run s_runs[MAX_DYN];
+
+static int batch_reserve(int need)
+{
+    if (need > s_batch_cap) {
+        int cap = need * 2;
+        float *p = realloc(s_batch, (size_t)cap * DYN_FLOATS * sizeof(float));
+
+        if (p == NULL) {
+            return 0;
+        }
+        s_batch = p;
+        s_batch_cap = cap;
+    }
+    return 1;
+}
+
+/* `at` is where the pass's runs so far end; n counts this run. -1 when
+ * the staging block cannot grow; the pass then falls back. */
+static int batch_add_pass(int at, int n, const struct dyn *d)
+{
+    if (!batch_reserve(at + n + d->count)) {
+        return -1;
+    }
+    memcpy(s_batch + (size_t)(at + n) * DYN_FLOATS, d->v,
+           (size_t)d->count * DYN_FLOATS * sizeof(float));
+    return n + d->count;
+}
+
+/* A run from the pass's already uploaded block. */
+static void draw_batch_at(const struct dyn *first, int at, int n)
+{
+    int use_table = first->table != NULL;
+    float u = (float)use_table;
+
+    if (use_table) {
+        rnd_texture_unit(2, s_dyn_dst);
+        rnd_texture_unit(1, table_get(first->table));
+    }
+    rnd_depth(RND_DEPTH_LEQUAL, !use_table);
+    rnd_offset(use_table);
+    rnd_texture_unit(0, first->tex);
+    rnd_uniform(RND_U_USE_TABLE, &u);
+    rnd_draw(RND_TRIANGLES, at, n);
+}
+
+/* Staging allocation failed: each face streams as before, so none is
+ * dropped and none reads another face's vertices. */
+static void draw_one(const struct dyn *d)
+{
+    int use_table = d->table != NULL;
+    float u = (float)use_table;
+
+    if (use_table) {
+        rnd_texture_unit(2, s_dyn_dst);
+        rnd_texture_unit(1, table_get(d->table));
+    }
+    rnd_depth(RND_DEPTH_LEQUAL, !use_table);
+    rnd_offset(use_table);
+    rnd_texture_unit(0, d->tex);
+    rnd_uniform(RND_U_USE_TABLE, &u);
+    rnd_stream(&d->v[0][0], d->count);
+    rnd_draw(RND_TRIANGLES, 0, d->count);
+}
+#endif
+
 /* Back to front. With framebuffer fetch the table reads the current
  * target, so faces of one material in that order share a draw and no
  * copy is made. Otherwise each reads a copy of what is under it; where
@@ -1014,6 +1095,47 @@ static void draw_dyns(void)
     rnd_use(RND_DYN);
     rnd_cull(RND_CULL_OFF);
     if (rnd_dyn_framebuffer_fetch()) {
+#if IGN_DYN_ARENA
+        int total = 0, runs = 0, failed = 0;
+
+        for (i = 0; i < s_dyn_count;) {
+            int j, n = 0;
+
+            for (j = i; j < s_dyn_count; j++) {
+                const struct dyn *d = s_order[j];
+
+                if (d->tex != s_order[i]->tex || d->table != s_order[i]->table) {
+                    break;
+                }
+                n = batch_add_pass(total, n, d);
+                if (n < 0) {
+                    failed = 1;
+                    break;
+                }
+            }
+            if (failed) {
+                break;
+            }
+            s_runs[runs].first = s_order[i];
+            s_runs[runs].at = total;
+            s_runs[runs].count = n;
+            runs++;
+            total += n;
+            i = j;
+        }
+        if (!failed) {
+            int r;
+
+            rnd_stream_pass(s_batch, total);
+            for (r = 0; r < runs; r++) {
+                draw_batch_at(s_runs[r].first, s_runs[r].at, s_runs[r].count);
+            }
+        } else {
+            for (i = 0; i < s_dyn_count; i++) {
+                draw_one(s_order[i]);
+            }
+        }
+#else
         for (i = 0; i < s_dyn_count;) {
             int j, n = 0;
 
@@ -1028,6 +1150,7 @@ static void draw_dyns(void)
             draw_batch(s_order[i], n);
             i = j;
         }
+#endif
         rnd_offset(0);
         rnd_depth(RND_DEPTH_OFF, 1);
         s_dyn_count = 0;

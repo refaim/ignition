@@ -1030,6 +1030,25 @@ void rnd_stream(const float *verts, int count)
     glBufferSubData(GL_ARRAY_BUFFER, 0, bytes, verts);
 }
 
+/* A whole pass at once. The orphan lets draws already queued keep
+ * reading the old storage, so a later pass cannot overwrite their
+ * vertices. The retained size is the largest pass seen, bounded by the
+ * caller's face limit. */
+void rnd_stream_pass(const float *verts, int count)
+{
+    GLsizeiptr bytes = (GLsizeiptr)count * s_prog[s_use].stride * (GLsizeiptr)sizeof(float);
+    GLsizeiptr cap = s_prog[s_use].cap;
+
+    prof_count(PROF_UPLOAD_BYTES, (uint64_t)bytes);
+    glBindBuffer(GL_ARRAY_BUFFER, s_prog[s_use].vbo);
+    if (bytes > cap) {
+        cap = bytes;
+        s_prog[s_use].cap = cap;
+    }
+    glBufferData(GL_ARRAY_BUFFER, cap, NULL, GL_STREAM_DRAW);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, bytes, verts);
+}
+
 void rnd_draw(int prim, int first, int count)
 {
     prof_count(PROF_DRAW_CALLS, 1);

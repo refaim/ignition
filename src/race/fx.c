@@ -612,9 +612,8 @@ static void stop_voice(s32 handle)
     }
 }
 
-/* A wreck's first step: where the car was, and its skids silenced. The
- * original clears the skid flags of the car being updated
- * (0x5285c0), not the wrecked one's. */
+/* A wreck's first step: where the car was, and its skids silenced.
+ * Deliberate correction: the wrecked car c owns these skid flags. */
 static void wreck_start(struct car *c)
 {
     c->saved_x = c->x;
@@ -624,11 +623,11 @@ static void wreck_start(struct car *c)
     c->f270 = 1;
     if (c->f298 == 1) {
         stop_voice(c->skid_voice_rear);
-        g_cars[r_5285c0].f298 = 0;
+        c->f298 = 0;
     }
     if (c->f29c == 1) {
         stop_voice(c->skid_voice_front);
-        g_cars[r_5285c0].f29c = 0;
+        c->f29c = 0;
     }
 }
 

@@ -409,6 +409,8 @@ static void step_car(int i)
     struct car_phys *p = &g_car_phys[i];
     int remote = is_remote(i);
 
+    /* race_contact's surface queries read the car from r_5285c0. */
+    r_5285c0 = i;
     c->probe_scale = c->f118 * 0.004545454545454545 + 1.0;
     if (is_out(c)) {
         return;

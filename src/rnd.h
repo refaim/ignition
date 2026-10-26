@@ -60,6 +60,18 @@ enum { RND_TRIANGLES, RND_STRIP };
 int rnd_init(void);
 void rnd_shutdown(void);
 
+/* 1 only while the Android GLES DYN shader can read the bound colour
+ * target directly and the experimental framebuffer-fetch build is
+ * active. Other backends need no implementation. */
+#if defined(IGN_GLES)
+int rnd_dyn_framebuffer_fetch(void);
+#else
+static inline int rnd_dyn_framebuffer_fetch(void)
+{
+    return 0;
+}
+#endif
+
 /* A texture of w x h, from `pixels` (rows `pitch` texels apart; 0 for
  * w) or empty (zeros). */
 unsigned rnd_texture(int format, int w, int h, const void *pixels, int pitch);

@@ -314,7 +314,14 @@ static int layer_of(int i, int through_table)
             }
         }
     }
+#if defined(__vita__) || defined(IGN_GXM)
+    /* GXM: each layer costs a scene, so keep the upstream cap. */
     s_layers[i] = through_table && best < MAX_LAYER ? best + 1 : best;
+#else
+    /* Android GLES: the layer copies are the fallback that preserves the
+     * table faces' dependencies, so do not merge them above MAX_LAYER. */
+    s_layers[i] = through_table ? best + 1 : best;
+#endif
     for (y = cy0; y <= cy1; y++) {
         for (x = cx0; x <= cx1; x++) {
             if (s_nodes_n == s_nodes_cap) {
@@ -984,14 +991,46 @@ static void draw_batch(const struct dyn *first, int n)
     rnd_draw(RND_TRIANGLES, 0, n);
 }
 
-/* Back to front, each through its table over a copy of what is under
- * it. Where copies are dear, one copy of the whole frame serves the
- * faces after it until one of them covers what was drawn since. */
+/* Back to front. With framebuffer fetch the table reads the current
+ * target, so faces of one material in that order share a draw and no
+ * copy is made. Otherwise each reads a copy of what is under it; where
+ * copies are dear, one copy of the whole frame serves the faces after
+ * it until one of them covers what was drawn since. */
 static void draw_dyns(void)
 {
     int i, copied = 0, batch = rnd_batch_copies();
 
     if (s_dyn_count == 0) {
+        return;
+    }
+    /* The faces' order, sorted rather than the faces themselves, which
+     * are big. */
+    prof_begin(PROF_SORT);
+    for (i = 0; i < s_dyn_count; i++) {
+        s_order[i] = &s_dyns[i];
+    }
+    qsort(s_order, (size_t)s_dyn_count, sizeof(s_order[0]), dyn_far_first);
+    prof_end(PROF_SORT);
+    rnd_use(RND_DYN);
+    rnd_cull(RND_CULL_OFF);
+    if (rnd_dyn_framebuffer_fetch()) {
+        for (i = 0; i < s_dyn_count;) {
+            int j, n = 0;
+
+            for (j = i; j < s_dyn_count; j++) {
+                const struct dyn *d = s_order[j];
+
+                if (d->tex != s_order[i]->tex || d->table != s_order[i]->table) {
+                    break;
+                }
+                n = batch_add(n, d);
+            }
+            draw_batch(s_order[i], n);
+            i = j;
+        }
+        rnd_offset(0);
+        rnd_depth(RND_DEPTH_OFF, 1);
+        s_dyn_count = 0;
         return;
     }
     if (s_dyn_dst == 0 || s_dyn_dst_w != s_w || s_dyn_dst_h != s_h) {
@@ -1002,17 +1041,7 @@ static void draw_dyns(void)
         s_dyn_dst_w = s_w;
         s_dyn_dst_h = s_h;
     }
-    /* The faces' order, sorted rather than the faces themselves, which
-     * are big. */
-    prof_begin(PROF_SORT);
-    for (i = 0; i < s_dyn_count; i++) {
-        s_order[i] = &s_dyns[i];
-    }
-    qsort(s_order, (size_t)s_dyn_count, sizeof(s_order[0]), dyn_far_first);
-    prof_end(PROF_SORT);
     cells_reset(s_w, s_h);
-    rnd_use(RND_DYN);
-    rnd_cull(RND_CULL_OFF);
     if (batch) {
         int *layer = layers_for(s_dyn_count), top = 0, l;
 

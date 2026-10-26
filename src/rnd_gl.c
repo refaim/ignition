@@ -43,6 +43,7 @@
 
 #include "rnd.h"
 #include "rnd_gl.h"
+#include "prof.h"
 
 unsigned rnd_gl_screen_fbo;
 
@@ -212,6 +213,15 @@ int rnd_gl_load(void *(*get)(const char *name))
 
 enum { WORK_UNIT = 7 };
 
+#if defined(IGN_GLES) && defined(__ANDROID__) && defined(IGN_GLES_FRAMEBUFFER_FETCH) && \
+    IGN_GLES_FRAMEBUFFER_FETCH == 1
+#define IGN_DYN_FETCH_BUILD 1
+#else
+#define IGN_DYN_FETCH_BUILD 0
+#endif
+
+static int s_dyn_framebuffer_fetch;
+
 /* ------------------------------------------------------------ shaders */
 
 /* CANVAS. Mode 0 copies the source index, 1 puts it through the table:
@@ -350,7 +360,15 @@ static const char *s_dyn_fs =
     "uniform int u_use_table;\n"
     "in vec2 v_uv;\n"
     "flat in vec3 v_info;\n"
+#if IGN_DYN_FETCH_BUILD
+    "#ifdef IGN_FRAMEBUFFER_FETCH\n"
+    "inout vec2 o_index;\n"
+    "#else\n"
+#endif
     "out vec2 o_index;\n"
+#if IGN_DYN_FETCH_BUILD
+    "#endif\n"
+#endif
     "void main() {\n"
     "    float c = v_info.z > 2.5 ? floor(v_uv.x) : v_info.y;\n"
     "    if (v_info.z < 1.5) {\n"
@@ -359,11 +377,27 @@ static const char *s_dyn_fs =
     "            discard;\n"
     "        }\n"
     "        if (u_use_table == 1) {\n"
+#if IGN_DYN_FETCH_BUILD
+    "#ifdef IGN_FRAMEBUFFER_FETCH\n"
+    "            float d = o_index.r * 255.0;\n"
+    "#else\n"
+#endif
     "            float d = texelFetch(u_dst, ivec2(gl_FragCoord.xy), 0).r * 255.0;\n"
+#if IGN_DYN_FETCH_BUILD
+    "#endif\n"
+#endif
     "            c = texelFetch(u_table, ivec2(int(d + 0.5), int(c + 0.5)), 0).r * 255.0;\n"
     "        }\n"
     "    } else if (u_use_table == 1) {\n"
+#if IGN_DYN_FETCH_BUILD
+    "#ifdef IGN_FRAMEBUFFER_FETCH\n"
+    "        float d = o_index.r * 255.0;\n"
+    "#else\n"
+#endif
     "        float d = texelFetch(u_dst, ivec2(gl_FragCoord.xy), 0).r * 255.0;\n"
+#if IGN_DYN_FETCH_BUILD
+    "#endif\n"
+#endif
     "        c = texelFetch(u_table, ivec2(int(d + 0.5), int(c + 0.5)), 0).r * 255.0;\n"
     "    }\n"
     "    o_index = vec2(c / 255.0, 1.0);\n"
@@ -489,7 +523,7 @@ static struct fb *fb_rec(GLuint f)
     return &s_fb[f];
 }
 
-static GLuint compile(GLenum type, const char *src)
+static GLuint compile(GLenum type, const char *src, int fetch)
 {
     GLuint s = glCreateShader(type);
     GLint ok = 0;
@@ -501,12 +535,21 @@ static GLuint compile(GLenum type, const char *src)
         "precision highp int;\n"
         "precision highp sampler2D;\n"
         "precision highp sampler2DArray;\n";
+    static const char es_fetch[] =
+        "#version 300 es\n"
+        "#extension GL_EXT_shader_framebuffer_fetch : require\n"
+        "#define IGN_FRAMEBUFFER_FETCH 1\n"
+        "precision highp float;\n"
+        "precision highp int;\n"
+        "precision highp sampler2D;\n"
+        "precision highp sampler2DArray;\n";
     const char *parts[2];
 
-    parts[0] = es;
+    parts[0] = fetch ? es_fetch : es;
     parts[1] = strncmp(src, "#version 150\n", 13) == 0 ? src + 13 : src;
     glShaderSource(s, 2, parts, NULL);
 #else
+    (void)fetch;
     glShaderSource(s, 1, &src, NULL);
 #endif
     glCompileShader(s);
@@ -516,17 +559,31 @@ static GLuint compile(GLenum type, const char *src)
 
         glGetShaderInfoLog(s, sizeof(log), NULL, log);
         fprintf(stderr, "rnd: shader: %s\n", log);
+        glDeleteShader(s);
+        return 0;
     }
     return s;
 }
 
-static int make_program(int p, const char *vs_src, const char *fs_src)
+static int make_program(int p, const char *vs_src, const char *fs_src, int fetch)
 {
-    GLuint vs = compile(GL_VERTEX_SHADER, vs_src);
-    GLuint fs = compile(GL_FRAGMENT_SHADER, fs_src);
+    GLuint vs = compile(GL_VERTEX_SHADER, vs_src, 0);
+    GLuint fs;
     GLint ok = 0;
     int i, offset = 0, stride = 0;
 
+    if (vs == 0) {
+        return 0;
+    }
+    fs = compile(GL_FRAGMENT_SHADER, fs_src, fetch);
+    if (fs == 0) {
+        glDeleteShader(vs);
+        return 0;
+    }
+    s_prog[p].program = 0;
+    s_prog[p].vao = 0;
+    s_prog[p].vbo = 0;
+    s_prog[p].cap = 0;
     s_prog[p].program = glCreateProgram();
     glAttachShader(s_prog[p].program, vs);
     glAttachShader(s_prog[p].program, fs);
@@ -548,6 +605,8 @@ static int make_program(int p, const char *vs_src, const char *fs_src)
     glGetProgramiv(s_prog[p].program, GL_LINK_STATUS, &ok);
     if (!ok) {
         fprintf(stderr, "rnd: program %d: link failed\n", p);
+        glDeleteProgram(s_prog[p].program);
+        s_prog[p].program = 0;
         return 0;
     }
     glUseProgram(s_prog[p].program);
@@ -584,6 +643,25 @@ static int make_program(int p, const char *vs_src, const char *fs_src)
     return 1;
 }
 
+static int dyn_fetch_extension(void)
+{
+#if IGN_DYN_FETCH_BUILD
+    GLint count = 0, i;
+
+    glGetIntegerv(GL_NUM_EXTENSIONS, &count);
+    for (i = 0; i < count; i++) {
+        const char *ext = (const char *)glGetStringi(GL_EXTENSIONS, (GLuint)i);
+
+        if (ext != NULL && strcmp(ext, "GL_EXT_shader_framebuffer_fetch") == 0) {
+            return 1;
+        }
+    }
+    return 0;
+#else
+    return 0;
+#endif
+}
+
 int rnd_init(void)
 {
     const char *src[RND_PROGRAMS][2] = {
@@ -591,13 +669,21 @@ int rnd_init(void)
         { s_present_vs, s_over_fs }, { s_mesh_vs, s_mesh_fs },
         { s_dyn_vs, s_dyn_fs }, { s_raster_vs, s_raster_fs },
     };
-    int p;
+    int p, fetch = 0;
 
+    s_dyn_framebuffer_fetch = 0;
     for (p = 0; p < RND_PROGRAMS; p++) {
-        if (!make_program(p, src[p][0], src[p][1])) {
+        if (p == RND_DYN && dyn_fetch_extension()) {
+            if (make_program(p, src[p][0], src[p][1], 1)) {
+                fetch = 1;
+            } else if (!make_program(p, src[p][0], src[p][1], 0)) {
+                return 0;
+            }
+        } else if (!make_program(p, src[p][0], src[p][1], 0)) {
             return 0;
         }
     }
+    s_dyn_framebuffer_fetch = fetch;
     s_use = -1;
     return 1;
 }
@@ -606,6 +692,7 @@ void rnd_shutdown(void)
 {
     int p;
 
+    s_dyn_framebuffer_fetch = 0;
     for (p = 0; p < RND_PROGRAMS; p++) {
         glDeleteProgram(s_prog[p].program);
         glDeleteVertexArrays(1, &s_prog[p].vao);
@@ -615,6 +702,13 @@ void rnd_shutdown(void)
     }
     glDeleteBuffers(1, &s_mesh_vbo);
 }
+
+#if defined(IGN_GLES)
+int rnd_dyn_framebuffer_fetch(void)
+{
+    return s_dyn_framebuffer_fetch;
+}
+#endif
 
 /* ------------------------------------------------------------ textures */
 
@@ -823,6 +917,8 @@ void rnd_read(int x, int y, int w, int h, int format, void *out, int pitch)
 
 void rnd_copy(unsigned tex, int x, int y, int w, int h)
 {
+    prof_count(PROF_COPY_CALLS, 1);
+    prof_count(PROF_COPY_PIXELS, (uint64_t)w * (uint64_t)h);
     glActiveTexture(GL_TEXTURE0 + WORK_UNIT);
     glBindTexture(GL_TEXTURE_2D, tex);
     glCopyTexSubImage2D(GL_TEXTURE_2D, 0, x, y, x, y, w, h);
@@ -925,6 +1021,7 @@ void rnd_stream(const float *verts, int count)
 {
     GLsizeiptr bytes = (GLsizeiptr)count * s_prog[s_use].stride * (GLsizeiptr)sizeof(float);
 
+    prof_count(PROF_UPLOAD_BYTES, (uint64_t)bytes);
     glBindBuffer(GL_ARRAY_BUFFER, s_prog[s_use].vbo);
     if (bytes > s_prog[s_use].cap) {
         glBufferData(GL_ARRAY_BUFFER, bytes, NULL, GL_STREAM_DRAW);
@@ -935,6 +1032,7 @@ void rnd_stream(const float *verts, int count)
 
 void rnd_draw(int prim, int first, int count)
 {
+    prof_count(PROF_DRAW_CALLS, 1);
     glDrawArrays(prim == RND_STRIP ? GL_TRIANGLE_STRIP : GL_TRIANGLES, first, count);
 }
 
@@ -947,6 +1045,7 @@ void rnd_mesh_store(int count)
 
 void rnd_mesh_write(int first, int count, const float *verts)
 {
+    prof_count(PROF_UPLOAD_BYTES, (uint64_t)count * 8 * sizeof(float));
     glBindBuffer(GL_ARRAY_BUFFER, s_mesh_vbo);
     glBufferSubData(GL_ARRAY_BUFFER, (GLintptr)first * 8 * (GLintptr)sizeof(float),
                     (GLsizeiptr)count * 8 * (GLsizeiptr)sizeof(float), verts);
@@ -954,6 +1053,7 @@ void rnd_mesh_write(int first, int count, const float *verts)
 
 void rnd_draw_mesh(int first, int count)
 {
+    prof_count(PROF_DRAW_CALLS, 1);
     glDrawArrays(GL_TRIANGLES, first, count);
 }
 
@@ -961,8 +1061,17 @@ void rnd_present(void)
 {
 }
 
-/* A copy is cheap: each face copies what it covers. */
+/* Copies are dear on the tile-based Android path, which defaults to one
+ * whole-frame copy per dependency layer. IGN_GLES_BATCH_COPIES=0 turns that
+ * off and =1 enables it on any IGN_GLES build; other builds keep a copy per
+ * face. */
 int rnd_batch_copies(void)
 {
+#if defined(IGN_GLES) && defined(IGN_GLES_BATCH_COPIES)
+    return IGN_GLES_BATCH_COPIES == 1;
+#elif defined(IGN_GLES) && defined(__ANDROID__)
+    return 1;
+#else
     return 0;
+#endif
 }

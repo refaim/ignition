@@ -476,6 +476,9 @@ static struct {
 
 static int s_use = -1;
 static GLuint s_mesh_vbo;
+#if RND_INDEXED_DYN
+static GLintptr s_indexed_offset;
+#endif
 
 /* What each GL texture name is. */
 struct tex {
@@ -701,6 +704,9 @@ void rnd_shutdown(void)
         }
     }
     glDeleteBuffers(1, &s_mesh_vbo);
+#if RND_INDEXED_DYN
+    s_indexed_offset = 0;
+#endif
 }
 
 #if defined(IGN_GLES)
@@ -1029,6 +1035,42 @@ void rnd_stream(const float *verts, int count)
     }
     glBufferSubData(GL_ARRAY_BUFFER, 0, bytes, verts);
 }
+
+#if RND_INDEXED_DYN
+int rnd_stream_indexed(const void *data, int vertex_count, int index_count)
+{
+    size_t vertex_bytes, index_bytes, bytes;
+    int stride = s_use >= 0 ? s_prog[s_use].stride : 0;
+
+    if (data == NULL || vertex_count <= 0 || index_count <= 0 ||
+        vertex_count > 65536 || index_count > 65536 || stride <= 0) {
+        return 0;
+    }
+    vertex_bytes = (size_t)vertex_count * (size_t)stride * sizeof(float);
+    index_bytes = (size_t)index_count * sizeof(uint16_t);
+    bytes = vertex_bytes + index_bytes;
+    s_indexed_offset = (GLintptr)vertex_bytes;
+
+    prof_count(PROF_UPLOAD_BYTES, (uint64_t)bytes);
+    glBindBuffer(GL_ARRAY_BUFFER, s_prog[s_use].vbo);
+    if ((GLsizeiptr)bytes > s_prog[s_use].cap) {
+        glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)bytes, NULL, GL_STREAM_DRAW);
+        s_prog[s_use].cap = (GLsizeiptr)bytes;
+    }
+    glBufferSubData(GL_ARRAY_BUFFER, 0, (GLsizeiptr)bytes, data);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_prog[s_use].vbo);
+    return 1;
+}
+
+void rnd_draw_indexed(int prim, int first, int count)
+{
+    prof_count(PROF_DRAW_CALLS, 1);
+    glDrawElements(prim == RND_STRIP ? GL_TRIANGLE_STRIP : GL_TRIANGLES, count,
+                   GL_UNSIGNED_SHORT,
+                   (const void *)(s_indexed_offset + (GLintptr)first * sizeof(uint16_t)));
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+}
+#endif
 
 void rnd_draw(int prim, int first, int count)
 {

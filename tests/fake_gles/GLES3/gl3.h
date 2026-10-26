@@ -58,6 +58,8 @@ enum {
     GL_STREAM_DRAW = 0x88e0,
     GL_STATIC_DRAW = 0x88e4,
     GL_ARRAY_BUFFER = 0x8892,
+    GL_ELEMENT_ARRAY_BUFFER = 0x8893,
+    GL_UNSIGNED_SHORT = 0x1403,
     GL_FRAGMENT_SHADER = 0x8b30,
     GL_VERTEX_SHADER = 0x8b31,
     GL_COMPILE_STATUS = 0x8b81,
@@ -111,6 +113,7 @@ void glDepthFunc(GLenum func);
 void glDepthMask(GLboolean flag);
 void glDisable(GLenum cap);
 void glDrawArrays(GLenum mode, GLint first, GLsizei count);
+void glDrawElements(GLenum mode, GLsizei count, GLenum type, const void *indices);
 void glEnable(GLenum cap);
 void glEnableVertexAttribArray(GLuint index);
 void glFramebufferRenderbuffer(GLenum target, GLenum attachment,

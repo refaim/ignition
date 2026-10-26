@@ -24,6 +24,14 @@
 
 #include "types.h"
 
+/* Exact indexed DYN uploads are an opted-in Android GLES experiment. */
+#if defined(IGN_GLES) && defined(__ANDROID__) && defined(IGN_GLES_INDEXED_DYN) && \
+    IGN_GLES_INDEXED_DYN == 1
+#define RND_INDEXED_DYN 1
+#else
+#define RND_INDEXED_DYN 0
+#endif
+
 /* Texture formats. RGB8 is the palette's: 3 bytes a texel. */
 enum { RND_R8, RND_RG8, RND_RGB8 };
 
@@ -118,6 +126,16 @@ void rnd_texture_unit(int unit, unsigned tex);
 /* Vertices for the program in use, which rnd_draw draws from. */
 void rnd_stream(const float *verts, int count);
 void rnd_draw(int prim, int first, int count);
+#if RND_INDEXED_DYN
+/* `data` holds `vertex_count` records of the current program, followed
+ * without padding by `index_count` uint16_t indices. Both regions go
+ * into the current program's generic buffer once, with the element
+ * region starting at a float-aligned byte offset. Returns 0 before any
+ * GL operation when either count is outside the DYN bound. */
+int rnd_stream_indexed(const void *data, int vertex_count, int index_count);
+/* Draws indices from the upload above. */
+void rnd_draw_indexed(int prim, int first, int count);
+#endif
 
 /* MESH's vertex store: room for `count` vertices (emptied), and
  * vertices written into it. */

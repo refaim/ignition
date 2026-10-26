@@ -46,6 +46,43 @@ static const char *const *s_extensions;
 static int s_extension_count;
 static int s_failures;
 
+enum { REC_UPLOAD_CAP = 4096, REC_VAOS = 16, REC_BUFFERS = 16 };
+
+struct rec_vao {
+    int used;
+    GLuint id;
+    GLuint element;
+};
+
+static struct rec_vao s_rec_vaos[REC_VAOS];
+static GLuint s_rec_current_vao;
+static GLuint s_rec_array_buffer;
+static GLuint s_rec_buffers[REC_BUFFERS];
+static int s_rec_buffer_count;
+static GLuint s_next_vao = 100;
+static GLuint s_next_buffer = 200;
+static int s_rec_bind_calls;
+static int s_rec_buffer_data_calls;
+static GLsizeiptr s_rec_buffer_data_size;
+static int s_rec_subdata_calls;
+static GLintptr s_rec_subdata_offset;
+static GLsizeiptr s_rec_subdata_size;
+static GLenum s_rec_subdata_target;
+static unsigned char s_rec_upload[REC_UPLOAD_CAP];
+static int s_rec_draw_arrays_calls;
+static GLenum s_rec_draw_arrays_mode;
+static GLint s_rec_draw_arrays_first;
+static GLsizei s_rec_draw_arrays_count;
+static int s_rec_draw_elements_calls;
+static GLenum s_rec_draw_elements_mode;
+static GLsizei s_rec_draw_elements_count;
+static GLenum s_rec_draw_elements_type;
+static size_t s_rec_draw_elements_offset;
+static GLuint s_rec_draw_array_buffer;
+static GLuint s_rec_draw_element_buffer;
+static GLuint s_rec_draw_vao;
+static int s_rec_deleted_buffers;
+
 #define CHECK(cond) \
     do { \
         if (!(cond)) { \
@@ -71,6 +108,57 @@ static struct program_rec *program_for(GLuint program)
     return i >= 0 && s_programs[i].used ? &s_programs[i] : NULL;
 }
 
+static struct rec_vao *rec_vao(GLuint id)
+{
+    int i;
+
+    for (i = 0; i < REC_VAOS; i++) {
+        if (s_rec_vaos[i].used && s_rec_vaos[i].id == id) {
+            return &s_rec_vaos[i];
+        }
+    }
+    for (i = 0; i < REC_VAOS; i++) {
+        if (!s_rec_vaos[i].used) {
+            s_rec_vaos[i].used = 1;
+            s_rec_vaos[i].id = id;
+            return &s_rec_vaos[i];
+        }
+    }
+    return NULL;
+}
+
+static void gl_record_reset(void)
+{
+    memset(s_rec_vaos, 0, sizeof(s_rec_vaos));
+    memset(s_rec_buffers, 0, sizeof(s_rec_buffers));
+    memset(s_rec_upload, 0, sizeof(s_rec_upload));
+    s_rec_current_vao = 0;
+    s_rec_array_buffer = 0;
+    s_rec_buffer_count = 0;
+    s_next_vao = 100;
+    s_next_buffer = 200;
+    s_rec_bind_calls = 0;
+    s_rec_buffer_data_calls = 0;
+    s_rec_buffer_data_size = 0;
+    s_rec_subdata_calls = 0;
+    s_rec_subdata_offset = 0;
+    s_rec_subdata_size = 0;
+    s_rec_subdata_target = 0;
+    s_rec_draw_arrays_calls = 0;
+    s_rec_draw_arrays_mode = 0;
+    s_rec_draw_arrays_first = 0;
+    s_rec_draw_arrays_count = 0;
+    s_rec_draw_elements_calls = 0;
+    s_rec_draw_elements_mode = 0;
+    s_rec_draw_elements_count = 0;
+    s_rec_draw_elements_type = 0;
+    s_rec_draw_elements_offset = 0;
+    s_rec_draw_array_buffer = 0;
+    s_rec_draw_element_buffer = 0;
+    s_rec_draw_vao = 0;
+    s_rec_deleted_buffers = 0;
+}
+
 static void fake_reset(void)
 {
     memset(s_shaders, 0, sizeof(s_shaders));
@@ -87,6 +175,7 @@ static void fake_reset(void)
     s_extension_queries = 0;
     s_extensions = NULL;
     s_extension_count = 0;
+    gl_record_reset();
 }
 
 static int source_count(const char *needle)
@@ -308,7 +397,7 @@ void glGenVertexArrays(GLsizei n, GLuint *arrays)
     GLsizei i;
 
     for (i = 0; i < n; i++) {
-        arrays[i] = 100u + (GLuint)i;
+        arrays[i] = s_next_vao++;
     }
 }
 
@@ -317,7 +406,10 @@ void glGenBuffers(GLsizei n, GLuint *buffers)
     GLsizei i;
 
     for (i = 0; i < n; i++) {
-        buffers[i] = 200u + (GLuint)i;
+        buffers[i] = s_next_buffer++;
+        if (s_rec_buffer_count < REC_BUFFERS) {
+            s_rec_buffers[s_rec_buffer_count++] = buffers[i];
+        }
     }
 }
 
@@ -330,7 +422,6 @@ VOID1(glActiveTexture, GLenum)
 VOID2(glBindFramebuffer, GLenum, GLuint)
 VOID2(glBindRenderbuffer, GLenum, GLuint)
 VOID2(glBindTexture, GLenum, GLuint)
-VOID1(glBindVertexArray, GLuint)
 VOID1(glDepthFunc, GLenum)
 VOID1(glDepthMask, GLboolean)
 VOID1(glDisable, GLenum)
@@ -346,17 +437,56 @@ VOID3(glTexParameteri, GLenum, GLenum, GLint)
 
 void glBindAttribLocation(GLuint program, GLuint index, const GLchar *name)
 { (void)program; (void)index; (void)name; }
-void glBindBuffer(GLenum target, GLuint buffer) { (void)target; (void)buffer; }
+void glBindVertexArray(GLuint array)
+{
+    s_rec_current_vao = array;
+    (void)rec_vao(array);
+}
+
+void glBindBuffer(GLenum target, GLuint buffer)
+{
+    struct rec_vao *vao;
+
+    s_rec_bind_calls++;
+    if (target == GL_ARRAY_BUFFER) {
+        s_rec_array_buffer = buffer;
+    } else if (target == GL_ELEMENT_ARRAY_BUFFER) {
+        vao = rec_vao(s_rec_current_vao);
+        if (vao != NULL) {
+            vao->element = buffer;
+        }
+    }
+}
+
 void glBufferData(GLenum target, GLsizeiptr size, const void *data, GLenum usage)
-{ (void)target; (void)size; (void)data; (void)usage; }
+{
+    (void)target;
+    (void)data;
+    (void)usage;
+    s_rec_buffer_data_calls++;
+    s_rec_buffer_data_size = size;
+}
+
 void glBufferSubData(GLenum target, GLintptr offset, GLsizeiptr size, const void *data)
-{ (void)target; (void)offset; (void)size; (void)data; }
+{
+    s_rec_subdata_calls++;
+    s_rec_subdata_target = target;
+    s_rec_subdata_offset = offset;
+    s_rec_subdata_size = size;
+    if (size >= 0 && (size_t)size <= sizeof(s_rec_upload) && data != NULL) {
+        memcpy(s_rec_upload, data, (size_t)size);
+    }
+}
 void glClearColor(GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha)
 { (void)red; (void)green; (void)blue; (void)alpha; }
 void glCopyTexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffset,
                          GLint x, GLint y, GLsizei width, GLsizei height)
 { (void)target; (void)level; (void)xoffset; (void)yoffset; (void)x; (void)y; (void)width; (void)height; }
-void glDeleteBuffers(GLsizei n, const GLuint *buffers) { (void)n; (void)buffers; }
+void glDeleteBuffers(GLsizei n, const GLuint *buffers)
+{
+    (void)buffers;
+    s_rec_deleted_buffers += n;
+}
 void glDeleteFramebuffers(GLsizei n, const GLuint *framebuffers) { (void)n; (void)framebuffers; }
 void glDeleteRenderbuffers(GLsizei n, const GLuint *renderbuffers) { (void)n; (void)renderbuffers; }
 void glDeleteTextures(GLsizei n, const GLuint *textures) { (void)n; (void)textures; }
@@ -365,7 +495,26 @@ void glBlitFramebuffer(GLint a, GLint b, GLint c, GLint d, GLint e, GLint f,
                        GLint g, GLint h, GLbitfield mask, GLenum filter)
 { (void)a; (void)b; (void)c; (void)d; (void)e; (void)f; (void)g; (void)h; (void)mask; (void)filter; }
 void glDrawArrays(GLenum mode, GLint first, GLsizei count)
-{ (void)mode; (void)first; (void)count; }
+{
+    s_rec_draw_arrays_calls++;
+    s_rec_draw_arrays_mode = mode;
+    s_rec_draw_arrays_first = first;
+    s_rec_draw_arrays_count = count;
+}
+
+void glDrawElements(GLenum mode, GLsizei count, GLenum type, const void *indices)
+{
+    struct rec_vao *vao = rec_vao(s_rec_current_vao);
+
+    s_rec_draw_elements_calls++;
+    s_rec_draw_elements_mode = mode;
+    s_rec_draw_elements_count = count;
+    s_rec_draw_elements_type = type;
+    s_rec_draw_elements_offset = (size_t)indices;
+    s_rec_draw_array_buffer = s_rec_array_buffer;
+    s_rec_draw_element_buffer = vao != NULL ? vao->element : 0;
+    s_rec_draw_vao = s_rec_current_vao;
+}
 void glCullFace(GLenum mode) { (void)mode; }
 void glFrontFace(GLenum mode) { (void)mode; }
 void glFramebufferRenderbuffer(GLenum target, GLenum attachment,

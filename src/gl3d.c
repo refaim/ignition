@@ -94,6 +94,9 @@ static int s_dyn_dst_w, s_dyn_dst_h;
 
 static unsigned table_get(const u8 *table);
 static unsigned texture_get(int slot);
+#if RND_INDEXED_DYN
+static void indexed_cleanup(void);
+#endif
 
 /* The raster path. */
 enum { MAX_TABLES = 16, RASTER_FLOATS = 8 };     /* x, y, u, v, page, colour, mode, - */
@@ -531,6 +534,9 @@ void gl3d_flush(void)
     }
     s_mesh_count = 0;
     s_vbo_used = 0;
+#if RND_INDEXED_DYN
+    indexed_cleanup();
+#endif
 }
 
 static void target_begin(struct target *t, int w, int h)
@@ -962,6 +968,98 @@ static int dyn_rect(const struct dyn *d, int r[4])
 /* Faces gathered for one draw: their vertices, one after the other. */
 static float *s_batch;
 static int s_batch_cap;
+#if RND_INDEXED_DYN
+static unsigned char *s_indexed_data;
+static size_t s_indexed_cap;
+static int *s_indexed_hash;
+static unsigned s_indexed_hash_cap;
+
+static void indexed_cleanup(void)
+{
+    free(s_indexed_data);
+    s_indexed_data = NULL;
+    s_indexed_cap = 0;
+    free(s_indexed_hash);
+    s_indexed_hash = NULL;
+    s_indexed_hash_cap = 0;
+}
+
+static uint32_t indexed_hash(const float *v)
+{
+    const unsigned char *p = (const unsigned char *)v;
+    uint32_t h = 2166136261u;
+    int i;
+
+    for (i = 0; i < DYN_FLOATS * (int)sizeof(float); i++) {
+        h = (h ^ p[i]) * 16777619u;
+    }
+    return h;
+}
+
+/* Builds the run's first-occurrence vertices and index stream in one
+ * staging block. Only byte-identical complete records share a vertex. */
+static int indexed_build(int n, int *unique_count)
+{
+    size_t vertex_bytes = (size_t)n * DYN_FLOATS * sizeof(float);
+    size_t index_bytes = (size_t)n * sizeof(uint16_t);
+    size_t need = vertex_bytes + index_bytes;
+    unsigned hash_cap = 1, hash_need;
+    uint16_t *out_indices;
+    int unique = 0, i;
+
+    if (n <= 0 || n > 65536) {
+        return 0;
+    }
+    while (hash_cap < (unsigned)n * 2) {
+        hash_cap <<= 1;
+    }
+    hash_need = hash_cap * (unsigned)sizeof(*s_indexed_hash);
+    if (need > s_indexed_cap) {
+        unsigned char *grown = realloc(s_indexed_data, need);
+
+        if (grown == NULL) {
+            return 0;
+        }
+        s_indexed_data = grown;
+        s_indexed_cap = need;
+    }
+    if (hash_cap > s_indexed_hash_cap) {
+        int *grown = realloc(s_indexed_hash, hash_need);
+
+        if (grown == NULL) {
+            return 0;
+        }
+        s_indexed_hash = grown;
+        s_indexed_hash_cap = hash_cap;
+    }
+    memset(s_indexed_hash, 0xff, hash_need);
+    out_indices = (uint16_t *)(s_indexed_data + vertex_bytes);
+    for (i = 0; i < n; i++) {
+        const float *v = s_batch + (size_t)i * DYN_FLOATS;
+        unsigned slot = indexed_hash(v) & (hash_cap - 1u);
+        int match;
+
+        while ((match = s_indexed_hash[slot]) >= 0) {
+            if (memcmp(s_indexed_data + (size_t)match * DYN_FLOATS * sizeof(float), v,
+                       DYN_FLOATS * sizeof(float)) == 0) {
+                break;
+            }
+            slot = (slot + 1) & (hash_cap - 1u);
+        }
+        if (match < 0) {
+            match = unique++;
+            s_indexed_hash[slot] = match;
+            memcpy(s_indexed_data + (size_t)match * DYN_FLOATS * sizeof(float), v,
+                   DYN_FLOATS * sizeof(float));
+        }
+        out_indices[i] = (uint16_t)match;
+    }
+    memmove(s_indexed_data + (size_t)unique * DYN_FLOATS * sizeof(float), out_indices,
+            index_bytes);
+    *unique_count = unique;
+    return 1;
+}
+#endif
 
 static int batch_add(int n, const struct dyn *d)
 {
@@ -987,6 +1085,23 @@ static void draw_batch(const struct dyn *first, int n)
     rnd_offset(use_table);
     rnd_texture_unit(0, first->tex);
     rnd_uniform(RND_U_USE_TABLE, &u);
+#if RND_INDEXED_DYN
+    if (rnd_dyn_framebuffer_fetch()) {
+        int unique;
+        size_t array_bytes = (size_t)n * DYN_FLOATS * sizeof(float);
+        size_t indexed_bytes;
+
+        if (indexed_build(n, &unique)) {
+            indexed_bytes = (size_t)unique * DYN_FLOATS * sizeof(float) +
+                            (size_t)n * sizeof(uint16_t);
+            if (indexed_bytes < array_bytes &&
+                rnd_stream_indexed(s_indexed_data, unique, n)) {
+                rnd_draw_indexed(RND_TRIANGLES, 0, n);
+                return;
+            }
+        }
+    }
+#endif
     rnd_stream(s_batch, n);
     rnd_draw(RND_TRIANGLES, 0, n);
 }

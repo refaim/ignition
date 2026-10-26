@@ -220,7 +220,20 @@ enum { WORK_UNIT = 7 };
 #define IGN_DYN_FETCH_BUILD 0
 #endif
 
+#if IGN_DYN_FETCH_BUILD && defined(IGN_GLES_SPLIT_DYN) && IGN_GLES_SPLIT_DYN == 1
+#define IGN_DYN_SPLIT_BUILD 1
+#else
+#define IGN_DYN_SPLIT_BUILD 0
+#endif
+
 static int s_dyn_framebuffer_fetch;
+
+#if IGN_DYN_SPLIT_BUILD
+static int s_dyn_split;
+static int s_dyn_plain_bound;
+static GLuint s_dyn_plain;
+static GLint s_dyn_plain_uniforms[RND_UNIFORMS];
+#endif
 
 /* ------------------------------------------------------------ shaders */
 
@@ -643,6 +656,67 @@ static int make_program(int p, const char *vs_src, const char *fs_src, int fetch
     return 1;
 }
 
+#if IGN_DYN_SPLIT_BUILD
+static void delete_dyn_plain(void)
+{
+    if (s_dyn_plain != 0) {
+        glDeleteProgram(s_dyn_plain);
+        s_dyn_plain = 0;
+    }
+    s_dyn_split = 0;
+    s_dyn_plain_bound = 0;
+}
+
+/* The ordinary DYN program: the same vertex shader, attributes and
+ * fragment body as the all-fetch build, without the fetch extension or
+ * its inout output. It shares DYN's VAO and VBO. */
+static int make_dyn_plain_program(void)
+{
+    GLuint vs = compile(GL_VERTEX_SHADER, s_dyn_vs, 0);
+    GLuint fs, program;
+    GLint ok = 0;
+    int i;
+
+    if (vs == 0) {
+        return 0;
+    }
+    fs = compile(GL_FRAGMENT_SHADER, s_dyn_fs, 0);
+    if (fs == 0) {
+        glDeleteShader(vs);
+        return 0;
+    }
+    program = glCreateProgram();
+    glAttachShader(program, vs);
+    glAttachShader(program, fs);
+    for (i = 0; s_def[RND_DYN].attrs[i] != 0; i++) {
+        glBindAttribLocation(program, (GLuint)i, s_def[RND_DYN].attr_names[i]);
+    }
+#if !defined(IGN_GLES)
+    glBindFragDataLocation(program, 0, s_def[RND_DYN].out);
+#endif
+    glLinkProgram(program);
+    glDeleteShader(vs);
+    glDeleteShader(fs);
+    glGetProgramiv(program, GL_LINK_STATUS, &ok);
+    if (!ok) {
+        fprintf(stderr, "rnd: split DYN program: link failed\n");
+        glDeleteProgram(program);
+        return 0;
+    }
+    glUseProgram(program);
+    for (i = 0; s_def[RND_DYN].samplers[i] != NULL; i++) {
+        glUniform1i(glGetUniformLocation(program, s_def[RND_DYN].samplers[i]), i);
+    }
+    for (i = 0; i < RND_UNIFORMS; i++) {
+        s_dyn_plain_uniforms[i] = glGetUniformLocation(program, s_uniform_names[i]);
+    }
+    s_dyn_plain = program;
+    s_dyn_split = 1;
+    s_dyn_plain_bound = 0;
+    return 1;
+}
+#endif
+
 static int dyn_fetch_extension(void)
 {
 #if IGN_DYN_FETCH_BUILD
@@ -672,14 +746,25 @@ int rnd_init(void)
     int p, fetch = 0;
 
     s_dyn_framebuffer_fetch = 0;
+#if IGN_DYN_SPLIT_BUILD
+    s_dyn_split = 0;
+    s_dyn_plain = 0;
+    s_dyn_plain_bound = 0;
+#endif
     for (p = 0; p < RND_PROGRAMS; p++) {
         if (p == RND_DYN && dyn_fetch_extension()) {
             if (make_program(p, src[p][0], src[p][1], 1)) {
                 fetch = 1;
+#if IGN_DYN_SPLIT_BUILD
+                make_dyn_plain_program();
+#endif
             } else if (!make_program(p, src[p][0], src[p][1], 0)) {
                 return 0;
             }
         } else if (!make_program(p, src[p][0], src[p][1], 0)) {
+#if IGN_DYN_SPLIT_BUILD
+            delete_dyn_plain();
+#endif
             return 0;
         }
     }
@@ -693,6 +778,9 @@ void rnd_shutdown(void)
     int p;
 
     s_dyn_framebuffer_fetch = 0;
+#if IGN_DYN_SPLIT_BUILD
+    delete_dyn_plain();
+#endif
     for (p = 0; p < RND_PROGRAMS; p++) {
         glDeleteProgram(s_prog[p].program);
         glDeleteVertexArrays(1, &s_prog[p].vao);
@@ -981,13 +1069,34 @@ void rnd_offset(int on)
 void rnd_use(int program)
 {
     s_use = program;
+#if IGN_DYN_SPLIT_BUILD
+    if (program == RND_DYN && s_dyn_split) {
+        s_dyn_plain_bound = 1;
+        glUseProgram(s_dyn_plain);
+        glBindVertexArray(s_prog[program].vao);
+        return;
+    }
+#endif
     glUseProgram(s_prog[program].program);
     glBindVertexArray(s_prog[program].vao);
 }
 
 void rnd_uniform(int id, const float *v)
 {
+#if IGN_DYN_SPLIT_BUILD
+    GLint loc;
+
+    if (s_use == RND_DYN && s_dyn_split && id == RND_U_USE_TABLE) {
+        int table = (GLint)v[0] == 1;
+
+        s_dyn_plain_bound = !table;
+        glUseProgram(table ? s_prog[RND_DYN].program : s_dyn_plain);
+    }
+    loc = s_use == RND_DYN && s_dyn_split && s_dyn_plain_bound
+              ? s_dyn_plain_uniforms[id] : s_prog[s_use].uniforms[id];
+#else
     GLint loc = s_prog[s_use].uniforms[id];
+#endif
 
     switch (id) {
     case RND_U_MODE:

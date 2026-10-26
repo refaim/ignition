@@ -11,6 +11,7 @@
  * work goes through rnd.h.
  */
 
+#include <float.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,6 +28,13 @@
 #define IGN_DYN_ARENA 1
 #else
 #define IGN_DYN_ARENA 0
+#endif
+
+#if defined(IGN_GLES) && defined(__ANDROID__) && defined(IGN_GLES_VISIBILITY_CULL) && \
+    IGN_GLES_VISIBILITY_CULL == 1
+#define IGN_VISIBILITY_CULL 1
+#else
+#define IGN_VISIBILITY_CULL 0
 #endif
 
 enum {
@@ -48,6 +56,10 @@ struct mesh_entry {
     int first;
     int count;
     int deferred;               /* has faces through a table */
+#if IGN_VISIBILITY_CULL
+    float lo[3], hi[3];         /* uploaded positions, for the draw cull */
+    int bounds_valid;
+#endif
 };
 
 struct texture_entry {
@@ -390,6 +402,150 @@ static void warn_once(int type)
     }
 }
 
+#if IGN_VISIBILITY_CULL
+/* GLSL does not promise the CPU's association of a mat4 * vec4, nor
+ * forbid contraction into an FMA. This envelope assumes ordinary IEEE
+ * binary32 with round-to-nearest, FMA allowed, and optionally FTZ; it
+ * does not cover arbitrary-precision arithmetic. 2^-24 is float's unit
+ * roundoff, and eight covers every product and addition of any
+ * association with room for a fused multiply-add. The bound is absolute,
+ * from the sum of the term magnitudes, so it also survives cancellation.
+ * Eight FLT_MIN cover a flushed product or addition result at each of
+ * the four products and three additions. */
+#define CLIP_DOT_UNIT 5.9604644775390625e-8
+#define CLIP_DOT_ROUNDINGS 8.0
+#define CLIP_DOT_FTZ_ALLOWANCE (8.0 * (double)FLT_MIN)
+
+/* A flushed subnormal input may lose far more than its own magnitude
+ * after multiplication by a large position, so it is outside the bound.
+ * An s32 upload never produces a subnormal position, but direct bounds
+ * are checked as well. */
+static int clip_value_uncertain(float v)
+{
+    return !isfinite(v) || (v != 0.0f && fabsf(v) < FLT_MIN);
+}
+
+static int clip_inputs_uncertain(const struct mesh_entry *e, const float m[16])
+{
+    int i;
+
+    for (i = 0; i < 16; i++) {
+        if (clip_value_uncertain(m[i])) {
+            return 1;
+        }
+    }
+    for (i = 0; i < 3; i++) {
+        if (clip_value_uncertain(e->lo[i]) || clip_value_uncertain(e->hi[i])) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/* One row of m * (px, py, pz, 1) as the exact double sum, with a bound
+ * on how far any float evaluation of that row can differ from it. */
+static double clip_dot(const float m[16], int row, float px, float py, float pz,
+                       float *error)
+{
+    double p0 = (double)m[row] * px;
+    double p1 = (double)m[4 + row] * py;
+    double p2 = (double)m[8 + row] * pz;
+    double p3 = (double)m[12 + row];
+    double sum = fabs(p0) + fabs(p1) + fabs(p2) + fabs(p3);
+
+    /* Any float product or association can overflow once the absolute
+     * terms sum above FLT_MAX, even when the relative error is finite.
+     * A sum below FLT_MAX is not enough either: rounded products or a
+     * different association can land above it, so the error must fit as
+     * headroom too. */
+    {
+        double allowance = CLIP_DOT_ROUNDINGS * CLIP_DOT_UNIT * sum
+                         + CLIP_DOT_FTZ_ALLOWANCE;
+
+        *error = sum > FLT_MAX || sum + allowance > FLT_MAX
+               ? INFINITY : (float)allowance;
+    }
+    return p0 + p1 + p2 + p3;
+}
+
+/* The enclosing box of the positions actually in the mesh's FLOATS8
+ * upload. A mesh whose build produced no triangles has no usable box. */
+static void mesh_bounds(const float *verts, int n, struct mesh_entry *e)
+{
+    int i, k;
+
+    e->bounds_valid = n > 0;
+    if (!e->bounds_valid) {
+        return;
+    }
+    for (k = 0; k < 3; k++) {
+        e->lo[k] = verts[k];
+        e->hi[k] = verts[k];
+    }
+    for (i = 1; i < n; i++) {
+        for (k = 0; k < 3; k++) {
+            float p = verts[(size_t)i * FLOATS + k];
+
+            e->lo[k] = p < e->lo[k] ? p : e->lo[k];
+            e->hi[k] = p > e->hi[k] ? p : e->hi[k];
+        }
+    }
+}
+
+/* Whether any clip side has every corner of the uploaded box outside
+ * it. Near-plane and behind-eye cases stay: only the four side planes
+ * can reject a box without relying on the depth convention. */
+static int mesh_visible(const struct mesh_entry *e, const float m[16])
+{
+    double corner[8][3];
+    float error[8][3];
+    int i, side, x, y, z;
+
+    if (!e->bounds_valid || clip_inputs_uncertain(e, m)) {
+        return 1;
+    }
+    i = 0;
+    for (x = 0; x < 2; x++) {
+        for (y = 0; y < 2; y++) {
+            for (z = 0; z < 2; z++) {
+                float px = x ? e->hi[0] : e->lo[0];
+                float py = y ? e->hi[1] : e->lo[1];
+                float pz = z ? e->hi[2] : e->lo[2];
+
+                corner[i][0] = clip_dot(m, 0, px, py, pz, &error[i][0]);
+                corner[i][1] = clip_dot(m, 1, px, py, pz, &error[i][1]);
+                corner[i][2] = clip_dot(m, 3, px, py, pz, &error[i][2]);
+                if (!isfinite(error[i][0]) || !isfinite(error[i][1])
+                    || !isfinite(error[i][2])
+                    || corner[i][2] <= (double)error[i][2]) {
+                    return 1;
+                }
+                i++;
+            }
+        }
+    }
+    for (side = 0; side < 4; side++) {
+        int outside = 1;
+
+        for (i = 0; i < 8; i++) {
+            double k = side == 0 ? corner[i][0] : side == 1 ? -corner[i][0]
+                    : side == 2 ? corner[i][1] : -corner[i][1];
+            double margin = (double)(side < 2 ? error[i][0] : error[i][1])
+                          + (double)error[i][2];
+
+            if (!(k > corner[i][2] + margin)) {
+                outside = 0;
+                break;
+            }
+        }
+        if (outside) {
+            return 0;
+        }
+    }
+    return 1;
+}
+#endif
+
 /* A mesh's faces as triangles into `verts`; returns their vertices. */
 static int mesh_build(const s32 *mesh, float *verts, int *deferred_out)
 {
@@ -456,6 +612,9 @@ static struct mesh_entry *mesh_get(const s32 *mesh)
         free(verts);
         return NULL;
     }
+#if IGN_VISIBILITY_CULL
+    mesh_bounds(verts, n, &s_meshes[s_mesh_count]);
+#endif
     rnd_mesh_write(s_vbo_used, n, verts);
     free(verts);
     e = &s_meshes[s_mesh_count++];
@@ -486,6 +645,9 @@ void gl3d_mesh_changed(const s32 *mesh)
     n = mesh_build(mesh, verts, &deferred);
     if (n == s_meshes[i].count) {
         rnd_mesh_write(s_meshes[i].first, n, verts);
+#if IGN_VISIBILITY_CULL
+        mesh_bounds(verts, n, &s_meshes[i]);
+#endif
     }
     free(verts);
 }
@@ -933,6 +1095,40 @@ static int dyn_far_first(const void *a, const void *b)
     return p < q ? -1 : p > q ? 1 : 0;
 }
 
+#if IGN_VISIBILITY_CULL
+/* A face is rejected only when every vertex is strictly outside one of
+ * the four side planes. Behind the eye, touching or crossing a plane,
+ * and non-finite clip coordinates keep it. */
+static int dyn_visible(const struct dyn *d)
+{
+    int side, k;
+
+    for (side = 0; side < 4; side++) {
+        int outside = 1;
+
+        for (k = 0; k < d->count; k++) {
+            float x = d->v[k][0], y = d->v[k][1], w = d->v[k][3];
+            float value, margin;
+
+            if (!isfinite(x) || !isfinite(y) || !isfinite(w) || w <= 0.0f) {
+                outside = 0;
+                break;
+            }
+            value = side == 0 ? x : side == 1 ? -x : side == 2 ? y : -y;
+            margin = 1e-4f * (fabsf(value) + fabsf(w) + 1.0f);
+            if (!(value > w + margin)) {
+                outside = 0;
+                break;
+            }
+        }
+        if (outside) {
+            return 0;
+        }
+    }
+    return 1;
+}
+#endif
+
 /* The pixels a face covers, from its clip space vertices. */
 static int dyn_rect(const struct dyn *d, int r[4])
 {
@@ -1084,6 +1280,26 @@ static void draw_dyns(void)
     if (s_dyn_count == 0) {
         return;
     }
+#if IGN_VISIBILITY_CULL
+    /* Admission has already happened: the same first MAX_DYN faces are
+     * considered. Compact in place so equal depths keep their order. */
+    {
+        int kept = 0;
+
+        for (i = 0; i < s_dyn_count; i++) {
+            if (dyn_visible(&s_dyns[i])) {
+                if (kept != i) {
+                    s_dyns[kept] = s_dyns[i];
+                }
+                kept++;
+            }
+        }
+        s_dyn_count = kept;
+    }
+    if (s_dyn_count == 0) {
+        return;
+    }
+#endif
     /* The faces' order, sorted rather than the faces themselves, which
      * are big. */
     prof_begin(PROF_SORT);
@@ -1300,6 +1516,13 @@ void gl3d_draw(const struct scene *sc, struct scene_obj *const *objs, int count,
         }
         rnd_use(RND_MESH);
         rnd_texture_unit(0, texture_get(o->tex));
+#if IGN_VISIBILITY_CULL
+        /* texture_get has already run, so the cache fills exactly as the
+         * unculled path would; only this face's own draw is skipped. */
+        if (!mesh_visible(e, m)) {
+            continue;
+        }
+#endif
         rnd_uniform(RND_U_MATRIX, m);
         rnd_draw_mesh(e->first, e->count);
     }

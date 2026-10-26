@@ -54,16 +54,56 @@ int g_scene_texture_pages[SCENE_TEXTURES];
 
 void scene_view_rows(const struct scene *sc, double rows[3][3])
 {
-    memset(rows, 0, sizeof(double) * 9);
-    rows[0][0] = rows[1][1] = rows[2][2] = 1.0;
-    (void)sc;
+    const double k = -3.14159265358979323846264338327950288 / 1800.0;
+    double sp = sin(sc->pitch * k), cp = cos(sc->pitch * k);
+    double sy = sin(sc->yaw * k), cy = cos(sc->yaw * k);
+    double sr = sin(sc->roll * k), cr = cos(sc->roll * k);
+
+    /* The production formula (src/scene.c, scene_view_rows). */
+    rows[0][0] = cr * cy - sp * sy * sr;
+    rows[0][1] = -cp * sr;
+    rows[0][2] = cr * sy + sp * cy * sr;
+    rows[1][0] = cy * sr + cr * sp * sy;
+    rows[1][1] = cr * cp;
+    rows[1][2] = sr * sy - cr * sp * cy;
+    rows[2][0] = -cp * sy;
+    rows[2][1] = sp;
+    rows[2][2] = cp * cy;
 }
 
 void scene_obj_rows(const struct scene_obj *o, double rows[3][3])
 {
-    memset(rows, 0, sizeof(double) * 9);
-    rows[0][0] = rows[1][1] = rows[2][2] = 1.0;
-    (void)o;
+    int ax = ((o->ax % 3600) + 3600) % 3600;
+    int ay = ((o->ay % 3600) + 3600) % 3600;
+    int az = ((o->az % 3600) + 3600) % 3600;
+    const double k = 3.14159265358979323846264338327950288 / 1800.0;
+    double sx = sin(ax * k), cx = cos(ax * k);
+    double sy = -sin(ay * k), cy = cos(ay * k);
+    double sz = -sin(az * k), cz = cos(az * k);
+    double ry[3][3] = { { cy, 0, sy }, { 0, 1, 0 }, { -sy, 0, cy } };
+    double rx[3][3] = { { 1, 0, 0 }, { 0, cx, -sx }, { 0, sx, cx } };
+    double rz[3][3] = { { cz, -sz, 0 }, { sz, cz, 0 }, { 0, 0, 1 } };
+    double t[3][3];
+    int i, j, kk;
+
+    /* The production formula (src/scene.c, scene_obj_rows). */
+    for (i = 0; i < 3; i++) {
+        for (j = 0; j < 3; j++) {
+            t[i][j] = 0;
+            for (kk = 0; kk < 3; kk++) {
+                t[i][j] += ry[i][kk] * rx[kk][j];
+            }
+        }
+    }
+    for (i = 0; i < 3; i++) {
+        for (j = 0; j < 3; j++) {
+            rows[i][j] = 0;
+            for (kk = 0; kk < 3; kk++) {
+                rows[i][j] += t[i][kk] * rz[kk][j];
+            }
+        }
+        rows[i][1] = -rows[i][1];
+    }
 }
 
 int canvas_is_gpu(const u8 *key)
@@ -122,12 +162,16 @@ static int s_stream_count;
 static int s_stream_vert_count;
 static int s_stream_truncated;
 static unsigned s_texture_ids[MAX_TRACKED_TEXTURES];
-static int s_texture_count;
+static int s_rnd_texture_count;
 static int s_texture_free_count;
+static const u8 *s_pages_pixels[MAX_TRACKED_TEXTURES];
+static unsigned s_pages_ids[MAX_TRACKED_TEXTURES];
+static int s_pages_count;
 static int s_texture_unit0, s_texture_unit1, s_texture_unit2;
 static int s_use_table_uniform;
 static int s_depth_calls, s_offset_calls;
 static int s_last_depth_func, s_last_depth_write, s_last_offset;
+static int s_mesh_draw_count;
 static int s_failures;
 
 #define CHECK(cond) \
@@ -140,17 +184,17 @@ static int s_failures;
 
 unsigned rnd_texture(int format, int w, int h, const void *pixels, int pitch)
 {
-    unsigned id = 700u + (unsigned)s_texture_count;
+    unsigned id = 700u + (unsigned)s_rnd_texture_count;
 
     (void)format;
     (void)w;
     (void)h;
     (void)pixels;
     (void)pitch;
-    if (s_texture_count < MAX_TRACKED_TEXTURES) {
-        s_texture_ids[s_texture_count] = id;
+    if (s_rnd_texture_count < MAX_TRACKED_TEXTURES) {
+        s_texture_ids[s_rnd_texture_count] = id;
     }
-    s_texture_count++;
+    s_rnd_texture_count++;
     return id;
 }
 
@@ -162,9 +206,15 @@ void rnd_texture_free(unsigned tex)
 
 unsigned rnd_pages(const u8 *pixels, int count)
 {
-    (void)pixels;
+    unsigned id = 1000u + (unsigned)s_pages_count;
+
     (void)count;
-    return 900u;
+    if (s_pages_count < MAX_TRACKED_TEXTURES) {
+        s_pages_pixels[s_pages_count] = pixels;
+        s_pages_ids[s_pages_count] = id;
+    }
+    s_pages_count++;
+    return id;
 }
 
 void rnd_copy(unsigned tex, int x, int y, int w, int h)
@@ -257,6 +307,7 @@ void rnd_draw_mesh(int first, int count)
 {
     (void)first;
     (void)count;
+    s_mesh_draw_count++;
 }
 
 void rnd_mesh_store(int count)
@@ -359,8 +410,11 @@ static void reset_calls(void)
     s_stream_count = 0;
     s_stream_vert_count = 0;
     s_stream_truncated = 0;
-    s_texture_count = 0;
+    s_rnd_texture_count = 0;
     s_texture_free_count = 0;
+    memset(s_pages_pixels, 0, sizeof(s_pages_pixels));
+    memset(s_pages_ids, 0, sizeof(s_pages_ids));
+    s_pages_count = 0;
     s_texture_unit0 = s_texture_unit1 = s_texture_unit2 = 0;
     s_use_table_uniform = 0;
     s_depth_calls = 0;
@@ -368,6 +422,7 @@ static void reset_calls(void)
     s_last_depth_func = -1;
     s_last_depth_write = -1;
     s_last_offset = -1;
+    s_mesh_draw_count = 0;
 }
 
 static void face(int i, float depth, unsigned tex, const u8 *table, float uv)
@@ -626,7 +681,7 @@ static void test_fallback(void)
     CHECK(s_dyn_dst != 0);
     CHECK(s_dyn_dst_w == s_w);
     CHECK(s_dyn_dst_h == s_h);
-    CHECK(s_texture_count == 2);     /* snapshot and cached table */
+    CHECK(s_rnd_texture_count == 2);     /* snapshot and cached table */
 
     /* The existing snapshot is reused at the same size ... */
     two_table_faces();
@@ -634,7 +689,7 @@ static void test_fallback(void)
     draw_dyns();
     CHECK(s_copy_count == 2);
     CHECK(s_texture_free_count == 0);
-    CHECK(s_texture_count == 0);
+    CHECK(s_rnd_texture_count == 0);
 
     /* ... and replaced when either size changes. */
     two_table_faces();
@@ -643,7 +698,7 @@ static void test_fallback(void)
     draw_dyns();
     CHECK(s_copy_count == 2);
     CHECK(s_texture_free_count == 1);
-    CHECK(s_texture_count == 1);
+    CHECK(s_rnd_texture_count == 1);
 
     two_table_faces();
     s_dyn_dst_h = 63;
@@ -651,7 +706,7 @@ static void test_fallback(void)
     draw_dyns();
     CHECK(s_copy_count == 2);
     CHECK(s_texture_free_count == 1);
-    CHECK(s_texture_count == 1);
+    CHECK(s_rnd_texture_count == 1);
 
     if (s_failures == started) {
         puts("copy fallback unchanged          ok");

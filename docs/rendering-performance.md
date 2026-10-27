@@ -30,3 +30,5 @@ full uploaded vertex payloads and profiler reporting. They need no ROM,
 display server, Android device or SDK.
 
 Faces wholly outside the screen are conservatively removed before upload; intersecting and uncertain faces retain their stable draw order.
+
+The renderer caches redundant GL state and uniform updates, with invalidation on resource deletion, resize and reinitialization.

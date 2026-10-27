@@ -222,6 +222,229 @@ enum { WORK_UNIT = 7 };
 
 static int s_dyn_framebuffer_fetch;
 
+/* Optional GL state cache for Android's GLES backend. */
+#if defined(IGN_GLES) && defined(__ANDROID__) && defined(IGN_GLES_STATE_CACHE) && \
+    IGN_GLES_STATE_CACHE == 1
+#define IGN_STATE_CACHE_BUILD 1
+#else
+#define IGN_STATE_CACHE_BUILD 0
+#endif
+
+#if IGN_STATE_CACHE_BUILD
+enum { STATE_TEXTURE_UNITS = 32 };
+
+struct cached_uniform {
+    unsigned char valid;
+    union {
+        GLint i[16];
+        GLfloat f[16];
+    } value;
+};
+
+static struct {
+    GLuint program, vao;
+    int depth_test, depth_func, depth_write;
+    int cull, cull_face, front_face;
+    int offset, offset_factor, offset_units;
+    int active_texture;
+    GLuint tex2d[STATE_TEXTURE_UNITS], tex_array[STATE_TEXTURE_UNITS];
+    struct cached_uniform uniforms[RND_PROGRAMS][RND_UNIFORMS];
+} s_state;
+
+static void state_cache_reset(void)
+{
+    memset(&s_state, 0, sizeof(s_state));
+    s_state.program = (GLuint)~0u;
+    s_state.vao = (GLuint)~0u;
+    s_state.depth_test = -1;
+    s_state.depth_func = -1;
+    s_state.depth_write = -1;
+    s_state.cull = -1;
+    s_state.cull_face = -1;
+    s_state.front_face = -1;
+    s_state.offset = -1;
+    s_state.active_texture = -1;
+    memset(s_state.tex2d, 0xff, sizeof(s_state.tex2d));
+    memset(s_state.tex_array, 0xff, sizeof(s_state.tex_array));
+}
+
+static void state_forget_program(int p)
+{
+    memset(s_state.uniforms[p], 0, sizeof(s_state.uniforms[p]));
+}
+
+static void state_use_program(GLuint program)
+{
+    if (s_state.program != program) {
+        glUseProgram(program);
+        s_state.program = program;
+    }
+}
+
+static void state_bind_vao(GLuint vao)
+{
+    if (s_state.vao != vao) {
+        glBindVertexArray(vao);
+        s_state.vao = vao;
+    }
+}
+
+static int state_active_texture(int unit)
+{
+    if ((unsigned)unit < STATE_TEXTURE_UNITS) {
+        if (s_state.active_texture != unit) {
+            glActiveTexture(GL_TEXTURE0 + (GLenum)unit);
+            s_state.active_texture = unit;
+        }
+        return unit;
+    }
+    glActiveTexture(GL_TEXTURE0 + (GLenum)unit);
+    s_state.active_texture = -1;
+    return -1;
+}
+
+static void state_bind_2d(int unit, GLuint tex)
+{
+    if (unit < 0) {
+        glBindTexture(GL_TEXTURE_2D, tex);
+    } else if (s_state.tex2d[unit] != tex) {
+        glBindTexture(GL_TEXTURE_2D, tex);
+        s_state.tex2d[unit] = tex;
+    }
+}
+
+static void state_bind_array(int unit, GLuint tex)
+{
+    if (unit < 0) {
+        glBindTexture(GL_TEXTURE_2D_ARRAY, tex);
+    } else if (s_state.tex_array[unit] != tex) {
+        glBindTexture(GL_TEXTURE_2D_ARRAY, tex);
+        s_state.tex_array[unit] = tex;
+    }
+}
+
+static void state_texture_freed(GLuint tex)
+{
+    int i;
+
+    for (i = 0; i < STATE_TEXTURE_UNITS; i++) {
+        if (s_state.tex2d[i] == tex) {
+            s_state.tex2d[i] = 0;
+        }
+        if (s_state.tex_array[i] == tex) {
+            s_state.tex_array[i] = 0;
+        }
+    }
+}
+
+static void state_uniform(int program, int id, GLint loc, const float *v)
+{
+    struct cached_uniform *u = &s_state.uniforms[program][id];
+
+    switch (id) {
+    case RND_U_MODE:
+    case RND_U_USE_TABLE: {
+        GLint value = (GLint)v[0];
+
+        if (u->valid && u->value.i[0] == value) {
+            return;
+        }
+        glUniform1i(loc, value);
+        u->valid = 1;
+        u->value.i[0] = value;
+        break;
+    }
+    case RND_U_RECT:
+        if (u->valid && memcmp(u->value.f, v, 4 * sizeof(float)) == 0) {
+            return;
+        }
+        glUniform4f(loc, v[0], v[1], v[2], v[3]);
+        u->valid = 1;
+        memcpy(u->value.f, v, 4 * sizeof(float));
+        break;
+    case RND_U_MATRIX:
+        if (u->valid && memcmp(u->value.f, v, 16 * sizeof(float)) == 0) {
+            return;
+        }
+        glUniformMatrix4fv(loc, 1, GL_FALSE, v);
+        u->valid = 1;
+        memcpy(u->value.f, v, 16 * sizeof(float));
+        break;
+    default:
+        if (u->valid && memcmp(u->value.f, v, 2 * sizeof(float)) == 0) {
+            return;
+        }
+        glUniform2f(loc, v[0], v[1]);
+        u->valid = 1;
+        memcpy(u->value.f, v, 2 * sizeof(float));
+        break;
+    }
+}
+#else
+static void state_cache_reset(void)
+{
+}
+
+static void state_forget_program(int p)
+{
+    (void)p;
+}
+
+static void state_use_program(GLuint program)
+{
+    glUseProgram(program);
+}
+
+static void state_bind_vao(GLuint vao)
+{
+    glBindVertexArray(vao);
+}
+
+static int state_active_texture(int unit)
+{
+    glActiveTexture(GL_TEXTURE0 + (GLenum)unit);
+    return -1;
+}
+
+static void state_bind_2d(int unit, GLuint tex)
+{
+    (void)unit;
+    glBindTexture(GL_TEXTURE_2D, tex);
+}
+
+static void state_bind_array(int unit, GLuint tex)
+{
+    (void)unit;
+    glBindTexture(GL_TEXTURE_2D_ARRAY, tex);
+}
+
+static void state_texture_freed(GLuint tex)
+{
+    (void)tex;
+}
+
+static void state_uniform(int program, int id, GLint loc, const float *v)
+{
+    (void)program;
+    (void)id;
+    switch (id) {
+    case RND_U_MODE:
+    case RND_U_USE_TABLE:
+        glUniform1i(loc, (GLint)v[0]);
+        break;
+    case RND_U_RECT:
+        glUniform4f(loc, v[0], v[1], v[2], v[3]);
+        break;
+    case RND_U_MATRIX:
+        glUniformMatrix4fv(loc, 1, GL_FALSE, v);
+        break;
+    default:
+        glUniform2f(loc, v[0], v[1]);
+        break;
+    }
+}
+#endif
+
 /* ------------------------------------------------------------ shaders */
 
 /* CANVAS. Mode 0 copies the source index, 1 puts it through the table:
@@ -580,6 +803,7 @@ static int make_program(int p, const char *vs_src, const char *fs_src, int fetch
         glDeleteShader(vs);
         return 0;
     }
+    state_forget_program(p);
     s_prog[p].program = 0;
     s_prog[p].vao = 0;
     s_prog[p].vbo = 0;
@@ -609,7 +833,7 @@ static int make_program(int p, const char *vs_src, const char *fs_src, int fetch
         s_prog[p].program = 0;
         return 0;
     }
-    glUseProgram(s_prog[p].program);
+    state_use_program(s_prog[p].program);
     for (i = 0; i < 4 && s_def[p].samplers[i] != NULL; i++) {
         glUniform1i(glGetUniformLocation(s_prog[p].program, s_def[p].samplers[i]), i);
     }
@@ -619,7 +843,7 @@ static int make_program(int p, const char *vs_src, const char *fs_src, int fetch
     s_prog[p].stride = stride;
 
     glGenVertexArrays(1, &s_prog[p].vao);
-    glBindVertexArray(s_prog[p].vao);
+    state_bind_vao(s_prog[p].vao);
     if (stride == 0) {
         return 1;
     }
@@ -671,20 +895,24 @@ int rnd_init(void)
     };
     int p, fetch = 0;
 
+    state_cache_reset();
     s_dyn_framebuffer_fetch = 0;
     for (p = 0; p < RND_PROGRAMS; p++) {
         if (p == RND_DYN && dyn_fetch_extension()) {
             if (make_program(p, src[p][0], src[p][1], 1)) {
                 fetch = 1;
             } else if (!make_program(p, src[p][0], src[p][1], 0)) {
+                state_cache_reset();
                 return 0;
             }
         } else if (!make_program(p, src[p][0], src[p][1], 0)) {
+            state_cache_reset();
             return 0;
         }
     }
     s_dyn_framebuffer_fetch = fetch;
     s_use = -1;
+    state_cache_reset();
     return 1;
 }
 
@@ -701,6 +929,7 @@ void rnd_shutdown(void)
         }
     }
     glDeleteBuffers(1, &s_mesh_vbo);
+    state_cache_reset();
 }
 
 #if defined(IGN_GLES)
@@ -726,10 +955,11 @@ unsigned rnd_texture(int format, int w, int h, const void *pixels, int pitch)
 {
     GLuint t;
     struct tex *r;
+    int unit;
 
     glGenTextures(1, &t);
-    glActiveTexture(GL_TEXTURE0 + WORK_UNIT);
-    glBindTexture(GL_TEXTURE_2D, t);
+    unit = state_active_texture(WORK_UNIT);
+    state_bind_2d(unit, t);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -750,9 +980,10 @@ unsigned rnd_texture(int format, int w, int h, const void *pixels, int pitch)
 void rnd_texture_set(unsigned tex, int w, int h, const void *pixels, int pitch)
 {
     struct tex *r = tex_rec(tex);
+    int unit;
 
-    glActiveTexture(GL_TEXTURE0 + WORK_UNIT);
-    glBindTexture(GL_TEXTURE_2D, tex);
+    unit = state_active_texture(WORK_UNIT);
+    state_bind_2d(unit, tex);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch != 0 && pitch != w ? pitch : 0);
     if (w != r->w || h != r->h) {
@@ -773,6 +1004,7 @@ void rnd_texture_free(unsigned tex)
 
     if (t != 0) {
         glDeleteTextures(1, &t);
+        state_texture_freed(t);
         memset(tex_rec(t), 0, sizeof(struct tex));
     }
 }
@@ -781,10 +1013,11 @@ unsigned rnd_pages(const u8 *pixels, int count)
 {
     GLuint t;
     struct tex *r;
+    int unit;
 
     glGenTextures(1, &t);
-    glActiveTexture(GL_TEXTURE0 + WORK_UNIT);
-    glBindTexture(GL_TEXTURE_2D_ARRAY, t);
+    unit = state_active_texture(WORK_UNIT);
+    state_bind_array(unit, t);
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -917,10 +1150,12 @@ void rnd_read(int x, int y, int w, int h, int format, void *out, int pitch)
 
 void rnd_copy(unsigned tex, int x, int y, int w, int h)
 {
+    int unit;
+
     prof_count(PROF_COPY_CALLS, 1);
     prof_count(PROF_COPY_PIXELS, (uint64_t)w * (uint64_t)h);
-    glActiveTexture(GL_TEXTURE0 + WORK_UNIT);
-    glBindTexture(GL_TEXTURE_2D, tex);
+    unit = state_active_texture(WORK_UNIT);
+    state_bind_2d(unit, tex);
     glCopyTexSubImage2D(GL_TEXTURE_2D, 0, x, y, x, y, w, h);
 }
 
@@ -946,6 +1181,26 @@ void rnd_scissor(int on, int x, int y, int w, int h)
 
 void rnd_depth(int func, int write)
 {
+#if IGN_STATE_CACHE_BUILD
+    int test = func != RND_DEPTH_OFF;
+
+    if (s_state.depth_test != test) {
+        if (test) {
+            glEnable(GL_DEPTH_TEST);
+        } else {
+            glDisable(GL_DEPTH_TEST);
+        }
+        s_state.depth_test = test;
+    }
+    if (test && s_state.depth_func != func) {
+        glDepthFunc(func == RND_DEPTH_LESS ? GL_LESS : GL_LEQUAL);
+        s_state.depth_func = func;
+    }
+    if (s_state.depth_write != write) {
+        glDepthMask(write ? GL_TRUE : GL_FALSE);
+        s_state.depth_write = write;
+    }
+#else
     if (func == RND_DEPTH_OFF) {
         glDisable(GL_DEPTH_TEST);
     } else {
@@ -953,10 +1208,35 @@ void rnd_depth(int func, int write)
         glDepthFunc(func == RND_DEPTH_LESS ? GL_LESS : GL_LEQUAL);
     }
     glDepthMask(write ? GL_TRUE : GL_FALSE);
+#endif
 }
 
 void rnd_cull(int mode)
 {
+#if IGN_STATE_CACHE_BUILD
+    int front;
+
+    if (mode == RND_CULL_OFF) {
+        if (s_state.cull != 0) {
+            glDisable(GL_CULL_FACE);
+            s_state.cull = 0;
+        }
+        return;
+    }
+    front = mode == RND_CULL_CCW ? GL_CW : GL_CCW;
+    if (s_state.cull != 1) {
+        glEnable(GL_CULL_FACE);
+        s_state.cull = 1;
+    }
+    if (s_state.cull_face != GL_BACK) {
+        glCullFace(GL_BACK);
+        s_state.cull_face = GL_BACK;
+    }
+    if (s_state.front_face != front) {
+        glFrontFace(front);
+        s_state.front_face = front;
+    }
+#else
     if (mode == RND_CULL_OFF) {
         glDisable(GL_CULL_FACE);
         return;
@@ -964,16 +1244,39 @@ void rnd_cull(int mode)
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
     glFrontFace(mode == RND_CULL_CCW ? GL_CW : GL_CCW);
+#endif
 }
 
 void rnd_offset(int on)
 {
+#if IGN_STATE_CACHE_BUILD
+    if (on) {
+        int changed = s_state.offset_factor != -1;
+
+        if (s_state.offset != 1) {
+            glEnable(GL_POLYGON_OFFSET_FILL);
+            s_state.offset = 1;
+        }
+        if (s_state.offset_units != -4) {
+            changed = 1;
+        }
+        if (changed) {
+            glPolygonOffset(-1.0f, -4.0f);
+            s_state.offset_factor = -1;
+            s_state.offset_units = -4;
+        }
+    } else if (s_state.offset != 0) {
+        glDisable(GL_POLYGON_OFFSET_FILL);
+        s_state.offset = 0;
+    }
+#else
     if (on) {
         glEnable(GL_POLYGON_OFFSET_FILL);
         glPolygonOffset(-1.0f, -4.0f);
     } else {
         glDisable(GL_POLYGON_OFFSET_FILL);
     }
+#endif
 }
 
 /* ------------------------------------------------------------ drawing */
@@ -981,40 +1284,31 @@ void rnd_offset(int on)
 void rnd_use(int program)
 {
     s_use = program;
-    glUseProgram(s_prog[program].program);
-    glBindVertexArray(s_prog[program].vao);
+    state_use_program(s_prog[program].program);
+    state_bind_vao(s_prog[program].vao);
 }
 
 void rnd_uniform(int id, const float *v)
 {
     GLint loc = s_prog[s_use].uniforms[id];
 
-    switch (id) {
-    case RND_U_MODE:
-    case RND_U_USE_TABLE:
-        glUniform1i(loc, (GLint)v[0]);
-        break;
-    case RND_U_RECT:
-        glUniform4f(loc, v[0], v[1], v[2], v[3]);
-        break;
-    case RND_U_MATRIX:
-        glUniformMatrix4fv(loc, 1, GL_FALSE, v);
-        break;
-    default:
-        glUniform2f(loc, v[0], v[1]);
-        break;
-    }
+    state_uniform(s_use, id, loc, v);
 }
 
 void rnd_texture_unit(int unit, unsigned tex)
 {
-    glActiveTexture(GL_TEXTURE0 + (GLenum)unit);
+    int cached = state_active_texture(unit);
+
     if (tex == 0) {
-        glBindTexture(GL_TEXTURE_2D, 0);
-        glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+        state_bind_2d(cached, 0);
+        state_bind_array(cached, 0);
         return;
     }
-    glBindTexture(tex_rec(tex)->target, tex);
+    if (tex_rec(tex)->target == GL_TEXTURE_2D_ARRAY) {
+        state_bind_array(cached, tex);
+    } else {
+        state_bind_2d(cached, tex);
+    }
 }
 
 void rnd_stream(const float *verts, int count)

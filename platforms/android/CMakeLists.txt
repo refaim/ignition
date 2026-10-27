@@ -27,7 +27,7 @@ target_compile_definitions(ignition PRIVATE IGN_GLES _DEFAULT_SOURCE IGN_VERSION
 
 # Android's renderer paths are part of the normal build. GPU capability and
 # allocation/shader failures still select their safe runtime fallbacks.
-foreach(feature IN ITEMS IGN_GLES_FRAMEBUFFER_FETCH IGN_GLES_DYN_ARENA IGN_GLES_VISIBILITY_CULL)
+foreach(feature IN ITEMS IGN_GLES_FRAMEBUFFER_FETCH IGN_GLES_DYN_ARENA IGN_GLES_VISIBILITY_CULL IGN_GLES_STATE_CACHE)
     target_compile_definitions(ignition PRIVATE ${feature}=1)
 endforeach()
 # android_main calls main.c's main under this name.

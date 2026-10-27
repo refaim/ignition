@@ -48,6 +48,9 @@ $(eval $(call renderer_case,batch-other,tests/test_batch_copies.c src/rnd_gl.c,-
 $(eval $(call renderer_case,profiler,tests/test_prof_counts.c,-DIGN_PROF=1))
 $(eval $(call renderer_case,profiler-off,tests/test_prof_disabled.c,))
 
+$(eval $(call renderer_case,visibility-on,tests/test_perf_visibility.c,$(RENDER_ANDROID) -DIGN_GLES_VISIBILITY_CULL=1))
+$(eval $(call renderer_case,visibility-off,tests/test_perf_visibility.c,$(RENDER_ANDROID) -DIGN_GLES_VISIBILITY_CULL=0))
+$(eval $(call renderer_case,stream-visibility,tests/test_perf_stream_visibility.c src/prof.c,$(RENDER_ANDROID) -DIGN_GLES_DYN_ARENA=1 -DIGN_GLES_VISIBILITY_CULL=1 -DIGN_PROF=1))
 RENDER_RUN_TARGETS := $(addprefix renderer-run-,$(RENDER_TEST_NAMES))
 .PHONY: test-renderer $(RENDER_RUN_TARGETS)
 test-renderer: $(RENDER_RUN_TARGETS)

@@ -28,3 +28,5 @@ switch-table options apply only to host fixtures. The tests include feature
 and platform controls, coherent-extension matching, shader failures, dependency layers,
 full uploaded vertex payloads and profiler reporting. They need no ROM,
 display server, Android device or SDK.
+
+Faces wholly outside the screen are conservatively removed before upload; intersecting and uncertain faces retain their stable draw order.

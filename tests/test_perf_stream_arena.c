@@ -330,6 +330,9 @@ void rnd_draw(int prim, int first, int count)
     d->copies_before = s_copy_count;
     d->passes_before = s_pass_count;
     d->streams_before = s_legacy_stream_calls;
+#ifdef PERF_STREAM_DRAW_OBSERVER
+    PERF_STREAM_DRAW_OBSERVER(first, count);
+#endif
 }
 
 void rnd_draw_mesh(int first, int count)

@@ -24,6 +24,8 @@ enum {
     GL_FALSE = 0,
     GL_TRUE = 1,
     GL_NO_ERROR = 0,
+    GL_INVALID_OPERATION = 0x0502,
+    GL_OUT_OF_MEMORY = 0x0505,
     GL_TRIANGLES = 0x0004,
     GL_TRIANGLE_STRIP = 0x0005,
     GL_LESS = 0x0201,
@@ -75,7 +77,8 @@ enum {
     GL_CW = 0x0900,
     GL_CCW = 0x0901,
     GL_EXTENSIONS = 0x1f03,
-    GL_NUM_EXTENSIONS = 0x821d
+    GL_NUM_EXTENSIONS = 0x821d,
+    GL_MAX_ARRAY_TEXTURE_LAYERS = 0x88ff
 };
 
 void glActiveTexture(GLenum texture);
@@ -124,6 +127,7 @@ void glGenRenderbuffers(GLsizei n, GLuint *renderbuffers);
 void glGenTextures(GLsizei n, GLuint *textures);
 void glGenVertexArrays(GLsizei n, GLuint *arrays);
 void glGetIntegerv(GLenum pname, GLint *data);
+GLenum glGetError(void);
 void glGetProgramiv(GLuint program, GLenum pname, GLint *params);
 void glGetShaderInfoLog(GLuint shader, GLsizei buf_size, GLsizei *length, GLchar *info_log);
 void glGetShaderiv(GLuint shader, GLenum pname, GLint *params);
@@ -149,6 +153,9 @@ void glTexParameteri(GLenum target, GLenum pname, GLint param);
 void glTexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffset,
                      GLsizei width, GLsizei height, GLenum format, GLenum type,
                      const void *pixels);
+void glTexSubImage3D(GLenum target, GLint level, GLint xoffset, GLint yoffset,
+                     GLint zoffset, GLsizei width, GLsizei height, GLsizei depth,
+                     GLenum format, GLenum type, const void *pixels);
 void glUniform1i(GLint location, GLint v0);
 void glUniform2f(GLint location, GLfloat v0, GLfloat v1);
 void glUniform4f(GLint location, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3);

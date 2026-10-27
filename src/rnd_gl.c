@@ -1033,6 +1033,89 @@ unsigned rnd_pages(const u8 *pixels, int count)
     return t;
 }
 
+#if IGN_SHARED_PAGES_BUILD
+
+static struct {
+    GLuint tex;
+    GLint layers;
+} s_page_pool;
+
+static void clear_gl_errors(void)
+{
+    while (glGetError() != GL_NO_ERROR) {
+    }
+}
+
+unsigned rnd_page_pool_create(int *layers)
+{
+    GLint max_layers = 0, count;
+    GLuint t = 0;
+    struct tex *r;
+
+    *layers = 0;
+    clear_gl_errors();
+    glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, &max_layers);
+    count = max_layers > RND_PAGE_POOL_MAX_LAYERS ? RND_PAGE_POOL_MAX_LAYERS : max_layers;
+    if (count < 1) {
+        return 0;
+    }
+    glGenTextures(1, &t);
+    if (t == 0) {
+        return 0;
+    }
+    state_bind_array(state_active_texture(WORK_UNIT), t);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_R8, 256, 256, count, 0, GL_RED,
+                 GL_UNSIGNED_BYTE, NULL);
+    if (glGetError() != GL_NO_ERROR) {
+        glDeleteTextures(1, &t);
+        state_texture_freed(t);
+        return 0;
+    }
+    r = tex_rec(t);
+    r->target = GL_TEXTURE_2D_ARRAY;
+    r->format = RND_R8;
+    r->w = 256;
+    r->h = 256;
+    s_page_pool.tex = t;
+    s_page_pool.layers = count;
+    *layers = (int)count;
+    return t;
+}
+
+int rnd_page_pool_upload(unsigned tex, int base_layer, const u8 *pixels, int pages)
+{
+    if (tex == 0 || tex != s_page_pool.tex) {
+        return 0;
+    }
+    if (pixels == NULL || pages <= 0 || base_layer < 0 ||
+        base_layer > (int)s_page_pool.layers - pages) {
+        return 0;
+    }
+    clear_gl_errors();
+    state_bind_array(state_active_texture(WORK_UNIT), tex);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, base_layer, 256, 256, pages, GL_RED,
+                    GL_UNSIGNED_BYTE, pixels);
+    return glGetError() == GL_NO_ERROR;
+}
+
+void rnd_page_pool_release(unsigned tex)
+{
+    if (tex == 0 || tex != s_page_pool.tex) {
+        return;
+    }
+    rnd_texture_free(tex);
+    s_page_pool.tex = 0;
+    s_page_pool.layers = 0;
+}
+
+#endif
+
 void rnd_texture_size(unsigned tex, int *w, int *h)
 {
     struct tex *r = tex_rec(tex);

@@ -208,7 +208,11 @@ unsigned rnd_pages(const u8 *pixels, int count)
 {
     (void)pixels;
     (void)count;
+#ifdef PERF_PAGE_TEXTURE_ID
+    return PERF_PAGE_TEXTURE_ID;
+#else
     return 900u;
+#endif
 }
 
 void rnd_copy(unsigned tex, int x, int y, int w, int h)

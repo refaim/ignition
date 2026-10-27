@@ -47,6 +47,38 @@ static int s_fail_vertex_compile, s_fail_normal_dyn;
 static int s_extension_queries;
 static const char *const *s_extensions;
 static int s_extension_count;
+static GLint s_max_array_layers;
+static GLuint s_next_texture;
+static GLuint s_next_vao, s_next_vbo;
+static GLuint s_deleted_textures[16];
+static int s_deleted_texture_count;
+static int s_fail_gen_textures, s_fail_tex_image, s_fail_sub_image;
+static GLenum s_pending_gl_error;
+static int s_active_unit, s_current_fbo, s_current_vao, s_current_vbo;
+static GLuint s_bound_2d[32], s_bound_array[32];
+static int s_pool_bind_unit;
+static GLenum s_pool_bind_target;
+static GLuint s_pool_bind_texture;
+static GLenum s_last_tex_param_name;
+static GLint s_last_tex_param_value;
+static int s_tex_param_calls;
+enum { MAX_POOL_UPLOAD = 8 * 256 * 256 };
+static struct {
+    int used;
+    GLint level, x, y, z;
+    GLsizei w, h, d;
+    GLenum format, type;
+    int bytes;
+    unsigned char data[MAX_POOL_UPLOAD];
+} s_pool_upload;
+static int s_pool_upload_calls;
+static struct {
+    int used;
+    GLint level, internal, border;
+    GLsizei w, h, d;
+    GLenum format, type;
+    const void *pixels;
+} s_pool_image;
 static int s_failures;
 
 enum { EV_DATA, EV_SUB, EV_DRAW };
@@ -121,6 +153,28 @@ static void fake_reset(void)
     s_extension_queries = 0;
     s_extensions = NULL;
     s_extension_count = 0;
+    s_max_array_layers = 0;
+    s_next_texture = 500;
+    s_next_vao = 100;
+    s_next_vbo = 200;
+    s_deleted_texture_count = 0;
+    s_fail_gen_textures = 0;
+    s_fail_tex_image = 0;
+    s_fail_sub_image = 0;
+    s_pending_gl_error = GL_NO_ERROR;
+    s_active_unit = 0;
+    s_current_fbo = s_current_vao = s_current_vbo = 0;
+    s_pool_bind_unit = -1;
+    s_pool_bind_target = 0;
+    s_pool_bind_texture = 0;
+    s_last_tex_param_name = 0;
+    s_last_tex_param_value = 0;
+    s_tex_param_calls = 0;
+    memset(&s_pool_upload, 0, sizeof(s_pool_upload));
+    memset(&s_pool_image, 0, sizeof(s_pool_image));
+    s_pool_upload_calls = 0;
+    memset(s_bound_2d, 0, sizeof(s_bound_2d));
+    memset(s_bound_array, 0, sizeof(s_bound_array));
     s_event_count = 0;
     s_array_buffer = 0;
     s_next_buffer = 200;
@@ -392,7 +446,19 @@ void glGetIntegerv(GLenum pname, GLint *data)
         *data = s_extension_count;
         return;
     }
+    if (pname == GL_MAX_ARRAY_TEXTURE_LAYERS) {
+        *data = s_max_array_layers;
+        return;
+    }
     *data = 0;
+}
+
+GLenum glGetError(void)
+{
+    GLenum error = s_pending_gl_error;
+
+    s_pending_gl_error = GL_NO_ERROR;
+    return error;
 }
 
 const GLubyte *glGetStringi(GLenum name, GLuint index)
@@ -415,7 +481,7 @@ void glGenVertexArrays(GLsizei n, GLuint *arrays)
     GLsizei i;
 
     for (i = 0; i < n; i++) {
-        arrays[i] = 100u + (GLuint)i;
+        arrays[i] = s_next_vao++;
     }
 }
 
@@ -433,11 +499,37 @@ void glGenBuffers(GLsizei n, GLuint *buffers)
 #define VOID2(name, a, b) void name(a x, b y) { (void)x; (void)y; }
 #define VOID3(name, a, b, c) void name(a x, b y, c z) { (void)x; (void)y; (void)z; }
 
-VOID1(glActiveTexture, GLenum)
-VOID2(glBindFramebuffer, GLenum, GLuint)
+void glActiveTexture(GLenum texture)
+{
+    s_active_unit = (int)(texture - GL_TEXTURE0);
+}
+
+void glBindFramebuffer(GLenum target, GLuint framebuffer)
+{
+    (void)target;
+    s_current_fbo = (int)framebuffer;
+}
+
 VOID2(glBindRenderbuffer, GLenum, GLuint)
-VOID2(glBindTexture, GLenum, GLuint)
-VOID1(glBindVertexArray, GLuint)
+
+void glBindTexture(GLenum target, GLuint texture)
+{
+    if (s_active_unit >= 0 && s_active_unit < 32) {
+        if (target == GL_TEXTURE_2D) s_bound_2d[s_active_unit] = texture;
+        if (target == GL_TEXTURE_2D_ARRAY) s_bound_array[s_active_unit] = texture;
+    }
+    if (s_active_unit == 7) {
+        s_pool_bind_unit = s_active_unit;
+        s_pool_bind_target = target;
+        s_pool_bind_texture = texture;
+    }
+}
+
+void glBindVertexArray(GLuint array)
+{
+    s_current_vao = (int)array;
+}
+
 VOID1(glDepthFunc, GLenum)
 VOID1(glDepthMask, GLboolean)
 VOID1(glDisable, GLenum)
@@ -449,7 +541,15 @@ VOID1(glClearDepthf, GLfloat)
 VOID2(glPolygonOffset, GLfloat, GLfloat)
 VOID2(glUniform1i, GLint, GLint)
 VOID3(glUniform2f, GLint, GLfloat, GLfloat)
-VOID3(glTexParameteri, GLenum, GLenum, GLint)
+void glTexParameteri(GLenum target, GLenum pname, GLint param)
+{
+    (void)target;
+    s_last_tex_param_name = pname;
+    s_last_tex_param_value = param;
+    s_tex_param_calls++;
+}
+
+
 
 void glBindAttribLocation(GLuint program, GLuint index, const GLchar *name)
 { (void)program; (void)index; (void)name; }
@@ -457,6 +557,7 @@ void glBindBuffer(GLenum target, GLuint buffer)
 {
     if (target == GL_ARRAY_BUFFER) {
         s_array_buffer = buffer;
+        s_current_vbo = (int)buffer;
     }
 }
 void glBufferData(GLenum target, GLsizeiptr size, const void *data, GLenum usage)
@@ -516,7 +617,19 @@ void glCopyTexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffse
 void glDeleteBuffers(GLsizei n, const GLuint *buffers) { (void)n; (void)buffers; }
 void glDeleteFramebuffers(GLsizei n, const GLuint *framebuffers) { (void)n; (void)framebuffers; }
 void glDeleteRenderbuffers(GLsizei n, const GLuint *renderbuffers) { (void)n; (void)renderbuffers; }
-void glDeleteTextures(GLsizei n, const GLuint *textures) { (void)n; (void)textures; }
+void glDeleteTextures(GLsizei n, const GLuint *textures)
+{
+    GLsizei i;
+
+    for (i = 0; i < n && s_deleted_texture_count < 16; i++) {
+        int unit;
+        for (unit = 0; unit < 32; unit++) {
+            if (s_bound_2d[unit] == textures[i]) s_bound_2d[unit] = 0;
+            if (s_bound_array[unit] == textures[i]) s_bound_array[unit] = 0;
+        }
+        s_deleted_textures[s_deleted_texture_count++] = textures[i];
+    }
+}
 void glDeleteVertexArrays(GLsizei n, const GLuint *arrays) { (void)n; (void)arrays; }
 void glBlitFramebuffer(GLint a, GLint b, GLint c, GLint d, GLint e, GLint f,
                        GLint g, GLint h, GLbitfield mask, GLenum filter)
@@ -546,7 +659,13 @@ void glGenFramebuffers(GLsizei n, GLuint *framebuffers)
 void glGenRenderbuffers(GLsizei n, GLuint *renderbuffers)
 { GLsizei i; for (i = 0; i < n; i++) renderbuffers[i] = 400u + (GLuint)i; }
 void glGenTextures(GLsizei n, GLuint *textures)
-{ GLsizei i; for (i = 0; i < n; i++) textures[i] = 500u + (GLuint)i; }
+{
+    GLsizei i;
+
+    for (i = 0; i < n; i++) {
+        textures[i] = s_fail_gen_textures ? 0 : s_next_texture++;
+    }
+}
 void glReadPixels(GLint x, GLint y, GLsizei width, GLsizei height, GLenum format,
                   GLenum type, void *pixels)
 { (void)x; (void)y; (void)width; (void)height; (void)format; (void)type; (void)pixels; }
@@ -564,13 +683,57 @@ void glTexImage2D(GLenum target, GLint level, GLint internalformat, GLsizei widt
 void glTexImage3D(GLenum target, GLint level, GLint internalformat, GLsizei width,
                   GLsizei height, GLsizei depth, GLint border, GLenum format,
                   GLenum type, const void *pixels)
-{ (void)target; (void)level; (void)internalformat; (void)width; (void)height;
-  (void)depth; (void)border; (void)format; (void)type; (void)pixels; }
+{
+    s_pool_image.used = 1;
+    s_pool_image.level = level;
+    s_pool_image.internal = internalformat;
+    s_pool_image.w = width;
+    s_pool_image.h = height;
+    s_pool_image.d = depth;
+    s_pool_image.border = border;
+    s_pool_image.format = format;
+    s_pool_image.type = type;
+    s_pool_image.pixels = pixels;
+    (void)target;
+    if (s_fail_tex_image) {
+        s_pending_gl_error = GL_OUT_OF_MEMORY;
+    }
+}
 void glTexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffset,
                      GLsizei width, GLsizei height, GLenum format, GLenum type,
                      const void *pixels)
 { (void)target; (void)level; (void)xoffset; (void)yoffset; (void)width; (void)height;
   (void)format; (void)type; (void)pixels; }
+void glTexSubImage3D(GLenum target, GLint level, GLint xoffset, GLint yoffset,
+                     GLint zoffset, GLsizei width, GLsizei height, GLsizei depth,
+                     GLenum format, GLenum type, const void *pixels)
+{
+    size_t bytes = (size_t)width * (size_t)height * (size_t)depth;
+
+    (void)target;
+    s_pool_upload_calls++;
+    s_pool_upload.used = 1;
+    s_pool_upload.level = level;
+    s_pool_upload.x = xoffset;
+    s_pool_upload.y = yoffset;
+    s_pool_upload.z = zoffset;
+    s_pool_upload.w = width;
+    s_pool_upload.h = height;
+    s_pool_upload.d = depth;
+    s_pool_upload.format = format;
+    s_pool_upload.type = type;
+    s_pool_upload.bytes = 0;
+    if (s_fail_sub_image) {
+        s_pending_gl_error = GL_OUT_OF_MEMORY;
+        return;
+    }
+    if (width <= 0 || height <= 0 || depth <= 0 || pixels == NULL ||
+        bytes > sizeof(s_pool_upload.data)) {
+        return;
+    }
+    memcpy(s_pool_upload.data, pixels, bytes);
+    s_pool_upload.bytes = (int)bytes;
+}
 void glUniform4f(GLint location, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3)
 { (void)location; (void)v0; (void)v1; (void)v2; (void)v3; }
 void glUniformMatrix4fv(GLint location, GLsizei count, GLboolean transpose,
@@ -814,6 +977,127 @@ static void test_stream_pass(void)
     }
 }
 
+#if IGN_SHARED_PAGES_BUILD
+
+static u8 s_pool_pixels[3 * 256 * 256];
+
+static void test_page_pool_backend(void)
+{
+    unsigned pool, small;
+    int layers = -1, i, calls;
+
+    for (i = 0; i < (int)sizeof(s_pool_pixels); i++) {
+        s_pool_pixels[i] = (u8)(i * 37 + 11);
+    }
+
+    fake_reset();
+    CHECK(rnd_init() != 0);
+    s_max_array_layers = 0;
+    CHECK(rnd_page_pool_create(&layers) == 0);
+    CHECK(layers == 0);
+    s_max_array_layers = -4;
+    CHECK(rnd_page_pool_create(&layers) == 0);
+    s_max_array_layers = 2;
+    small = rnd_page_pool_create(&layers);
+    CHECK(small != 0);
+    CHECK(layers == 2);
+    CHECK(s_pool_image.w == 256 && s_pool_image.h == 256 && s_pool_image.d == 2);
+    CHECK(rnd_page_pool_upload(small, 0, s_pool_pixels, 2) == 1);
+    CHECK(s_pool_upload.z == 0 && s_pool_upload.d == 2);
+    CHECK(s_pool_upload.bytes == 2 * 256 * 256);
+    CHECK(memcmp(s_pool_upload.data, s_pool_pixels, 2 * 256 * 256) == 0);
+    CHECK(rnd_page_pool_upload(small, 1, s_pool_pixels, 2) == 0);
+    rnd_page_pool_release(0);
+    rnd_page_pool_release(small + 1);
+    CHECK(s_deleted_texture_count == 0);
+    rnd_page_pool_release(small);
+    CHECK(s_deleted_texture_count == 1 && s_deleted_textures[0] == small);
+    CHECK(rnd_page_pool_upload(small, 0, s_pool_pixels, 1) == 0);
+    rnd_page_pool_release(small);
+    CHECK(s_deleted_texture_count == 1);
+    small = rnd_page_pool_create(&layers);
+    CHECK(small == 501 && layers == 2);
+    rnd_page_pool_release(small);
+
+    rnd_shutdown();
+    fake_reset();
+    CHECK(rnd_init() != 0);
+    s_max_array_layers = 512;
+    s_pending_gl_error = GL_INVALID_OPERATION;
+    glBindVertexArray(77);
+    glBindBuffer(GL_ARRAY_BUFFER, 88);
+    glBindFramebuffer(GL_FRAMEBUFFER, 99);
+    pool = rnd_page_pool_create(&layers);
+    CHECK(pool != 0);
+    CHECK(layers == 256);
+    CHECK(s_pool_image.used && s_pool_image.level == 0);
+    CHECK(s_pool_image.internal == GL_R8 && s_pool_image.format == GL_RED);
+    CHECK(s_pool_image.type == GL_UNSIGNED_BYTE && s_pool_image.border == 0);
+    CHECK(s_pool_image.w == 256 && s_pool_image.h == 256 && s_pool_image.d == 256);
+    CHECK(s_pool_image.pixels == NULL);
+    CHECK(s_pool_bind_unit == 7 && s_pool_bind_target == GL_TEXTURE_2D_ARRAY);
+    CHECK(s_pool_bind_texture == pool);
+    CHECK(s_tex_param_calls == 4);
+    CHECK(s_last_tex_param_name == GL_TEXTURE_WRAP_T &&
+          s_last_tex_param_value == GL_REPEAT);
+
+    s_pending_gl_error = GL_INVALID_OPERATION;
+    CHECK(rnd_page_pool_upload(pool, 0, s_pool_pixels, 3) == 1);
+    CHECK(s_pool_upload.used && s_pool_upload.level == 0);
+    CHECK(s_pool_upload.x == 0 && s_pool_upload.y == 0 && s_pool_upload.z == 0);
+    CHECK(s_pool_upload.w == 256 && s_pool_upload.h == 256 && s_pool_upload.d == 3);
+    CHECK(s_pool_upload.format == GL_RED && s_pool_upload.type == GL_UNSIGNED_BYTE);
+    CHECK(s_pool_upload.bytes == (int)sizeof(s_pool_pixels));
+    CHECK(memcmp(s_pool_upload.data, s_pool_pixels, sizeof(s_pool_pixels)) == 0);
+    CHECK(s_pool_bind_unit == 7 && s_pool_bind_texture == pool);
+
+    CHECK(rnd_page_pool_upload(pool, 253, s_pool_pixels, 3) == 1);
+    CHECK(s_pool_upload.z == 253 && s_pool_upload.d == 3);
+    CHECK(s_pool_upload.bytes == (int)sizeof(s_pool_pixels));
+    CHECK(memcmp(s_pool_upload.data, s_pool_pixels, sizeof(s_pool_pixels)) == 0);
+
+    calls = s_pool_upload_calls;
+    CHECK(rnd_page_pool_upload(pool, 254, s_pool_pixels, 3) == 0);
+    CHECK(rnd_page_pool_upload(pool, 0, NULL, 1) == 0);
+    CHECK(rnd_page_pool_upload(pool, 0, s_pool_pixels, 0) == 0);
+    CHECK(rnd_page_pool_upload(pool, 0, s_pool_pixels, -1) == 0);
+    CHECK(rnd_page_pool_upload(pool, -1, s_pool_pixels, 1) == 0);
+    CHECK(rnd_page_pool_upload(0, 0, s_pool_pixels, 1) == 0);
+    CHECK(rnd_page_pool_upload(pool + 1, 0, s_pool_pixels, 1) == 0);
+    CHECK(s_pool_upload_calls == calls);
+
+    s_fail_sub_image = 1;
+    CHECK(rnd_page_pool_upload(pool, 6, s_pool_pixels, 1) == 0);
+    s_fail_sub_image = 0;
+    CHECK(s_current_vao == 77 && s_current_vbo == 88 && s_current_fbo == 99);
+
+    rnd_shutdown();
+    fake_reset();
+    CHECK(rnd_init() != 0);
+    s_max_array_layers = 512;
+    s_fail_tex_image = 1;
+    CHECK(rnd_page_pool_create(&layers) == 0);
+    CHECK(layers == 0);
+    CHECK(s_deleted_texture_count == 1);
+
+    rnd_shutdown();
+    fake_reset();
+    CHECK(rnd_init() != 0);
+    s_max_array_layers = 512;
+    s_fail_gen_textures = 1;
+    CHECK(rnd_page_pool_create(&layers) == 0);
+
+    rnd_shutdown();
+    fake_reset();
+    CHECK(rnd_init() != 0);
+    s_max_array_layers = 512;
+    CHECK(rnd_page_pool_create(&layers) != 0);
+    CHECK(layers == 256);
+    rnd_shutdown();
+}
+
+#endif
+
 int main(void)
 {
     static const char *const exact[] = {
@@ -847,6 +1131,9 @@ int main(void)
     run_init_case("coherent, default build off", exact, 2, 0, 0, 0, 0, 0, 1, 0);
 #endif
     test_stream_pass();
+#if IGN_SHARED_PAGES_BUILD
+    test_page_pool_backend();
+#endif
 
     if (s_failures != 0) {
         fprintf(stderr, "test_rnd_dyn_fetch: %d failures\n", s_failures);

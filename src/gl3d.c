@@ -100,6 +100,10 @@ struct dyn {
     float depth;                /* w of the middle, for the order */
     unsigned tex;
     const u8 *table;            /* NULL: drawn as it is */
+#if IGN_SHARED_PAGES_BUILD
+    unsigned pool_tex;          /* 0: use tex */
+    int pool_layer;
+#endif
 };
 
 static struct dyn s_dyns[MAX_DYN];
@@ -110,6 +114,19 @@ static struct { const s32 *begin, *end; } s_dyn_ranges[8];    /* meshes always d
 static int s_dyn_range_count;
 static unsigned s_dyn_dst;      /* RG8, a copy of the target */
 static int s_dyn_dst_w, s_dyn_dst_h;
+
+#if IGN_SHARED_PAGES_BUILD
+struct page_source {
+    const u8 *pixels;
+    int pages;
+    int base;                   /* -1: this source is not pooled */
+};
+
+static struct page_source s_page_sources[MAX_TEXTURES];
+static int s_page_source_count, s_page_used, s_page_layers;
+static unsigned s_page_tex;
+static int s_page_tried;
+#endif
 
 static unsigned table_get(const u8 *table);
 static unsigned texture_get(int slot);
@@ -679,6 +696,101 @@ static unsigned texture_get(int slot)
     return e->tex;
 }
 
+#if IGN_SHARED_PAGES_BUILD
+
+/* A face may move to the shared array only when every vertex reads a
+ * whole layer of its own source array. */
+static int page_exact(const struct dyn *d, int pages)
+{
+    int k;
+
+    if (pages <= 0) {
+        return 0;
+    }
+    for (k = 0; k < d->count; k++) {
+        float page = d->v[k][6];
+
+        if (!(page >= 0.0f && page < (float)pages) || floorf(page) != page) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+static unsigned page_texture(void)
+{
+    if (!s_page_tried) {
+        s_page_tried = 1;
+        s_page_tex = rnd_page_pool_create(&s_page_layers);
+    }
+    return s_page_tex;
+}
+
+/* The layer where an admitted source starts, uploading it once. A source
+ * that cannot be pooled stays out of the array, leaving its faces on
+ * their original one. */
+static int page_source(const u8 *pixels, int pages, int *base)
+{
+    struct page_source *e;
+    int i;
+
+    if (pixels == NULL || pages <= 0) {
+        return 0;
+    }
+    for (i = 0; i < s_page_source_count; i++) {
+        if (s_page_sources[i].pixels == pixels && s_page_sources[i].pages == pages) {
+            *base = s_page_sources[i].base;
+            return s_page_sources[i].base >= 0;
+        }
+    }
+    if (page_texture() == 0 || s_page_source_count == MAX_TEXTURES) {
+        return 0;
+    }
+    e = &s_page_sources[s_page_source_count++];
+    e->pixels = pixels;
+    e->pages = pages;
+    e->base = -1;
+    if (pages > s_page_layers - s_page_used) {
+        return 0;
+    }
+    e->base = s_page_used;
+    if (!rnd_page_pool_upload(s_page_tex, e->base, pixels, pages)) {
+        e->base = -1;
+        return 0;
+    }
+    s_page_used += pages;
+    *base = e->base;
+    return 1;
+}
+
+static void pages_reset(void)
+{
+    if (s_page_tex != 0) {
+        rnd_page_pool_release(s_page_tex);
+    }
+    s_page_tex = 0;
+    s_page_layers = s_page_used = s_page_source_count = 0;
+    s_page_tried = 0;
+}
+
+static void pool_face(struct dyn *d, int slot, int all)
+{
+    int base;
+
+    if (!all || !rnd_dyn_framebuffer_fetch()) {
+        return;
+    }
+    if (d->tex == 0 || !page_exact(d, g_scene_texture_pages[slot])) {
+        return;
+    }
+    if (page_source(g_scene_textures[slot], g_scene_texture_pages[slot], &base)) {
+        d->pool_tex = s_page_tex;
+        d->pool_layer = base;
+    }
+}
+
+#endif
+
 void gl3d_flush(void)
 {
     int i;
@@ -686,6 +798,9 @@ void gl3d_flush(void)
     if (!s_ready) {
         return;
     }
+#if IGN_SHARED_PAGES_BUILD
+    pages_reset();
+#endif
     for (i = 0; i < s_texture_count; i++) {
         rnd_texture_free(s_textures[i].tex);
     }
@@ -965,6 +1080,10 @@ static void collect(const struct scene *sc, const struct scene_obj *o, const flo
         }
         d->tex = tex;
         d->table = NULL;
+#if IGN_SHARED_PAGES_BUILD
+        d->pool_tex = 0;
+        d->pool_layer = 0;
+#endif
         if (type == 1 || type == 2) {
             float h = type == 1 ? 0.5f : 1.0f, uv[4] = { 0, 0, 0, 0 };
 
@@ -1080,6 +1199,9 @@ static void collect(const struct scene *sc, const struct scene_obj *o, const flo
             warn_once(type);
             continue;
         }
+#if IGN_SHARED_PAGES_BUILD
+        pool_face(d, o->tex, all);
+#endif
         s_dyn_count++;
     }
 }
@@ -1166,13 +1288,39 @@ static int dyn_rect(const struct dyn *d, int r[4])
 static float *s_batch;
 static int s_batch_cap;
 
+static unsigned batch_texture(const struct dyn *d)
+{
+#if IGN_SHARED_PAGES_BUILD
+    if (d->pool_tex != 0) {
+        return d->pool_tex;
+    }
+#endif
+    return d->tex;
+}
+
+static int same_batch(const struct dyn *a, const struct dyn *b)
+{
+    return a->table == b->table && batch_texture(a) == batch_texture(b);
+}
+
 static int batch_add(int n, const struct dyn *d)
 {
+#if IGN_SHARED_PAGES_BUILD
+    int i;
+#endif
+
     if (n + d->count > s_batch_cap) {
         s_batch_cap = (n + d->count) * 2;
         s_batch = realloc(s_batch, (size_t)s_batch_cap * DYN_FLOATS * sizeof(float));
     }
     memcpy(s_batch + (size_t)n * DYN_FLOATS, d->v, (size_t)d->count * DYN_FLOATS * sizeof(float));
+#if IGN_SHARED_PAGES_BUILD
+    if (d->pool_tex != 0) {
+        for (i = 0; i < d->count; i++) {
+            s_batch[(size_t)(n + i) * DYN_FLOATS + 6] += (float)d->pool_layer;
+        }
+    }
+#endif
     return n + d->count;
 }
 
@@ -1188,7 +1336,7 @@ static void draw_batch(const struct dyn *first, int n)
     }
     rnd_depth(RND_DEPTH_LEQUAL, !use_table);
     rnd_offset(use_table);
-    rnd_texture_unit(0, first->tex);
+    rnd_texture_unit(0, batch_texture(first));
     rnd_uniform(RND_U_USE_TABLE, &u);
     rnd_stream(s_batch, n);
     rnd_draw(RND_TRIANGLES, 0, n);
@@ -1226,9 +1374,7 @@ static int batch_add_pass(int at, int n, const struct dyn *d)
     if (!batch_reserve(at + n + d->count)) {
         return -1;
     }
-    memcpy(s_batch + (size_t)(at + n) * DYN_FLOATS, d->v,
-           (size_t)d->count * DYN_FLOATS * sizeof(float));
-    return n + d->count;
+    return batch_add(at + n, d) - at;
 }
 
 /* A run from the pass's already uploaded block. */
@@ -1243,7 +1389,7 @@ static void draw_batch_at(const struct dyn *first, int at, int n)
     }
     rnd_depth(RND_DEPTH_LEQUAL, !use_table);
     rnd_offset(use_table);
-    rnd_texture_unit(0, first->tex);
+    rnd_texture_unit(0, batch_texture(first));
     rnd_uniform(RND_U_USE_TABLE, &u);
     rnd_draw(RND_TRIANGLES, at, n);
 }
@@ -1320,7 +1466,7 @@ static void draw_dyns(void)
             for (j = i; j < s_dyn_count; j++) {
                 const struct dyn *d = s_order[j];
 
-                if (d->tex != s_order[i]->tex || d->table != s_order[i]->table) {
+                if (!same_batch(d, s_order[i])) {
                     break;
                 }
                 n = batch_add_pass(total, n, d);
@@ -1358,7 +1504,7 @@ static void draw_dyns(void)
             for (j = i; j < s_dyn_count; j++) {
                 const struct dyn *d = s_order[j];
 
-                if (d->tex != s_order[i]->tex || d->table != s_order[i]->table) {
+                if (!same_batch(d, s_order[i])) {
                     break;
                 }
                 n = batch_add(n, d);
@@ -1431,7 +1577,7 @@ static void draw_dyns(void)
                     if (layer[j] != l) {
                         continue;
                     }
-                    if (d->tex != s_order[i]->tex || d->table != s_order[i]->table) {
+                    if (!same_batch(d, s_order[i])) {
                         break;
                     }
                     n = batch_add(n, d);

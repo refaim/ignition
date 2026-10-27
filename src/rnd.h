@@ -72,6 +72,22 @@ static inline int rnd_dyn_framebuffer_fetch(void)
 }
 #endif
 
+#if defined(IGN_GLES) && defined(__ANDROID__) && defined(IGN_GLES_SHARED_PAGES) && \
+    IGN_GLES_SHARED_PAGES == 1
+#define IGN_SHARED_PAGES_BUILD 1
+#else
+#define IGN_SHARED_PAGES_BUILD 0
+#endif
+
+#if IGN_SHARED_PAGES_BUILD
+/* A shared R8 256x256 page array for the Android GLES DYN fetch path.
+ * create returns its texture and its usable layer count, or 0. */
+enum { RND_PAGE_POOL_MAX_LAYERS = 256 };
+unsigned rnd_page_pool_create(int *layers);
+int rnd_page_pool_upload(unsigned tex, int base_layer, const u8 *pixels, int pages);
+void rnd_page_pool_release(unsigned tex);
+#endif
+
 /* A texture of w x h, from `pixels` (rows `pitch` texels apart; 0 for
  * w) or empty (zeros). */
 unsigned rnd_texture(int format, int w, int h, const void *pixels, int pitch);

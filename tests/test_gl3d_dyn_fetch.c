@@ -152,6 +152,12 @@ struct draw_rec {
     int depth_write;
     int offset;
     int copies_before;
+    int program;
+    int vao;
+    int vbo;
+    int stream_program;
+    int stream_vao;
+    int stream_vbo;
 };
 
 static struct draw_rec s_draws[MAX_EVENTS];
@@ -171,6 +177,15 @@ static int s_texture_unit0, s_texture_unit1, s_texture_unit2;
 static int s_use_table_uniform;
 static int s_depth_calls, s_offset_calls;
 static int s_last_depth_func, s_last_depth_write, s_last_offset;
+static int s_current_program, s_current_vao, s_current_vbo;
+static int s_stream_program, s_stream_vao, s_stream_vbo;
+static int s_pages_calls;
+#if IGN_SHARED_PAGES_BUILD
+static int s_pool_create_calls, s_pool_upload_calls, s_pool_release_calls;
+static int s_pool_fail_create, s_pool_fail_upload;
+static int s_pool_last_base, s_pool_last_pages;
+static unsigned s_pool_last_tex;
+#endif
 static int s_mesh_draw_count;
 static int s_failures;
 
@@ -214,8 +229,34 @@ unsigned rnd_pages(const u8 *pixels, int count)
         s_pages_ids[s_pages_count] = id;
     }
     s_pages_count++;
+    s_pages_calls++;
     return id;
 }
+
+#if IGN_SHARED_PAGES_BUILD
+unsigned rnd_page_pool_create(int *layers)
+{
+    s_pool_create_calls++;
+    *layers = 256;
+    return s_pool_fail_create ? 0 : 1001u;
+}
+
+int rnd_page_pool_upload(unsigned tex, int base_layer, const u8 *pixels, int pages)
+{
+    s_pool_upload_calls++;
+    s_pool_last_tex = tex;
+    s_pool_last_base = base_layer;
+    s_pool_last_pages = pages;
+    (void)pixels;
+    return !s_pool_fail_upload;
+}
+
+void rnd_page_pool_release(unsigned tex)
+{
+    s_pool_release_calls++;
+    s_pool_last_tex = tex;
+}
+#endif
 
 void rnd_copy(unsigned tex, int x, int y, int w, int h)
 {
@@ -260,7 +301,8 @@ void rnd_uniform(int id, const float *v)
 
 void rnd_use(int program)
 {
-    (void)program;
+    s_current_program = program;
+    s_current_vao = 100 + program;
 }
 
 void rnd_cull(int mode)
@@ -274,6 +316,10 @@ void rnd_stream(const float *verts, int count)
     size_t floats = (size_t)copy * DYN_FLOATS;
 
     CHECK(floats <= sizeof(s_stream) / sizeof(s_stream[0]));
+    s_current_vbo = 200 + s_current_program;
+    s_stream_program = s_current_program;
+    s_stream_vao = s_current_vao;
+    s_stream_vbo = s_current_vbo;
     s_stream_vert_count = count;
     if (floats > sizeof(s_stream) / sizeof(s_stream[0])) {
         s_stream_truncated = 1;
@@ -301,6 +347,12 @@ void rnd_draw(int prim, int first, int count)
     d->offset = s_last_offset;
     d->depth_write = s_last_depth_write;
     d->copies_before = s_copy_count;
+    d->program = s_current_program;
+    d->vao = s_current_vao;
+    d->vbo = s_current_vbo;
+    d->stream_program = s_stream_program;
+    d->stream_vao = s_stream_vao;
+    d->stream_vbo = s_stream_vbo;
 }
 
 void rnd_draw_mesh(int first, int count)
@@ -423,6 +475,19 @@ static void reset_calls(void)
     s_last_depth_write = -1;
     s_last_offset = -1;
     s_mesh_draw_count = 0;
+    s_current_program = s_current_vao = s_current_vbo = -1;
+    s_stream_program = s_stream_vao = s_stream_vbo = -1;
+    s_pages_calls = 0;
+#if IGN_SHARED_PAGES_BUILD
+    s_pool_create_calls = 0;
+    s_pool_upload_calls = 0;
+    s_pool_release_calls = 0;
+    s_pool_fail_create = 0;
+    s_pool_fail_upload = 0;
+    s_pool_last_base = -1;
+    s_pool_last_pages = 0;
+    s_pool_last_tex = 0;
+#endif
 }
 
 static void face(int i, float depth, unsigned tex, const u8 *table, float uv)
@@ -653,6 +718,386 @@ static void test_fast_clipped_faces(void)
     }
 }
 
+#if IGN_SHARED_PAGES_BUILD
+
+static void collect_shared_page_faces(void)
+{
+    static u8 page_a[2 * 256 * 256];
+    static u8 page_b[3 * 256 * 256];
+    static const s32 mesh[] = {
+        3, 1,
+        -10, -10, 0, 10, -10, 0, 0, 10, 0,
+        18, 0, 1, 2, 0, 0, 65536, 0, 0, 65536, 1 << 16
+    };
+    struct scene sc;
+    struct scene_obj a, b;
+    float m[16];
+
+    memset(&sc, 0, sizeof(sc));
+    memset(&a, 0, sizeof(a));
+    memset(&b, 0, sizeof(b));
+    memset(page_a, 0x12, sizeof(page_a));
+    memset(page_b, 0x34, sizeof(page_b));
+    g_scene_textures[0] = page_a;
+    g_scene_texture_pages[0] = 2;
+    g_scene_textures[1] = page_b;
+    g_scene_texture_pages[1] = 3;
+    sc.focal_x = sc.focal_y = 100;
+    sc.near_ofs = 1;
+    sc.zoom = 1.0;
+    a.mesh = b.mesh = mesh;
+    a.tex = 0;
+    b.tex = 1;
+    a.z = b.z = 30;
+    gl3d_set_dynamic(mesh, mesh + sizeof(mesh) / sizeof(mesh[0]));
+
+    object_matrix(&sc, &a, 0, 0, m);
+    collect(&sc, &a, m, 1);
+    object_matrix(&sc, &b, 0, 0, m);
+    collect(&sc, &b, m, 1);
+}
+
+static void reset_pool_state(void)
+{
+    pages_reset();
+    memset(s_page_sources, 0, sizeof(s_page_sources));
+    s_page_used = 0;
+    s_page_layers = 0;
+    s_page_source_count = 0;
+    s_page_tried = 0;
+    reset_calls();
+}
+
+static void pooled_face(int i, float depth, unsigned tex, int layer, float page,
+                        const u8 *table, float uv)
+{
+    int k;
+
+    face(i, depth, tex, table, uv);
+    s_dyns[i].pool_tex = 1001u;
+    s_dyns[i].pool_layer = layer;
+    for (k = 0; k < s_dyns[i].count; k++) {
+        s_dyns[i].v[k][6] = page;
+    }
+}
+
+static void test_shared_page_exactness(void)
+{
+    int started = s_failures;
+    struct dyn d;
+
+    memset(&d, 0, sizeof(d));
+    d.count = 3;
+    CHECK(page_exact(&d, 0) == 0);
+    d.v[0][6] = -1.0f;
+    CHECK(page_exact(&d, 4) == 0);
+    d.v[0][6] = 4.0f;
+    CHECK(page_exact(&d, 4) == 0);
+    d.v[0][6] = 1.5f;
+    CHECK(page_exact(&d, 4) == 0);
+    d.v[0][6] = NAN;
+    CHECK(page_exact(&d, 4) == 0);
+    memset(d.v, 0, sizeof(d.v));
+    d.v[0][6] = 2.0f;
+    CHECK(page_exact(&d, 4) == 1);
+    if (s_failures == started) {
+        puts("shared page exactness            ok");
+    }
+}
+
+static void test_shared_page_source_limits(void)
+{
+    static u8 pixels_a[2 * 256 * 256];
+    static u8 pixels_b[3 * 256 * 256];
+    static u8 pixels_big[300 * 256 * 256];
+    int started = s_failures;
+    int base = -1, uploads;
+
+    reset_pool_state();
+    CHECK(page_source(NULL, 1, &base) == 0);
+    CHECK(page_source(pixels_a, 0, &base) == 0);
+    s_pool_fail_create = 1;
+    CHECK(page_source(pixels_a, 1, &base) == 0);
+    CHECK(s_page_tried == 1);
+    reset_pool_state();
+
+    CHECK(page_source(pixels_a, 2, &base) == 1);
+    CHECK(base == 0);
+    CHECK(s_pool_upload_calls == 1);
+    uploads = s_pool_upload_calls;
+    CHECK(page_source(pixels_a, 2, &base) == 1);
+    CHECK(base == 0);
+    CHECK(s_pool_upload_calls == uploads);
+    CHECK(page_source(pixels_b, 3, &base) == 1);
+    CHECK(base == 2);
+    CHECK(page_source(pixels_big, 300, &base) == 0);
+    CHECK(page_source(pixels_big, 300, &base) == 0);
+
+    s_pool_fail_upload = 1;
+    CHECK(page_source(pixels_a, 1, &base) == 0);
+    s_pool_fail_upload = 0;
+    s_page_source_count = MAX_TEXTURES;
+    CHECK(page_source(pixels_a + 1, 5, &base) == 0);
+    reset_pool_state();
+
+    CHECK(page_source(pixels_a, 255, &base) == 1);
+    CHECK(base == 0);
+    CHECK(page_source(pixels_a, 1, &base) == 1);
+    CHECK(base == 255);
+    CHECK(page_source(pixels_a, 2, &base) == 0);
+    pages_reset();
+    if (s_failures == started) {
+        puts("shared page source limits         ok");
+    }
+}
+
+static void test_shared_page_face_gate(void)
+{
+    static u8 pixels[2 * 256 * 256];
+    int started = s_failures;
+    struct dyn d;
+
+    reset_pool_state();
+    g_scene_textures[2] = pixels;
+    g_scene_texture_pages[2] = 2;
+    memset(&d, 0, sizeof(d));
+    d.count = 3;
+    d.tex = 900;
+    d.v[0][6] = 1.0f;
+    pool_face(&d, 2, 0);
+    CHECK(d.pool_tex == 0);
+    s_fetch_active = 0;
+    pool_face(&d, 2, 1);
+    CHECK(d.pool_tex == 0);
+    s_fetch_active = 1;
+    d.tex = 0;
+    pool_face(&d, 2, 1);
+    CHECK(d.pool_tex == 0);
+    d.tex = 900;
+    d.v[0][6] = 1.5f;
+    pool_face(&d, 2, 1);
+    CHECK(d.pool_tex == 0);
+    d.v[0][6] = 1.0f;
+    pool_face(&d, 2, 1);
+    CHECK(d.pool_tex != 0);
+    CHECK(d.pool_layer == 0);
+    CHECK(s_pool_upload_calls == 1);
+    pages_reset();
+    if (s_failures == started) {
+        puts("shared page face gate             ok");
+    }
+}
+
+static void test_shared_page_grouping(void)
+{
+    static const u8 table_a[256 * 256];
+    static const u8 table_b[256 * 256];
+    int started = s_failures;
+
+    prepare(3);
+    pooled_face(0, 30.0f, 11, 0, 1.0f, NULL, 1.0f);
+    pooled_face(1, 30.0f, 12, 2, 1.0f, NULL, 2.0f);
+    pooled_face(2, 30.0f, 11, 0, 1.0f, NULL, 3.0f);
+    reset_calls();
+    s_fetch_active = 1;
+    draw_dyns();
+    CHECK(s_draw_count == 1);
+    if (s_draw_count == 1) {
+        CHECK(s_draws[0].vertices == 9);
+        CHECK(s_draws[0].tex == 1001);
+        CHECK(s_stream[0 * DYN_FLOATS + 6] == 1.0f);
+        CHECK(s_stream[3 * DYN_FLOATS + 6] == 3.0f);
+        CHECK(s_stream[6 * DYN_FLOATS + 6] == 1.0f);
+        CHECK(s_stream[0 * DYN_FLOATS + 4] == 1.0f);
+        CHECK(s_stream[3 * DYN_FLOATS + 4] == 2.0f);
+        CHECK(s_stream[6 * DYN_FLOATS + 4] == 3.0f);
+    }
+
+    prepare(3);
+    pooled_face(0, 30.0f, 21, 0, 1.0f, table_a, 1.0f);
+    pooled_face(1, 30.0f, 22, 2, 1.0f, table_b, 2.0f);
+    pooled_face(2, 30.0f, 23, 4, 1.0f, table_a, 3.0f);
+    reset_calls();
+    s_fetch_active = 1;
+    draw_dyns();
+    CHECK(s_draw_count == 3);
+    if (s_draw_count == 3) {
+        CHECK(s_draws[0].first_uv == 1.0f && s_draws[0].table == 1);
+        CHECK(s_draws[1].first_uv == 2.0f && s_draws[1].table == 1);
+        CHECK(s_draws[2].first_uv == 3.0f && s_draws[2].table == 1);
+    }
+
+    prepare(3);
+    pooled_face(0, 30.0f, 31, 0, 1.0f, NULL, 1.0f);
+    face(1, 30.0f, 32, NULL, 2.0f);
+    pooled_face(2, 30.0f, 33, 2, 1.0f, NULL, 3.0f);
+    reset_calls();
+    s_fetch_active = 1;
+    draw_dyns();
+    CHECK(s_draw_count == 3);
+    if (s_draw_count == 3) {
+        CHECK(s_draws[0].tex == 1001);
+        CHECK(s_draws[1].tex == 32);
+        CHECK(s_draws[2].tex == 1001);
+        CHECK(s_draws[0].first_uv == 1.0f);
+        CHECK(s_draws[1].first_uv == 2.0f);
+        CHECK(s_draws[2].first_uv == 3.0f);
+    }
+    if (s_failures == started) {
+        puts("shared page grouping/barriers     ok");
+    }
+}
+
+static void test_shared_page_collect_fallbacks(void)
+{
+    int started = s_failures;
+
+    prepare(0);
+    g_scene_textures[0] = g_scene_textures[1] = NULL;
+    g_scene_texture_pages[0] = g_scene_texture_pages[1] = 0;
+    s_dyn_range_count = 0;
+    reset_pool_state();
+    s_fetch_active = 1;
+    s_pool_fail_create = 1;
+    collect_shared_page_faces();
+    CHECK(s_dyn_count == 2);
+    CHECK(s_dyns[0].pool_tex == 0 && s_dyns[1].pool_tex == 0);
+    CHECK(s_pool_upload_calls == 0);
+    reset_calls();
+    s_fetch_active = 1;
+    draw_dyns();
+    CHECK(s_draw_count == 2);
+
+    prepare(0);
+    g_scene_textures[0] = g_scene_textures[1] = NULL;
+    g_scene_texture_pages[0] = g_scene_texture_pages[1] = 0;
+    s_dyn_range_count = 0;
+    reset_pool_state();
+    s_fetch_active = 1;
+    s_pool_fail_upload = 1;
+    collect_shared_page_faces();
+    CHECK(s_dyns[0].pool_tex == 0 && s_dyns[1].pool_tex == 0);
+    CHECK(s_pool_upload_calls == 2);
+    reset_calls();
+    s_fetch_active = 1;
+    draw_dyns();
+    CHECK(s_draw_count == 2);
+    pages_reset();
+    if (s_failures == started) {
+        puts("shared page collect fallbacks     ok");
+    }
+}
+
+static void test_shared_page_flush(void)
+{
+    int started = s_failures;
+
+    prepare(0);
+    g_scene_textures[0] = g_scene_textures[1] = NULL;
+    g_scene_texture_pages[0] = g_scene_texture_pages[1] = 0;
+    s_dyn_range_count = 0;
+    reset_pool_state();
+    s_fetch_active = 1;
+    collect_shared_page_faces();
+    CHECK(s_page_tex != 0 && s_page_source_count == 2);
+    s_ready = 1;
+    reset_calls();
+    gl3d_flush();
+    CHECK(s_pool_release_calls == 1);
+    CHECK(s_page_tex == 0 && s_page_used == 0 && s_page_source_count == 0);
+    CHECK(s_page_tried == 0);
+
+    prepare(0);
+    s_dyn_range_count = 0;
+    reset_calls();
+    s_fetch_active = 1;
+    collect_shared_page_faces();
+    CHECK(s_pool_create_calls == 1);
+    CHECK(s_pool_upload_calls == 2);
+    CHECK(s_page_tex != 0);
+    pages_reset();
+    if (s_failures == started) {
+        puts("shared page flush/reinit          ok");
+    }
+}
+
+static void test_shared_pages_batch(void)
+{
+    int started = s_failures;
+    int pool_creates, pool_uploads, pool_base, pool_pages;
+
+    prepare(0);
+    g_scene_textures[0] = g_scene_textures[1] = NULL;
+    g_scene_texture_pages[0] = g_scene_texture_pages[1] = 0;
+    s_dyn_range_count = 0;
+    reset_calls();
+    s_fetch_active = 1;
+    collect_shared_page_faces();
+    pool_creates = s_pool_create_calls;
+    pool_uploads = s_pool_upload_calls;
+    pool_base = s_pool_last_base;
+    pool_pages = s_pool_last_pages;
+
+    CHECK(s_dyn_count == 2);
+    if (s_dyn_count == 2) {
+        CHECK(s_dyns[0].tex != 0);
+        CHECK(s_dyns[1].tex != 0);
+        CHECK(s_dyns[0].tex != s_dyns[1].tex);
+        CHECK(s_dyns[0].table == NULL);
+        CHECK(s_dyns[1].table == NULL);
+    }
+
+    reset_calls();
+    draw_dyns();
+
+    CHECK(s_draw_count == 1);
+    if (s_draw_count == 1) {
+        CHECK(s_draws[0].tex == 1001);
+        CHECK(s_stream_vert_count == 6);
+        CHECK(s_stream_count == 6);
+        CHECK(s_stream[4] == 0.0f);
+        CHECK(s_stream[5] == 0.0f);
+        CHECK(s_stream[6] == 1.0f);
+        CHECK(s_stream[3 * DYN_FLOATS + 4] == 0.0f);
+        CHECK(s_stream[3 * DYN_FLOATS + 5] == 0.0f);
+        CHECK(s_stream[3 * DYN_FLOATS + 6] == 3.0f);
+        CHECK(s_stream[4 * DYN_FLOATS + 4] == 65536.0f / 65536.0f);
+        CHECK(s_draws[0].program == RND_DYN);
+        CHECK(s_draws[0].stream_program == RND_DYN);
+        CHECK(s_draws[0].vao == 100 + RND_DYN);
+        CHECK(s_draws[0].stream_vao == 100 + RND_DYN);
+        CHECK(s_draws[0].vbo == 200 + RND_DYN);
+        CHECK(s_draws[0].stream_vbo == 200 + RND_DYN);
+    }
+    CHECK(pool_creates == 1);
+    CHECK(pool_uploads == 2);
+    CHECK(pool_base == 2);
+    CHECK(pool_pages == 3);
+    CHECK(s_dyn_count == 0);
+    if (s_failures == started) {
+        puts("shared pages adjacent DYN batch   ok");
+    }
+}
+
+static void test_shared_page_admission_cap(void)
+{
+    static u8 pixels[256 * 256];
+    int started = s_failures;
+
+    reset_pool_state();
+    g_scene_textures[9] = pixels;
+    g_scene_texture_pages[9] = 1;
+    s_texture_count = MAX_TEXTURES;
+    CHECK(texture_get(9) == 0);
+    CHECK(s_page_source_count == 0);
+    pages_reset();
+    if (s_failures == started) {
+        puts("shared page admission cap        ok");
+    }
+}
+
+#endif
+
 static void test_fallback(void)
 {
     int started = s_failures;
@@ -799,6 +1244,16 @@ int main(void)
     test_fast_mixed_depth();
     test_fast_long_group();
     test_fast_clipped_faces();
+#if IGN_SHARED_PAGES_BUILD
+    test_shared_page_exactness();
+    test_shared_page_source_limits();
+    test_shared_page_face_gate();
+    test_shared_page_grouping();
+    test_shared_page_collect_fallbacks();
+    test_shared_page_flush();
+    test_shared_page_admission_cap();
+    test_shared_pages_batch();
+#endif
     test_fallback();
     test_layered_dependencies();
 

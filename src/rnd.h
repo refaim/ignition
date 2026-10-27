@@ -60,6 +60,18 @@ enum { RND_TRIANGLES, RND_STRIP };
 int rnd_init(void);
 void rnd_shutdown(void);
 
+/* 1 only while the Android GLES DYN shader can read the bound colour
+ * target directly and the experimental framebuffer-fetch build is
+ * active. Other backends need no implementation. */
+#if defined(IGN_GLES)
+int rnd_dyn_framebuffer_fetch(void);
+#else
+static inline int rnd_dyn_framebuffer_fetch(void)
+{
+    return 0;
+}
+#endif
+
 /* A texture of w x h, from `pixels` (rows `pitch` texels apart; 0 for
  * w) or empty (zeros). */
 unsigned rnd_texture(int format, int w, int h, const void *pixels, int pitch);
@@ -105,6 +117,10 @@ void rnd_uniform(int id, const float *v);
 void rnd_texture_unit(int unit, unsigned tex);
 /* Vertices for the program in use, which rnd_draw draws from. */
 void rnd_stream(const float *verts, int count);
+/* One whole pass's vertices: orphan the program's stream buffer, keeping
+ * its capacity, and upload them once. Runs draw with rnd_draw(first,count).
+ * Only the opt-in GLES DYN arena path calls this. */
+void rnd_stream_pass(const float *verts, int count);
 void rnd_draw(int prim, int first, int count);
 
 /* MESH's vertex store: room for `count` vertices (emptied), and

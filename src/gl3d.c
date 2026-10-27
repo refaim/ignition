@@ -22,6 +22,13 @@
 #include "rnd.h"
 #include "soft3d/soft3d.h"
 
+#if defined(IGN_GLES) && defined(__ANDROID__) && defined(IGN_GLES_DYN_ARENA) && \
+    IGN_GLES_DYN_ARENA == 1
+#define IGN_DYN_ARENA 1
+#else
+#define IGN_DYN_ARENA 0
+#endif
+
 enum {
     MAX_MESHES = 1024,
     MAX_TEXTURES = 64,
@@ -314,7 +321,14 @@ static int layer_of(int i, int through_table)
             }
         }
     }
+#if defined(__vita__) || defined(IGN_GXM)
+    /* GXM: each layer costs a scene, so keep the upstream cap. */
     s_layers[i] = through_table && best < MAX_LAYER ? best + 1 : best;
+#else
+    /* Android GLES: the layer copies are the fallback that preserves the
+     * table faces' dependencies, so do not merge them above MAX_LAYER. */
+    s_layers[i] = through_table ? best + 1 : best;
+#endif
     for (y = cy0; y <= cy1; y++) {
         for (x = cx0; x <= cx1; x++) {
             if (s_nodes_n == s_nodes_cap) {
@@ -984,14 +998,162 @@ static void draw_batch(const struct dyn *first, int n)
     rnd_draw(RND_TRIANGLES, 0, n);
 }
 
-/* Back to front, each through its table over a copy of what is under
- * it. Where copies are dear, one copy of the whole frame serves the
- * faces after it until one of them covers what was drawn since. */
+#if IGN_DYN_ARENA
+/* A run's place in the pass's one vertex block. */
+struct dyn_run {
+    const struct dyn *first;
+    int at;
+    int count;
+};
+
+static struct dyn_run s_runs[MAX_DYN];
+
+static int batch_reserve(int need)
+{
+    if (need > s_batch_cap) {
+        int cap = need * 2;
+        float *p = realloc(s_batch, (size_t)cap * DYN_FLOATS * sizeof(float));
+
+        if (p == NULL) {
+            return 0;
+        }
+        s_batch = p;
+        s_batch_cap = cap;
+    }
+    return 1;
+}
+
+/* `at` is where the pass's runs so far end; n counts this run. -1 when
+ * the staging block cannot grow; the pass then falls back. */
+static int batch_add_pass(int at, int n, const struct dyn *d)
+{
+    if (!batch_reserve(at + n + d->count)) {
+        return -1;
+    }
+    memcpy(s_batch + (size_t)(at + n) * DYN_FLOATS, d->v,
+           (size_t)d->count * DYN_FLOATS * sizeof(float));
+    return n + d->count;
+}
+
+/* A run from the pass's already uploaded block. */
+static void draw_batch_at(const struct dyn *first, int at, int n)
+{
+    int use_table = first->table != NULL;
+    float u = (float)use_table;
+
+    if (use_table) {
+        rnd_texture_unit(2, s_dyn_dst);
+        rnd_texture_unit(1, table_get(first->table));
+    }
+    rnd_depth(RND_DEPTH_LEQUAL, !use_table);
+    rnd_offset(use_table);
+    rnd_texture_unit(0, first->tex);
+    rnd_uniform(RND_U_USE_TABLE, &u);
+    rnd_draw(RND_TRIANGLES, at, n);
+}
+
+/* Staging allocation failed: each face streams as before, so none is
+ * dropped and none reads another face's vertices. */
+static void draw_one(const struct dyn *d)
+{
+    int use_table = d->table != NULL;
+    float u = (float)use_table;
+
+    if (use_table) {
+        rnd_texture_unit(2, s_dyn_dst);
+        rnd_texture_unit(1, table_get(d->table));
+    }
+    rnd_depth(RND_DEPTH_LEQUAL, !use_table);
+    rnd_offset(use_table);
+    rnd_texture_unit(0, d->tex);
+    rnd_uniform(RND_U_USE_TABLE, &u);
+    rnd_stream(&d->v[0][0], d->count);
+    rnd_draw(RND_TRIANGLES, 0, d->count);
+}
+#endif
+
+/* Back to front. With framebuffer fetch the table reads the current
+ * target, so faces of one material in that order share a draw and no
+ * copy is made. Otherwise each reads a copy of what is under it; where
+ * copies are dear, one copy of the whole frame serves the faces after
+ * it until one of them covers what was drawn since. */
 static void draw_dyns(void)
 {
     int i, copied = 0, batch = rnd_batch_copies();
 
     if (s_dyn_count == 0) {
+        return;
+    }
+    /* The faces' order, sorted rather than the faces themselves, which
+     * are big. */
+    prof_begin(PROF_SORT);
+    for (i = 0; i < s_dyn_count; i++) {
+        s_order[i] = &s_dyns[i];
+    }
+    qsort(s_order, (size_t)s_dyn_count, sizeof(s_order[0]), dyn_far_first);
+    prof_end(PROF_SORT);
+    rnd_use(RND_DYN);
+    rnd_cull(RND_CULL_OFF);
+    if (rnd_dyn_framebuffer_fetch()) {
+#if IGN_DYN_ARENA
+        int total = 0, runs = 0, failed = 0;
+
+        for (i = 0; i < s_dyn_count;) {
+            int j, n = 0;
+
+            for (j = i; j < s_dyn_count; j++) {
+                const struct dyn *d = s_order[j];
+
+                if (d->tex != s_order[i]->tex || d->table != s_order[i]->table) {
+                    break;
+                }
+                n = batch_add_pass(total, n, d);
+                if (n < 0) {
+                    failed = 1;
+                    break;
+                }
+            }
+            if (failed) {
+                break;
+            }
+            s_runs[runs].first = s_order[i];
+            s_runs[runs].at = total;
+            s_runs[runs].count = n;
+            runs++;
+            total += n;
+            i = j;
+        }
+        if (!failed) {
+            int r;
+
+            rnd_stream_pass(s_batch, total);
+            for (r = 0; r < runs; r++) {
+                draw_batch_at(s_runs[r].first, s_runs[r].at, s_runs[r].count);
+            }
+        } else {
+            for (i = 0; i < s_dyn_count; i++) {
+                draw_one(s_order[i]);
+            }
+        }
+#else
+        for (i = 0; i < s_dyn_count;) {
+            int j, n = 0;
+
+            for (j = i; j < s_dyn_count; j++) {
+                const struct dyn *d = s_order[j];
+
+                if (d->tex != s_order[i]->tex || d->table != s_order[i]->table) {
+                    break;
+                }
+                n = batch_add(n, d);
+            }
+            draw_batch(s_order[i], n);
+            i = j;
+        }
+#endif
+        rnd_offset(0);
+        rnd_depth(RND_DEPTH_OFF, 1);
+        s_dyn_count = 0;
         return;
     }
     if (s_dyn_dst == 0 || s_dyn_dst_w != s_w || s_dyn_dst_h != s_h) {
@@ -1002,17 +1164,7 @@ static void draw_dyns(void)
         s_dyn_dst_w = s_w;
         s_dyn_dst_h = s_h;
     }
-    /* The faces' order, sorted rather than the faces themselves, which
-     * are big. */
-    prof_begin(PROF_SORT);
-    for (i = 0; i < s_dyn_count; i++) {
-        s_order[i] = &s_dyns[i];
-    }
-    qsort(s_order, (size_t)s_dyn_count, sizeof(s_order[0]), dyn_far_first);
-    prof_end(PROF_SORT);
     cells_reset(s_w, s_h);
-    rnd_use(RND_DYN);
-    rnd_cull(RND_CULL_OFF);
     if (batch) {
         int *layer = layers_for(s_dyn_count), top = 0, l;
 
